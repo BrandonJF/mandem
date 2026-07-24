@@ -21,7 +21,10 @@ function resolveSpecifier(filePath: string, specifier: string): string | undefin
   return normalize(`${dirname(filePath)}/${specifier}`).replaceAll("\\", "/").replace(/\.(?:ts|tsx|js|jsx)$/, "");
 }
 function physicalLines(text: string): number { const normalized = text.replaceAll("\r\n", "\n"); return normalized === "" ? 0 : normalized.replace(/\n$/, "").split("\n").length; }
-function typeTokens(text: string): string { return text.replace(/\/\*[\s\S]*?\*\/|\/\/.*|(?:"(?:\\.|[^"\\])*")|(?:'(?:\\.|[^'\\])*')|(?:`(?:\\.|[^`\\])*`)/g, " "); }
+function typeTokens(text: string): string {
+  const templateExpressions = text.replace(/`(?:\\.|[^`\\])*`/g, (literal) => [...literal.matchAll(/\$\{([^}]*)\}/g)].map((match) => match[1] ?? "").join(" "));
+  return templateExpressions.replace(/\/\*[\s\S]*?\*\/|\/\/.*|(?:"(?:\\.|[^"\\])*")|(?:'(?:\\.|[^'\\])*')/g, " ");
+}
 
 export function evaluateArchitecture(files: readonly RepositoryFile[]): AnalysisResult {
   const paths = new Set(files.map(({ path }) => path)); const violations: RuleViolation[] = [];

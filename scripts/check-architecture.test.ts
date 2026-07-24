@@ -99,6 +99,11 @@ describe("architecture analyzer", () => {
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
   });
 
+  it("detects any in a template-literal type without scanning ordinary strings", () => {
+    const result = analyzeRepositoryFiles(completeModule("runtime", [{ path: "src/modules/runtime/domain/template.ts", text: `${overview}type Template = \`\${any}\`;\nconst ordinary = "any";\nexport { ordinary };` }]));
+    expect(result.violations.map(({ ruleId }) => ruleId)).toContain("ARCH-NO-EXPLICIT-ANY");
+  });
+
   it("has a table-driven malformed fixture matrix for every stable rule", () => {
     const huge = (count: number) => Array.from({ length: count }, (_, index) => index === 0 ? overview.trim() : "// line").join("\n");
     const files = [

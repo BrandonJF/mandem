@@ -686,6 +686,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Verified repaired implementation at `aed575083fb5bec975a78d9291e1dc3cc4504e23`: canonical check, build, entrypoint invocation, and issue fsck all passed.
 - [x] (2026-07-24) Closed second-review findings with bare-application import rejection, exact IO placement, `as any` detection, and a deterministic 22-rule malformed matrix.
 - [x] (2026-07-24) Closed final-review nested-type/process IO and explicit matrix-row findings; provider baseline state is consistently complete.
+- [x] (2026-07-24) Closed final P2 template-literal type interpolation coverage for explicit `any`.
 
 ## Surprises & Discoveries
 
@@ -823,6 +824,9 @@ Second-review repair update (2026-07-24): Application has no unapproved bare imp
 limited to infrastructure, `api/composition.ts`, scripts, and the two entrypoints; and explicit
 `any` includes assertion form. A table-driven fixture now exercises all 22 stable IDs in sorted
 output.
+
+Template-type repair update (2026-07-24): The explicit-`any` tokenization now preserves only
+interpolation expressions from template literals while masking ordinary string values and comments.
 
 Final-review verification update (2026-07-24): At
 `23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
