@@ -10,7 +10,7 @@ execution: code
 deepened: 2026-07-22
 plan_scope: program
 canonical_repository: BrandonJF/mandem
-execution_authorized: false
+execution_authorized: true
 ---
 
 # Mandem - Plan
@@ -984,8 +984,8 @@ published interface.
 - [x] (2026-07-24) Rewrote and clean-room approved the U1 child ExecPlan.
 - [x] (2026-07-24) Established planning root `a600d340c5306dad64f7405de6bb6b30b0a8f1b7`
   and U1 git-native issue `da645bd`.
-- [ ] Open the metadata-only authority PR, obtain exact operator approval for its head, and merge
-  it unchanged.
+- [x] (2026-07-24) Opened the metadata-only U1 authorization proposal.
+- [ ] Record exact operator approval for this authority-PR head and merge it unchanged.
 - [ ] Authorize and execute U1 only after both approvals are durably recorded.
 - [ ] Promote and complete U2 through U10 in dependency order.
 
