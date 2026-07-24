@@ -677,7 +677,17 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Created and audited an isolated worktree on
   `feat/u1-bootstrap-architecture-contract`; implementation has not started.
 - [x] (2026-07-24) Planning-only initial commit published to `origin/main`.
-- [ ] U1 implementation.
+- [x] (2026-07-24) Milestone 2: installed Bun dependencies, captured the meaningful red proof (`expected [] to deeply equal ArrayContaining` for `ARCH-MODULE-INFRASTRUCTURE`), then made the focused test green.
+- [x] (2026-07-24) Milestones 3-5: implemented the deterministic pure rule kernel, filesystem repository-tree adapter, thin checker script, and self-conforming `architecture-standard` and `runtime` modules.
+- [x] (2026-07-24) Milestone 6: added package/build/lint/type/test gates, bounded compiled entrypoints, source doctrine manifest, consumer contract, and a conservative versioned provider baseline.
+- [x] (2026-07-24) Milestone 7: independently reviewed the implementation, repaired the explicit-`any` self-check false positive and Vitest runtime mismatch, and verified `bun run check`, build, and both executable surfaces on `87004e92c2610b8e61067be10a1abe5c63ea215d`.
+- [x] (2026-07-24) Pushed `feat/u1-bootstrap-architecture-contract` and opened U1 PR #4 without merging it.
+- [x] (2026-07-24) Repaired independent-review P1/P2 findings: robust import-specifier resolution, IO API placement, complete public rule catalog, LF boundaries, package-bin integration contract, Bun preflight, and the full provider capability matrix.
+- [x] (2026-07-24) Verified repaired implementation at `aed575083fb5bec975a78d9291e1dc3cc4504e23`: canonical check, build, entrypoint invocation, and issue fsck all passed.
+- [x] (2026-07-24) Closed second-review findings with bare-application import rejection, exact IO placement, `as any` detection, and a deterministic 22-rule malformed matrix.
+- [x] (2026-07-24) Closed final-review nested-type/process IO and explicit matrix-row findings; provider baseline state is consistently complete.
+- [x] (2026-07-24) Closed final P2 template-literal type interpolation coverage for explicit `any`.
+- [x] (2026-07-24) Ran the required single headless Learn step and added a grounded architecture-gate fixture-matrix learning.
 
 ## Surprises & Discoveries
 
@@ -706,6 +716,14 @@ the Decision Log and re-reviewed.
   check; running `./install.sh` from the pinned checkout installed v1.3.3 successfully.
   Response: Corrected the plan command to enter the temporary checkout for installation and
   recorded the actual installed version before initializing issue `da645bd`.
+
+- Observation: Vitest executes these tests in a Node-compatible worker where the global `Bun` object is unavailable.
+  Evidence: The first integration tests failed with `ReferenceError: Bun is not defined`.
+  Response: Used Node-compatible `child_process` and `fs/promises` only in tests; production filesystem IO remains behind the Bun-oriented infrastructure adapter.
+
+- Observation: The original checker used substring regexes that did not resolve relative imports and counted a trailing LF as an extra physical line.
+  Evidence: New focused regressions initially failed to find a relative cross-module deep import, Node/Bun IO, and 150/200-line boundary files.
+  Response: Replaced the narrow checks with import-specifier collection plus normalized relative/alias resolution and LF-aware line counting.
 
 ## Decision Log
 
@@ -751,11 +769,25 @@ the Decision Log and re-reviewed.
   mistaking either name or standard for an internal invention.
   Date/Author: 2026-07-24 / Brandon and Codex
 
+- Decision: Replace the provisional provider blocker with actual bounded probe evidence.
+  Rationale: Full-access, JSON, read-only, fresh-session, and interruption behaviors were observed in disposable clean Git fixtures and recorded without secrets.
+  Date/Author: 2026-07-24 / Codex
+
 ## Outcomes & Retrospective
 
 Planning outcome: U1 has a dependency-aware, self-contained execution contract, clean-room
 approval, exact head-bound operator approval, a durable git-native issue, and an isolated
 implementation worktree. It is ready for Milestone 2; implementation has not started.
+
+Implementation outcome (in progress): Milestones 2-6 are implemented. The checker uses pure
+typed rules through an application port and filesystem adapter, passes on Mandem, and rejects the
+malformed fixture with exit 1. Both compiled executables emit their bounded version/help results.
+The provider baseline has complete direct evidence for the required U2 protocol capabilities.
+
+Verification outcome (2026-07-24): `bun run check` passed architecture checking, strict TypeScript,
+ESLint, and all four Vitest tests; `bun run build` emitted both Linux executables; each emitted its
+expected version and help output. This was observed at
+`87004e92c2610b8e61067be10a1abe5c63ea215d`. The branch remains unmerged pending its U1 PR.
 
 Revision note (2026-07-24): Rewrote U1 against the complete repository-root `PLANS.md` contract,
 then repaired the clean-room verification findings. Added plain-language orientation, exact
@@ -769,3 +801,39 @@ after reading `PLANS.md`.
 
 Post-merge living update (2026-07-24): Recorded exact approval, unchanged merge, durable issue,
 and isolated-worktree readiness. No implementation instruction changed.
+
+Execution living update (2026-07-24): Recorded Milestones 2-6, the red/green proof, the Vitest
+runtime discovery, the conservative provider decision, and the remaining Milestone 7 work. This
+update keeps the plan restartable from repository state.
+
+Pre-PR living update (2026-07-24): Recorded final local verification, review repairs, and the
+remaining push/PR handoff without changing U1's approved implementation scope.
+
+PR handoff update (2026-07-24): Opened https://github.com/BrandonJF/mandem/pull/4 from the U1
+branch. The branch is intentionally preserved and unmerged for the master landing process.
+
+Review-repair update (2026-07-24): Closed the independent P1/P2 checker, package-contract, Bun
+preflight, provider-matrix, boundary-counting, and rule-catalog findings with proof-first tests.
+The provider baseline now contains every required observed capability rather than a provisional U2
+blocker.
+
+Repair verification update (2026-07-24): At `aed575083fb5bec975a78d9291e1dc3cc4504e23`,
+`bun run check` passed the Bun pin preflight, checker, strict typecheck, lint, and eleven tests;
+the compiled executables returned their bounded version/help results; and `git issue fsck` passed.
+
+Second-review repair update (2026-07-24): Application has no unapproved bare imports; IO is
+limited to infrastructure, `api/composition.ts`, scripts, and the two entrypoints; and explicit
+`any` includes assertion form. A table-driven fixture now exercises all 22 stable IDs in sorted
+output.
+
+Template-type repair update (2026-07-24): The explicit-`any` tokenization now preserves only
+interpolation expressions from template literals while masking ordinary string values and comments.
+At `4d1f181130f73ab9683ff50166b218052a5544ba`, the red template-type regression was green and
+the canonical check, build, entrypoint, and issue-fsck gates passed.
+
+Learn update (2026-07-24): Added `docs/solutions/best-practices/preventing-silent-pass-architecture-gates.md` as the single learning. It records catalog-derived adversarial matrices and lexical blind-spot probes. No additional learning was created; the recurring issue-comment command-substitution mistake did not naturally belong in this architecture-gate learning. Headless discoverability found that root instructions do not surface `docs/solutions/`; the gap is noted but not edited in headless mode. Vocabulary capture scanned and found no qualifying project-specific term; no `CONCEPTS.md` was created.
+
+Final-review verification update (2026-07-24): At
+`23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
+regressions passed, each malformed-matrix row asserted its exact ID/path/message fragment, and
+the provider baseline no longer contained stale blocker state. All canonical gates passed.

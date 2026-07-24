@@ -1,0 +1,47 @@
+version: 1
+local_decision_artifacts:
+  - path: docs/plans/2026-07-21-001-feat-mandem-plan.md
+    sha256: 724934a05ea16493392e34e3f808f02626608ff666d9ba5765e4cce08130e4fd
+  - path: docs/plans/units/u1-bootstrap-repository-architecture-contract.md
+    sha256: d0bb6ce7051599f8cafd7d2d2563b382c8dc06f7625e642e4c0bf0304011a283
+sources:
+  - name: nucleus
+    repository: https://github.com/BrandonJF/nucleus.git
+    revision: 7265e19cb24cf9e86c3facbd91326227dfa05dd1
+    artifacts:
+      - path: docs/development/module-creation-guide.md
+        sha256: a62c344f92bfdb2577ea9e390f8b87374d3c741d4d9ecad9f0f4c22c5171b4a3
+      - path: docs/development/use-case-architecture-guide.md
+        sha256: 7ae2345070060fbc33dd96075e2dd2ba3d65df6edcd2daa590398949886ea55e
+      - path: docs/development/clean-architecture-rules.md
+        sha256: 0499a6146e72bfb0a22f3824fffef426606d85f80096fc0db1dc6f1cd9b2e25b
+      - path: scripts/create-module.test.ts
+        sha256: f5c0f1d899a84db15ba80a42270bb7a70c180ad85d4e51ff136c3be054472726
+      - path: scripts/create-module.ts
+        sha256: ba273ca4624ca085d0514e1bd710b79bbdbb59983725a17718da36cb4cada4c4
+    normalized_artifact: docs/architecture/architecture-standard-v1.md
+    owner: U1
+  - name: strategy-builder-pro
+    repository: https://github.com/BrandonJF/strategy-builder-pro.git
+    revision: 01677c0afcf6171515ec1e788e6bc64ca5310659
+    artifacts: [{ path: CLAUDE.md, sha256: 151ab3260439dc71ac8146544e5dc7e720c5fc8625165347b34a51d7d32f59d4 }, { path: docs/architecture/ADR.md, sha256: 7804fba231cd82569273b96b9dcf5d5b2efe122ca8bcfa6b016710fb431147b8 }]
+    normalized_artifact: docs/architecture/consumer-integration-contract.md
+    owner: U8
+  - name: pier-infra
+    repository: https://github.com/BrandonJF/pier-infra.git
+    revision: 7491afbf775ecad83f0c80c7a41a61950fa3dc07
+    artifacts: [{ path: AGENTS.md, sha256: 2adb47128fb8b4250fa19e44aa7395e9485d72c1a39275dfba6d1e6db74c40d2 }, { path: docs/operations/agentic-execution.md, sha256: 6738857400ae4bc3de633b49ac5c584378983692d601ce05b15cc4405e71cd8e }]
+    normalized_artifact: CLAUDE.md
+    owner: U5
+  - name: axi
+    repository: https://github.com/kunchenguid/axi.git
+    revision: b88620b3e87441bdaa330e9fdd313cde68d7fa77
+    artifacts: [{ path: principles.yaml, sha256: 316ee65e837e3d2d3d42517690c747c5f85dd7a9983804818c212467980ea74d }]
+    normalized_artifact: docs/architecture/mandem-system.md
+    owner: U5
+  - name: toon
+    repository: https://github.com/toon-format/toon.git
+    revision: f5f428e34bf4ea00d61964271a5a5279c20ae226
+    artifacts: [{ path: README.md, sha256: b39a1f699f7e1798ca5c81fc95e90dd6dfdb66456a531c2e9702cd16113d3e56 }, { path: LICENSE, sha256: 2d0d2dd26bee672a2981c6d94ae71506011fdabbc54796a126476556c0b71875 }]
+    normalized_artifact: docs/operations/provider-capability-baseline.md
+    owner: U5
