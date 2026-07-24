@@ -1,4 +1,9 @@
 version: 1
+local_decision_artifacts:
+  - path: docs/plans/2026-07-21-001-feat-mandem-plan.md
+    sha256: 724934a05ea16493392e34e3f808f02626608ff666d9ba5765e4cce08130e4fd
+  - path: docs/plans/units/u1-bootstrap-repository-architecture-contract.md
+    sha256: d0bb6ce7051599f8cafd7d2d2563b382c8dc06f7625e642e4c0bf0304011a283
 sources:
   - name: nucleus
     repository: https://github.com/BrandonJF/nucleus.git
