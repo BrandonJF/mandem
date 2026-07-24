@@ -683,6 +683,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Milestone 7: independently reviewed the implementation, repaired the explicit-`any` self-check false positive and Vitest runtime mismatch, and verified `bun run check`, build, and both executable surfaces on `87004e92c2610b8e61067be10a1abe5c63ea215d`.
 - [x] (2026-07-24) Pushed `feat/u1-bootstrap-architecture-contract` and opened U1 PR #4 without merging it.
 - [x] (2026-07-24) Repaired independent-review P1/P2 findings: robust import-specifier resolution, IO API placement, complete public rule catalog, LF boundaries, package-bin integration contract, Bun preflight, and the full provider capability matrix.
+- [x] (2026-07-24) Verified repaired implementation at `aed575083fb5bec975a78d9291e1dc3cc4504e23`: canonical check, build, entrypoint invocation, and issue fsck all passed.
 
 ## Surprises & Discoveries
 
@@ -815,3 +816,7 @@ Review-repair update (2026-07-24): Closed the independent P1/P2 checker, package
 preflight, provider-matrix, boundary-counting, and rule-catalog findings with proof-first tests.
 The provider baseline now contains every required observed capability rather than a provisional U2
 blocker.
+
+Repair verification update (2026-07-24): At `aed575083fb5bec975a78d9291e1dc3cc4504e23`,
+`bun run check` passed the Bun pin preflight, checker, strict typecheck, lint, and eleven tests;
+the compiled executables returned their bounded version/help results; and `git issue fsck` passed.
