@@ -10,7 +10,8 @@ execution: code
 deepened: 2026-07-22
 plan_scope: program
 canonical_repository: BrandonJF/mandem
-execution_authorized: true
+program_coordination_authorized: true
+execution_authorized: false
 ---
 
 # Mandem - Plan
@@ -24,6 +25,9 @@ This file is the canonical program authority for Mandem. The copy previously mer
 Builder Pro is historical provenance, not a second living plan. This program plan may coordinate
 planning, review, approval, and execution across U1 through U10, but it never authorizes a worker
 to implement a unit directly. Only the complete child ExecPlan for that unit can do so.
+`program_coordination_authorized` permits that sequencing role. The master's
+`execution_authorized` field remains false permanently so no worker can mistake it for child
+implementation authority.
 
 ## Purpose / Big Picture
 
@@ -1029,8 +1033,11 @@ published interface.
 - Decision: Make the Mandem copy of this document the canonical living program ExecPlan and retain the SBP copy only as historical provenance.
   Rationale: A fresh Codex session must be able to enter the Mandem repository, discover the full program, and continue without depending on SBP chat or files.
   Date/Author: 2026-07-24 / Brandon and Codex
-- Decision: Require both program-level and child-level execution authority.
-  Rationale: The program plan must be resumable and capable of coordinating the whole build, while each implementation worker still needs one reviewed, self-contained unit contract.
+- Decision: Separate program coordination authority from child implementation authority.
+  Rationale: The program plan must be resumable and capable of coordinating the whole build, while
+  its generic `execution_authorized` flag remains false so it cannot be mistaken for a worker
+  prompt. `program_coordination_authorized` permits sequencing; each implementation worker still
+  needs one reviewed, self-contained child with `execution_authorized: true`.
   Date/Author: 2026-07-24 / Brandon and Codex
 - Decision: Make the approved child ExecPlan the sole implementation-worker authority.
   Rationale: The master owns program sequencing; duplicating it in each worker context creates
