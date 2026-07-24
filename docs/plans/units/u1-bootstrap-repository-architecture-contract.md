@@ -827,6 +827,8 @@ output.
 
 Template-type repair update (2026-07-24): The explicit-`any` tokenization now preserves only
 interpolation expressions from template literals while masking ordinary string values and comments.
+At `4d1f181130f73ab9683ff50166b218052a5544ba`, the red template-type regression was green and
+the canonical check, build, entrypoint, and issue-fsck gates passed.
 
 Final-review verification update (2026-07-24): At
 `23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
