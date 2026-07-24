@@ -682,6 +682,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Milestone 6: added package/build/lint/type/test gates, bounded compiled entrypoints, source doctrine manifest, consumer contract, and a conservative versioned provider baseline.
 - [x] (2026-07-24) Milestone 7: independently reviewed the implementation, repaired the explicit-`any` self-check false positive and Vitest runtime mismatch, and verified `bun run check`, build, and both executable surfaces on `87004e92c2610b8e61067be10a1abe5c63ea215d`.
 - [x] (2026-07-24) Pushed `feat/u1-bootstrap-architecture-contract` and opened U1 PR #4 without merging it.
+- [x] (2026-07-24) Repaired independent-review P1/P2 findings: robust import-specifier resolution, IO API placement, complete public rule catalog, LF boundaries, package-bin integration contract, Bun preflight, and the full provider capability matrix.
 
 ## Surprises & Discoveries
 
@@ -714,6 +715,10 @@ the Decision Log and re-reviewed.
 - Observation: Vitest executes these tests in a Node-compatible worker where the global `Bun` object is unavailable.
   Evidence: The first integration tests failed with `ReferenceError: Bun is not defined`.
   Response: Used Node-compatible `child_process` and `fs/promises` only in tests; production filesystem IO remains behind the Bun-oriented infrastructure adapter.
+
+- Observation: The original checker used substring regexes that did not resolve relative imports and counted a trailing LF as an extra physical line.
+  Evidence: New focused regressions initially failed to find a relative cross-module deep import, Node/Bun IO, and 150/200-line boundary files.
+  Response: Replaced the narrow checks with import-specifier collection plus normalized relative/alias resolution and LF-aware line counting.
 
 ## Decision Log
 
@@ -763,6 +768,10 @@ the Decision Log and re-reviewed.
   Rationale: The working-directory probe passed for both installed CLIs, but unexecuted full-access, JSON, interruption, review, and fresh-session capabilities cannot be inferred safely.
   Date/Author: 2026-07-24 / Codex
 
+- Decision: Replace the provisional provider blocker with actual bounded probe evidence.
+  Rationale: Full-access, JSON, read-only, fresh-session, and interruption behaviors were observed in disposable clean Git fixtures and recorded without secrets.
+  Date/Author: 2026-07-24 / Codex
+
 ## Outcomes & Retrospective
 
 Planning outcome: U1 has a dependency-aware, self-contained execution contract, clean-room
@@ -801,3 +810,8 @@ remaining push/PR handoff without changing U1's approved implementation scope.
 
 PR handoff update (2026-07-24): Opened https://github.com/BrandonJF/mandem/pull/4 from the U1
 branch. The branch is intentionally preserved and unmerged for the master landing process.
+
+Review-repair update (2026-07-24): Closed the independent P1/P2 checker, package-contract, Bun
+preflight, provider-matrix, boundary-counting, and rule-catalog findings with proof-first tests.
+The provider baseline now contains every required observed capability rather than a provisional U2
+blocker.

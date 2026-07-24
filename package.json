@@ -9,11 +9,12 @@
   "bin": { "mandem": "dist/mandem", "mandem-server": "dist/mandem-server" },
   "scripts": {
     "architecture:check": "bun scripts/check-architecture.ts",
+    "preflight:bun": "bun scripts/preflight-bun.ts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx eslint .",
     "test:run": "bunx vitest run",
     "build": "bun build --compile --outfile dist/mandem src/cli/main.ts && bun build --compile --outfile dist/mandem-server src/server/main.ts",
-    "check": "bun run architecture:check && bun run typecheck && bun run lint && bun run test:run"
+    "check": "bun run preflight:bun && bun run architecture:check && bun run typecheck && bun run lint && bun run test:run"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
