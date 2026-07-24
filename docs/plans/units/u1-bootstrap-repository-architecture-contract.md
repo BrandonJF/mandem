@@ -680,7 +680,8 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Milestone 2: installed Bun dependencies, captured the meaningful red proof (`expected [] to deeply equal ArrayContaining` for `ARCH-MODULE-INFRASTRUCTURE`), then made the focused test green.
 - [x] (2026-07-24) Milestones 3-5: implemented the deterministic pure rule kernel, filesystem repository-tree adapter, thin checker script, and self-conforming `architecture-standard` and `runtime` modules.
 - [x] (2026-07-24) Milestone 6: added package/build/lint/type/test gates, bounded compiled entrypoints, source doctrine manifest, consumer contract, and a conservative versioned provider baseline.
-- [ ] Milestone 7: commit-SHA-bound final verification, independent self-review, issue evidence, push, and U1 PR.
+- [x] (2026-07-24) Milestone 7: independently reviewed the implementation, repaired the explicit-`any` self-check false positive and Vitest runtime mismatch, and verified `bun run check`, build, and both executable surfaces on `87004e92c2610b8e61067be10a1abe5c63ea215d`.
+- [ ] Push the verified branch and open the U1 pull request without merging it.
 
 ## Surprises & Discoveries
 
@@ -773,6 +774,11 @@ typed rules through an application port and filesystem adapter, passes on Mandem
 malformed fixture with exit 1. Both compiled executables emit their bounded version/help results.
 The provider baseline is intentionally a U2-promotion blocker pending the remaining actual probes.
 
+Verification outcome (2026-07-24): `bun run check` passed architecture checking, strict TypeScript,
+ESLint, and all four Vitest tests; `bun run build` emitted both Linux executables; each emitted its
+expected version and help output. This was observed at
+`87004e92c2610b8e61067be10a1abe5c63ea215d`. The branch remains unmerged pending its U1 PR.
+
 Revision note (2026-07-24): Rewrote U1 against the complete repository-root `PLANS.md` contract,
 then repaired the clean-room verification findings. Added plain-language orientation, exact
 commands, observable validation, recovery, artifacts, interfaces, an executable authorization
@@ -789,3 +795,6 @@ and isolated-worktree readiness. No implementation instruction changed.
 Execution living update (2026-07-24): Recorded Milestones 2-6, the red/green proof, the Vitest
 runtime discovery, the conservative provider decision, and the remaining Milestone 7 work. This
 update keeps the plan restartable from repository state.
+
+Pre-PR living update (2026-07-24): Recorded final local verification, review repairs, and the
+remaining push/PR handoff without changing U1's approved implementation scope.
