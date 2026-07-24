@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", "module": "Preserve", "moduleResolution": "bundler", "strict": true,
+    "noUncheckedIndexedAccess": true, "verbatimModuleSyntax": true, "skipLibCheck": true,
+    "baseUrl": ".", "paths": { "@/*": ["src/*"] }, "types": ["bun-types"]
+  },
+  "include": ["src", "scripts", "tests", "vitest.config.ts", "eslint.config.ts"]
+}
