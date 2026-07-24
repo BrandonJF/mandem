@@ -684,6 +684,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Pushed `feat/u1-bootstrap-architecture-contract` and opened U1 PR #4 without merging it.
 - [x] (2026-07-24) Repaired independent-review P1/P2 findings: robust import-specifier resolution, IO API placement, complete public rule catalog, LF boundaries, package-bin integration contract, Bun preflight, and the full provider capability matrix.
 - [x] (2026-07-24) Verified repaired implementation at `aed575083fb5bec975a78d9291e1dc3cc4504e23`: canonical check, build, entrypoint invocation, and issue fsck all passed.
+- [x] (2026-07-24) Closed second-review findings with bare-application import rejection, exact IO placement, `as any` detection, and a deterministic 22-rule malformed matrix.
 
 ## Surprises & Discoveries
 
@@ -820,3 +821,8 @@ blocker.
 Repair verification update (2026-07-24): At `aed575083fb5bec975a78d9291e1dc3cc4504e23`,
 `bun run check` passed the Bun pin preflight, checker, strict typecheck, lint, and eleven tests;
 the compiled executables returned their bounded version/help results; and `git issue fsck` passed.
+
+Second-review repair update (2026-07-24): Application has no unapproved bare imports; IO is
+limited to infrastructure, `api/composition.ts`, scripts, and the two entrypoints; and explicit
+`any` includes assertion form. A table-driven fixture now exercises all 22 stable IDs in sorted
+output.

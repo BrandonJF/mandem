@@ -10,7 +10,7 @@ const requiredDirectories = [["domain", "ARCH-MODULE-DOMAIN"], ["application", "
 const requiredFiles = [["README.md", "ARCH-MODULE-README"], ["index.ts", "ARCH-MODULE-ROOT-BARREL"], ["domain/types.ts", "ARCH-DOMAIN-TYPES"], ["api/composition.ts", "ARCH-API-COMPOSITION"]] as const;
 const importExpression = /(?:import|export)\s+(?:type\s+)?(?:[^"']*?\s+from\s+)?["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g;
 const ioPackages = new Set(["fs", "fs/promises", "child_process", "net", "http", "https", "tls", "dgram", "sqlite", "prisma", "axios"]);
-const explicitAnyPattern = new RegExp(":\\s*" + "any\\b|<" + "any>");
+const explicitAnyPattern = new RegExp(":\\s*" + "any\\b|<" + "any>|\\bas\\s+" + "any\\b");
 
 function violation(ruleId: string, path: string, message = ruleDescriptions[ruleId as keyof typeof ruleDescriptions] ?? "architecture violation"): RuleViolation { return { ruleId, severity: "error", path, message }; }
 function moduleNames(files: readonly RepositoryFile[]): string[] { return [...new Set(files.map(({ path }) => path.match(/^src\/modules\/([^/]+)/)?.[1]).filter((name): name is string => name !== undefined))]; }
@@ -39,13 +39,15 @@ export function evaluateArchitecture(files: readonly RepositoryFile[]): Analysis
     for (const specifier of imports) {
       const resolved = resolveSpecifier(file.path, specifier); const targetLayer = resolved?.match(/^src\/modules\/[^/]+\/(domain|application|infrastructure|api)(?:\/|$)/)?.[1];
       if (layer === "domain" && targetLayer && targetLayer !== "domain") violations.push(violation("ARCH-DOMAIN-DEPENDENCY", file.path));
-      if (layer === "application" && targetLayer && targetLayer !== "domain" && targetLayer !== "application") violations.push(violation("ARCH-APPLICATION-DEPENDENCY", file.path));
+      if (layer === "application" && ((!resolved && !specifier.startsWith("@/")) || (targetLayer !== undefined && targetLayer !== "domain" && targetLayer !== "application"))) violations.push(violation("ARCH-APPLICATION-DEPENDENCY", file.path));
       const targetModule = resolved?.match(/^src\/modules\/([^/]+)/)?.[1];
       if (moduleRoot && targetModule && targetModule !== moduleRoot.slice("src/modules/".length) && resolved !== `src/modules/${targetModule}`) violations.push(violation("ARCH-CROSS-MODULE-DEEP-IMPORT", file.path));
       const packageName = specifier.replace(/^node:/, "");
-      if (layer && layer !== "infrastructure" && layer !== "api" && (ioPackages.has(packageName) || packageName.startsWith("fs/") || packageName === "fetch")) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
+      const ioAllowed = layer === "infrastructure" || file.path.endsWith("/api/composition.ts") || file.path === "src/cli/main.ts" || file.path === "src/server/main.ts";
+      if (!ioAllowed && (ioPackages.has(packageName) || packageName.startsWith("fs/") || packageName === "fetch")) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
     }
-    if (layer && layer !== "infrastructure" && layer !== "api" && /\b(?:Bun\.(?:file|write|spawn|serve)|process\.(?:cwd|exit|env)|fetch\s*\()/.test(file.text)) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
+    const directIoAllowed = layer === "infrastructure" || file.path.endsWith("/api/composition.ts") || file.path === "src/cli/main.ts" || file.path === "src/server/main.ts";
+    if (!directIoAllowed && /\b(?:Bun\.(?:file|write|spawn|serve)|process\.(?:cwd|exit|env)|fetch\s*\()/.test(file.text)) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
     const lines = physicalLines(file.text); const isBarrel = /\/index\.tsx?$/.test(file.path);
     if (!isBarrel && /\.tsx$/.test(file.path) && lines > 150) violations.push(violation("ARCH-COMPONENT-SIZE", file.path));
     if (!isBarrel && /(?:use|hook)[^/]*\.ts$/i.test(file.path) && lines > 200) violations.push(violation("ARCH-HOOK-SIZE", file.path));

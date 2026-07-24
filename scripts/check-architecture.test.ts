@@ -80,4 +80,43 @@ describe("architecture analyzer", () => {
     ]));
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-APPLICATION-DEPENDENCY", "ARCH-CROSS-MODULE-DEEP-IMPORT", "ARCH-NO-EXPLICIT-ANY", "ARCH-COMPONENT-STATE"]));
   });
+
+  it("rejects bare application imports, `as any`, and IO outside exact composition roots", () => {
+    const result = analyzeRepositoryFiles([
+      ...completeModule("runtime", [
+        { path: "src/modules/runtime/application/zod.ts", text: `${overview}import { z } from "zod";\nexport { z };` },
+        { path: "src/modules/runtime/domain/cast.ts", text: `${overview}const value = unknownValue as any;\nexport { value };` },
+        { path: "src/modules/runtime/api/report.ts", text: `${overview}const value = Bun.file("x");\nexport { value };` }
+      ]),
+      { path: "src/worker.ts", text: `${overview}const value = Bun.file("x");\nexport { value };` }
+    ]);
+    expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-APPLICATION-DEPENDENCY", "ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
+    expect(result.violations.filter(({ ruleId }) => ruleId === "ARCH-IO-PLACEMENT").map(({ path }) => path)).toEqual(expect.arrayContaining(["src/modules/runtime/api/report.ts", "src/worker.ts"]));
+  });
+
+  it("has a table-driven malformed fixture matrix for every stable rule", () => {
+    const huge = (count: number) => Array.from({ length: count }, (_, index) => index === 0 ? overview.trim() : "// line").join("\n");
+    const files = [
+      { path: "src/modules/Bad_Name/index.ts", text: `${overview}export * from "./infrastructure/index";` },
+      { path: "src/modules/no-barrel/README.md", text: "fixture" },
+      ...completeModule("broken", [
+        { path: "src/modules/broken/domain/entity.ts", text: `${overview}import { x } from "../api/composition";\nexport interface BrokenEntity { value: string; }` },
+        { path: "src/modules/broken/domain/io.ts", text: `${overview}const value = Bun.file("x") as any;\nexport { value };` },
+        { path: "src/modules/broken/application/zod.ts", text: `${overview}import { z } from "zod";\nexport { z };` },
+        { path: "src/modules/broken/application/deep.ts", text: `${overview}import { x } from "@/modules/other/domain/types";\nexport { x };` },
+        { path: "src/modules/broken/api/Widget.tsx", text: `${huge(151)}\nuseState(1);useState(2);useState(3);useState(4);useState(5);` },
+        { path: "src/modules/broken/application/useThing.ts", text: huge(201) }
+      ]),
+      { path: "src/worker.ts", text: "const value = Bun.file(\"x\");" }
+    ];
+    const result = analyzeRepositoryFiles(files);
+    const expected = architectureRules.map(({ id }) => id);
+    for (const id of expected) {
+      const finding = result.violations.find((violation) => violation.ruleId === id);
+      expect(finding, id).toBeDefined();
+      expect(finding?.path.startsWith("src/")).toBe(true);
+      expect(finding?.message.length).toBeGreaterThan(0);
+    }
+    expect(result.violations).toEqual([...result.violations].sort((left, right) => left.ruleId.localeCompare(right.ruleId) || left.path.localeCompare(right.path) || left.message.localeCompare(right.message)));
+  });
 });
