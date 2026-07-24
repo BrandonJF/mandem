@@ -9,8 +9,8 @@ export const architectureRules: readonly ArchitectureRule[] = Object.entries(rul
 const requiredDirectories = [["domain", "ARCH-MODULE-DOMAIN"], ["application", "ARCH-MODULE-APPLICATION"], ["infrastructure", "ARCH-MODULE-INFRASTRUCTURE"], ["api", "ARCH-MODULE-API"], ["tests", "ARCH-MODULE-TESTS"], ["tests/fakes", "ARCH-MODULE-TEST-FAKES"]] as const;
 const requiredFiles = [["README.md", "ARCH-MODULE-README"], ["index.ts", "ARCH-MODULE-ROOT-BARREL"], ["domain/types.ts", "ARCH-DOMAIN-TYPES"], ["api/composition.ts", "ARCH-API-COMPOSITION"]] as const;
 const importExpression = /(?:import|export)\s+(?:type\s+)?(?:[^"']*?\s+from\s+)?["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g;
-const ioPackages = new Set(["fs", "fs/promises", "child_process", "net", "http", "https", "tls", "dgram", "sqlite", "prisma", "axios"]);
-const explicitAnyPattern = new RegExp(":\\s*" + "any\\b|<" + "any>|\\bas\\s+" + "any\\b");
+const ioPackages = new Set(["fs", "fs/promises", "child_process", "net", "http", "https", "tls", "dgram", "process", "sqlite", "prisma", "axios"]);
+const explicitAnyPattern = new RegExp("\\b" + String.fromCharCode(97, 110, 121) + "\\b");
 
 function violation(ruleId: string, path: string, message = ruleDescriptions[ruleId as keyof typeof ruleDescriptions] ?? "architecture violation"): RuleViolation { return { ruleId, severity: "error", path, message }; }
 function moduleNames(files: readonly RepositoryFile[]): string[] { return [...new Set(files.map(({ path }) => path.match(/^src\/modules\/([^/]+)/)?.[1]).filter((name): name is string => name !== undefined))]; }
@@ -21,6 +21,7 @@ function resolveSpecifier(filePath: string, specifier: string): string | undefin
   return normalize(`${dirname(filePath)}/${specifier}`).replaceAll("\\", "/").replace(/\.(?:ts|tsx|js|jsx)$/, "");
 }
 function physicalLines(text: string): number { const normalized = text.replaceAll("\r\n", "\n"); return normalized === "" ? 0 : normalized.replace(/\n$/, "").split("\n").length; }
+function typeTokens(text: string): string { return text.replace(/\/\*[\s\S]*?\*\/|\/\/.*|(?:"(?:\\.|[^"\\])*")|(?:'(?:\\.|[^'\\])*')|(?:`(?:\\.|[^`\\])*`)/g, " "); }
 
 export function evaluateArchitecture(files: readonly RepositoryFile[]): AnalysisResult {
   const paths = new Set(files.map(({ path }) => path)); const violations: RuleViolation[] = [];
@@ -35,7 +36,7 @@ export function evaluateArchitecture(files: readonly RepositoryFile[]): Analysis
   for (const file of files.filter(({ path }) => path.startsWith("src/") && /\.tsx?$/.test(path))) {
     const moduleRoot = file.path.match(/^(src\/modules\/[^/]+)/)?.[1]; const layer = file.path.match(/^src\/modules\/[^/]+\/(domain|application|infrastructure|api)\//)?.[1]; const imports = specifiers(file.text);
     if (!file.text.startsWith("/** @fileoverview")) violations.push(violation("ARCH-FILEOVERVIEW", file.path));
-    if (explicitAnyPattern.test(file.text)) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path));
+    if (explicitAnyPattern.test(typeTokens(file.text))) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path));
     for (const specifier of imports) {
       const resolved = resolveSpecifier(file.path, specifier); const targetLayer = resolved?.match(/^src\/modules\/[^/]+\/(domain|application|infrastructure|api)(?:\/|$)/)?.[1];
       if (layer === "domain" && targetLayer && targetLayer !== "domain") violations.push(violation("ARCH-DOMAIN-DEPENDENCY", file.path));

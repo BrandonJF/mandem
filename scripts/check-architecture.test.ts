@@ -85,13 +85,18 @@ describe("architecture analyzer", () => {
     const result = analyzeRepositoryFiles([
       ...completeModule("runtime", [
         { path: "src/modules/runtime/application/zod.ts", text: `${overview}import { z } from "zod";\nexport { z };` },
-        { path: "src/modules/runtime/domain/cast.ts", text: `${overview}const value = unknownValue as any;\nexport { value };` },
+        { path: "src/modules/runtime/domain/cast.ts", text: `${overview}import { env } from "node:process";\nconst value = unknownValue as any;\ntype Values = Array<any[]>;\nexport { value, env };` },
         { path: "src/modules/runtime/api/report.ts", text: `${overview}const value = Bun.file("x");\nexport { value };` }
       ]),
       { path: "src/worker.ts", text: `${overview}const value = Bun.file("x");\nexport { value };` }
     ]);
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-APPLICATION-DEPENDENCY", "ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
     expect(result.violations.filter(({ ruleId }) => ruleId === "ARCH-IO-PLACEMENT").map(({ path }) => path)).toEqual(expect.arrayContaining(["src/modules/runtime/api/report.ts", "src/worker.ts"]));
+  });
+
+  it("detects nested any types and process imports independently", () => {
+    const result = analyzeRepositoryFiles(completeModule("runtime", [{ path: "src/modules/runtime/domain/nested.ts", text: `${overview}import { env } from "node:process";\ntype Values = Array<any[]>;\nexport { env };` }]));
+    expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
   });
 
   it("has a table-driven malformed fixture matrix for every stable rule", () => {
@@ -110,12 +115,15 @@ describe("architecture analyzer", () => {
       { path: "src/worker.ts", text: "const value = Bun.file(\"x\");" }
     ];
     const result = analyzeRepositoryFiles(files);
-    const expected = architectureRules.map(({ id }) => id);
-    for (const id of expected) {
-      const finding = result.violations.find((violation) => violation.ruleId === id);
-      expect(finding, id).toBeDefined();
-      expect(finding?.path.startsWith("src/")).toBe(true);
-      expect(finding?.message.length).toBeGreaterThan(0);
+    const rows = [
+      ["ARCH-MODULE-NAME", "src/modules/Bad_Name", "lowercase kebab-case"], ["ARCH-MODULE-DOMAIN", "src/modules/Bad_Name", "contain domain"], ["ARCH-MODULE-APPLICATION", "src/modules/Bad_Name", "contain application"], ["ARCH-MODULE-INFRASTRUCTURE", "src/modules/Bad_Name", "contain infrastructure"], ["ARCH-MODULE-API", "src/modules/Bad_Name", "contain api"], ["ARCH-MODULE-README", "src/modules/Bad_Name", "README.md"], ["ARCH-MODULE-ROOT-BARREL", "src/modules/no-barrel", "index.ts"], ["ARCH-DOMAIN-TYPES", "src/modules/Bad_Name", "domain/types.ts"], ["ARCH-API-COMPOSITION", "src/modules/Bad_Name", "api/composition.ts"], ["ARCH-MODULE-TESTS", "src/modules/Bad_Name", "contain tests"], ["ARCH-MODULE-TEST-FAKES", "src/modules/Bad_Name", "tests/fakes"],
+      ["ARCH-DOMAIN-DEPENDENCY", "src/modules/broken/domain/entity.ts", "outer layer"], ["ARCH-APPLICATION-DEPENDENCY", "src/modules/broken/application/zod.ts", "only domain or application"], ["ARCH-CROSS-MODULE-DEEP-IMPORT", "src/modules/broken/application/deep.ts", "module barrels"], ["ARCH-INFRASTRUCTURE-ROOT-EXPORT", "src/modules/Bad_Name/index.ts", "do not export infrastructure"], ["ARCH-IO-PLACEMENT", "src/modules/broken/domain/io.ts", "limited to infrastructure"], ["ARCH-FILEOVERVIEW", "src/worker.ts", "@fileoverview"], ["ARCH-NO-EXPLICIT-ANY", "src/modules/broken/domain/io.ts", "explicit any"], ["ARCH-DOMAIN-ENTITY-PLACEMENT", "src/modules/broken/domain/entity.ts", "types.ts"], ["ARCH-COMPONENT-SIZE", "src/modules/broken/api/Widget.tsx", "150"], ["ARCH-HOOK-SIZE", "src/modules/broken/application/useThing.ts", "200"], ["ARCH-COMPONENT-STATE", "src/modules/broken/api/Widget.tsx", "fewer than five"]
+    ] as const;
+    expect(rows).toHaveLength(architectureRules.length);
+    for (const [ruleId, path, messageFragment] of rows) {
+      const finding = result.violations.find((violation) => violation.ruleId === ruleId && violation.path === path);
+      expect(finding, `${ruleId} ${path}`).toBeDefined();
+      expect(finding?.message).toContain(messageFragment);
     }
     expect(result.violations).toEqual([...result.violations].sort((left, right) => left.ruleId.localeCompare(right.ruleId) || left.path.localeCompare(right.path) || left.message.localeCompare(right.message)));
   });

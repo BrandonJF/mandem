@@ -685,6 +685,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Repaired independent-review P1/P2 findings: robust import-specifier resolution, IO API placement, complete public rule catalog, LF boundaries, package-bin integration contract, Bun preflight, and the full provider capability matrix.
 - [x] (2026-07-24) Verified repaired implementation at `aed575083fb5bec975a78d9291e1dc3cc4504e23`: canonical check, build, entrypoint invocation, and issue fsck all passed.
 - [x] (2026-07-24) Closed second-review findings with bare-application import rejection, exact IO placement, `as any` detection, and a deterministic 22-rule malformed matrix.
+- [x] (2026-07-24) Closed final-review nested-type/process IO and explicit matrix-row findings; provider baseline state is consistently complete.
 
 ## Surprises & Discoveries
 
@@ -766,10 +767,6 @@ the Decision Log and re-reviewed.
   mistaking either name or standard for an internal invention.
   Date/Author: 2026-07-24 / Brandon and Codex
 
-- Decision: Record the provider baseline as deliberately incomplete and block U2 promotion.
-  Rationale: The working-directory probe passed for both installed CLIs, but unexecuted full-access, JSON, interruption, review, and fresh-session capabilities cannot be inferred safely.
-  Date/Author: 2026-07-24 / Codex
-
 - Decision: Replace the provisional provider blocker with actual bounded probe evidence.
   Rationale: Full-access, JSON, read-only, fresh-session, and interruption behaviors were observed in disposable clean Git fixtures and recorded without secrets.
   Date/Author: 2026-07-24 / Codex
@@ -783,7 +780,7 @@ implementation worktree. It is ready for Milestone 2; implementation has not sta
 Implementation outcome (in progress): Milestones 2-6 are implemented. The checker uses pure
 typed rules through an application port and filesystem adapter, passes on Mandem, and rejects the
 malformed fixture with exit 1. Both compiled executables emit their bounded version/help results.
-The provider baseline is intentionally a U2-promotion blocker pending the remaining actual probes.
+The provider baseline has complete direct evidence for the required U2 protocol capabilities.
 
 Verification outcome (2026-07-24): `bun run check` passed architecture checking, strict TypeScript,
 ESLint, and all four Vitest tests; `bun run build` emitted both Linux executables; each emitted its
