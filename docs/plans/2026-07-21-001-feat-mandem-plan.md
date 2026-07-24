@@ -992,7 +992,12 @@ published interface.
   `b3aa645fa0b4995d01ddb23639d54706e6ea467f`, merged it unchanged as
   `2e9ad31d4a83c366ee36a3e3247ad4fcb559c573`, and created the isolated U1 worktree.
 - [x] (2026-07-24) Authorized U1 only after both approvals were durably recorded.
-- [ ] Execute and complete U1 from its approved child plan and isolated worktree.
+- [x] (2026-07-24) Completed U1 through TDD implementation, repeated independent review and
+  repair, Learn, PR #4 merge, and post-merge verification at
+  `88b9533ab840c9d357a1d09d2341709e2cbdd986`.
+- [x] (2026-07-24) Revalidated U2's scaffold against U1's merged package, architecture checker,
+  public module surfaces, repository gates, provider capability baseline, and durable evidence.
+  U2 remains unauthorized pending its own complete plan, clean-room review, and exact approval.
 - [ ] Promote and complete U2 through U10 in dependency order.
 
 ## Surprises & Discoveries
@@ -1063,8 +1068,9 @@ published interface.
 
 Current planning outcome: Mandem has a dependency-ordered program ExecPlan in its own repository,
 plus child-plan boundaries for U1 through U10. The program is restartable from durable artifacts
-and no longer depends on the SBP orchestrator conversation. U1 is authorized and isolated for
-implementation; U2-U10 remain unauthorized until their own reviewed child plans are approved.
+and no longer depends on the SBP orchestrator conversation. U1 is complete at merge
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`; U2's dependency inputs have been revalidated against
+that merge, while U2-U10 remain unauthorized until their own reviewed child plans are approved.
 
 ## Deferred / Open Questions
 
@@ -1086,3 +1092,8 @@ technical design were preserved.
 
 Post-merge living update (2026-07-24): Recorded the exact approved authority head, merge SHA, and
 fresh U1 worktree readiness. No product requirement or implementation instruction changed.
+
+U1 completion update (2026-07-24): Recorded PR #4 merge
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`, successful post-merge verification, durable Learn,
+closed git-native issue `da645bd`, and U2 dependency revalidation. U2 remains a non-executable
+scaffold.

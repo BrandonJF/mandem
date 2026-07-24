@@ -81,3 +81,43 @@ Before this scaffold becomes `planned`, replace its planning gaps with a nearly 
 ## Dependency Revalidation
 
 When any dependency completes or changes an artifact consumed here, compare the actual output with this plan's assumptions. Any material mismatch returns the child to `planned` and requires review refresh before execution.
+
+U1 dependency revalidation completed on 2026-07-24 against merge
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The repository now provides Bun `1.3.14`, the
+canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the
+versioned 22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a
+completed Claude/Codex capability baseline. U2 must extend the existing `runtime` module, preserve
+those public barrels, keep SQLite behind infrastructure ports, and avoid weakening any U1 rule or
+gate. No material mismatch invalidated the scaffold, but it is not self-contained enough for
+implementation.
+
+## Progress
+
+- [x] (2026-07-24) Revalidated consumed inputs against merged U1 commit
+  `88b9533ab840c9d357a1d09d2341709e2cbdd986`.
+- [ ] Expand this scaffold into a self-contained U2 ExecPlan governed by `PLANS.md`.
+- [ ] Run clean-room review and repair at the exact planned revision.
+- [ ] Obtain exact-revision operator approval before authorization.
+
+## Surprises & Discoveries
+
+- Observation: U1 completed the provider capability matrix rather than leaving it as a U2
+  promotion blocker.
+  Evidence: `docs/operations/provider-capability-baseline.md` records working-directory,
+  full-access, structured completion, interruption, read-only review, and fresh-session recovery.
+
+## Decision Log
+
+- Decision: Extend U1's existing `runtime` module and public barrels in U2.
+  Rationale: U1's merged package and architecture contract are dependency ground truth; a parallel
+  lifecycle root would fragment the public surface and violate the handoff.
+  Date/Author: 2026-07-24 / Mandem program orchestrator
+
+## Outcomes & Retrospective
+
+Dependency revalidation found no incompatible U1 output. U2 is dependency-ready for detailed
+planning, but remains `promotion: scaffolded` and `execution_authorized: false`.
+
+Revision note (2026-07-24): Revalidated U2 against U1's actual merged artifacts and recorded the
+concrete interfaces, gates, provider evidence, and module-extension constraint. This update does
+not authorize U2 implementation.
