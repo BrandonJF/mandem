@@ -982,7 +982,10 @@ published interface.
 - [x] (2026-07-24) Final independent verification of the program ExecPlan and registry returned no
   unresolved P0-P2 findings.
 - [x] (2026-07-24) Rewrote and clean-room approved the U1 child ExecPlan.
-- [ ] Obtain exact operator approval for the U1 authority-PR head.
+- [x] (2026-07-24) Established planning root `a600d340c5306dad64f7405de6bb6b30b0a8f1b7`
+  and U1 git-native issue `da645bd`.
+- [ ] Open the metadata-only authority PR, obtain exact operator approval for its head, and merge
+  it unchanged.
 - [ ] Authorize and execute U1 only after both approvals are durably recorded.
 - [ ] Promote and complete U2 through U10 in dependency order.
 

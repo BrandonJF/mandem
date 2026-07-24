@@ -349,7 +349,7 @@ stop before implementation.
     u1_gni_dir=$(mktemp -d)
     git clone --branch v1.3.3 --depth 1 \
       https://github.com/remenoscodes/git-native-issue.git "$u1_gni_dir"
-    "$u1_gni_dir/install.sh" "$HOME/.local"
+    (cd "$u1_gni_dir" && ./install.sh "$HOME/.local")
     export PATH="$HOME/.local/bin:$PATH"
     git issue version
 
@@ -668,8 +668,10 @@ the Decision Log and re-reviewed.
   transition, meaningful TDD red seam, complete rule catalog, reproducible doctrine acquisition,
   provider probe matrix, checker exit contract, Bun pin, and U8 consumer handoff.
 - [x] (2026-07-24) Final independent clean-room verification returned no unresolved P0-P2 findings.
-- [ ] Exact operator approval and authority-only PR.
-- [ ] Planning-only initial commit.
+- [x] (2026-07-24) Published planning root
+  `a600d340c5306dad64f7405de6bb6b30b0a8f1b7` and initialized U1 issue `da645bd`.
+- [ ] Metadata-only authority PR, exact operator approval, and unchanged merge.
+- [x] (2026-07-24) Planning-only initial commit published to `origin/main`.
 - [ ] U1 implementation.
 
 ## Surprises & Discoveries
@@ -692,6 +694,13 @@ the Decision Log and re-reviewed.
   arrive until U4.
   Response: Moved all Docker/runtime behavior to U3 and made U1 use the pinned external
   `git-native-issue` executable before its first implementation commit.
+
+- Observation: The pinned `git-native-issue` installer requires its source directory as the
+  current working directory.
+  Evidence: Running the absolute `install.sh` path from Mandem fails its `bin/git-issue` source
+  check; running `./install.sh` from the pinned checkout installed v1.3.3 successfully.
+  Response: Corrected the plan command to enter the temporary checkout for installation and
+  recorded the actual installed version before initializing issue `da645bd`.
 
 ## Decision Log
 
@@ -747,5 +756,6 @@ commands, observable validation, recovery, artifacts, interfaces, an executable 
 transition, a meaningful test-first seam, the normative architecture rule catalog, reproducible
 source acquisition, provider capability probes, and the U8 consumer handoff. Pinned Nucleus,
 AXI, TOON, and git-native-issue provenance, made the external issue ledger a pre-implementation
-requirement, and moved Docker/runtime ownership to U3. This revision replaces the earlier draft
-that had not been authored after reading `PLANS.md`.
+requirement, corrected its installer working directory from observed v1.3.3 behavior, and moved
+Docker/runtime ownership to U3. This revision replaces the earlier draft that had not been authored
+after reading `PLANS.md`.
