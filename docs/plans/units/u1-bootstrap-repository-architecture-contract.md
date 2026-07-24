@@ -681,7 +681,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Milestones 3-5: implemented the deterministic pure rule kernel, filesystem repository-tree adapter, thin checker script, and self-conforming `architecture-standard` and `runtime` modules.
 - [x] (2026-07-24) Milestone 6: added package/build/lint/type/test gates, bounded compiled entrypoints, source doctrine manifest, consumer contract, and a conservative versioned provider baseline.
 - [x] (2026-07-24) Milestone 7: independently reviewed the implementation, repaired the explicit-`any` self-check false positive and Vitest runtime mismatch, and verified `bun run check`, build, and both executable surfaces on `87004e92c2610b8e61067be10a1abe5c63ea215d`.
-- [ ] Push the verified branch and open the U1 pull request without merging it.
+- [x] (2026-07-24) Pushed `feat/u1-bootstrap-architecture-contract` and opened U1 PR #4 without merging it.
 
 ## Surprises & Discoveries
 
@@ -798,3 +798,6 @@ update keeps the plan restartable from repository state.
 
 Pre-PR living update (2026-07-24): Recorded final local verification, review repairs, and the
 remaining push/PR handoff without changing U1's approved implementation scope.
+
+PR handoff update (2026-07-24): Opened https://github.com/BrandonJF/mandem/pull/4 from the U1
+branch. The branch is intentionally preserved and unmerged for the master landing process.
