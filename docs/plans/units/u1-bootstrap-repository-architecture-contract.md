@@ -823,3 +823,8 @@ Second-review repair update (2026-07-24): Application has no unapproved bare imp
 limited to infrastructure, `api/composition.ts`, scripts, and the two entrypoints; and explicit
 `any` includes assertion form. A table-driven fixture now exercises all 22 stable IDs in sorted
 output.
+
+Final-review verification update (2026-07-24): At
+`23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
+regressions passed, each malformed-matrix row asserted its exact ID/path/message fragment, and
+the provider baseline no longer contained stale blocker state. All canonical gates passed.
