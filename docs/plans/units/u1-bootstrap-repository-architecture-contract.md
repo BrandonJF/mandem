@@ -3,8 +3,8 @@ title: "U1: Bootstrap the standalone repository and architecture contract"
 plan_kind: mandem-child-execplan
 program_unit: U1
 parent: ../2026-07-21-001-feat-mandem-plan.md
-promotion: clean-room-approved
-execution_authorized: false
+promotion: executable
+execution_authorized: true
 date: 2026-07-24
 ---
 
@@ -670,7 +670,8 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Final independent clean-room verification returned no unresolved P0-P2 findings.
 - [x] (2026-07-24) Published planning root
   `a600d340c5306dad64f7405de6bb6b30b0a8f1b7` and initialized U1 issue `da645bd`.
-- [ ] Metadata-only authority PR, exact operator approval, and unchanged merge.
+- [x] (2026-07-24) Prepared the metadata-only authority proposal.
+- [ ] Record exact operator approval and merge this authority head unchanged.
 - [x] (2026-07-24) Planning-only initial commit published to `origin/main`.
 - [ ] U1 implementation.
 
