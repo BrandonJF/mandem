@@ -687,6 +687,7 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Closed second-review findings with bare-application import rejection, exact IO placement, `as any` detection, and a deterministic 22-rule malformed matrix.
 - [x] (2026-07-24) Closed final-review nested-type/process IO and explicit matrix-row findings; provider baseline state is consistently complete.
 - [x] (2026-07-24) Closed final P2 template-literal type interpolation coverage for explicit `any`.
+- [x] (2026-07-24) Ran the required single headless Learn step and added a grounded architecture-gate fixture-matrix learning.
 
 ## Surprises & Discoveries
 
@@ -829,6 +830,8 @@ Template-type repair update (2026-07-24): The explicit-`any` tokenization now pr
 interpolation expressions from template literals while masking ordinary string values and comments.
 At `4d1f181130f73ab9683ff50166b218052a5544ba`, the red template-type regression was green and
 the canonical check, build, entrypoint, and issue-fsck gates passed.
+
+Learn update (2026-07-24): Added `docs/solutions/best-practices/preventing-silent-pass-architecture-gates.md` as the single learning. It records catalog-derived adversarial matrices and lexical blind-spot probes. No additional learning was created; the recurring issue-comment command-substitution mistake did not naturally belong in this architecture-gate learning. Headless discoverability found that root instructions do not surface `docs/solutions/`; the gap is noted but not edited in headless mode. Vocabulary capture scanned and found no qualifying project-specific term; no `CONCEPTS.md` was created.
 
 Final-review verification update (2026-07-24): At
 `23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
