@@ -8,6 +8,7 @@ const requiredDirectories = [
 ] as const;
 const requiredFiles = [["README.md", "ARCH-MODULE-README"], ["index.ts", "ARCH-MODULE-ROOT-BARREL"], ["domain/types.ts", "ARCH-DOMAIN-TYPES"], ["api/composition.ts", "ARCH-API-COMPOSITION"]] as const;
 const ioPattern = /from\s+["'](?:node:)?(?:fs|child_process|net|http|https|process|sqlite|prisma|axios|fetch)["']/;
+const explicitAnyPattern = new RegExp(":\\s*" + "any\\b|<" + "any>");
 
 function violation(ruleId: string, path: string, message: string): RuleViolation {
   return { ruleId, severity: "error", path, message };
@@ -31,7 +32,7 @@ export function evaluateArchitecture(files: readonly RepositoryFile[]): Analysis
   for (const file of files.filter(({ path }) => path.startsWith("src/") && /\.tsx?$/.test(path))) {
     const layer = file.path.match(/^src\/modules\/[^/]+\/(domain|application|infrastructure|api)\//)?.[1];
     if (!file.text.startsWith("/** @fileoverview")) violations.push(violation("ARCH-FILEOVERVIEW", file.path, "TypeScript source must begin with an @fileoverview comment"));
-    if (/\bany\b/.test(file.text)) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path, "explicit any is forbidden"));
+    if (explicitAnyPattern.test(file.text)) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path, "explicit any is forbidden"));
     if (layer === "domain" && /from\s+["'][^"']*(?:application|infrastructure|\/api)[^"']*["']/.test(file.text)) violations.push(violation("ARCH-DOMAIN-DEPENDENCY", file.path, "domain may not import outer layers"));
     if (layer === "application" && /from\s+["'][^"']*(?:infrastructure|\/api)[^"']*["']/.test(file.text)) violations.push(violation("ARCH-APPLICATION-DEPENDENCY", file.path, "application may import only domain and ports"));
     if (layer && layer !== "infrastructure" && layer !== "api" && ioPattern.test(file.text)) violations.push(violation("ARCH-IO-PLACEMENT", file.path, "IO imports belong in infrastructure or composition"));

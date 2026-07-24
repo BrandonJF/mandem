@@ -677,7 +677,10 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Created and audited an isolated worktree on
   `feat/u1-bootstrap-architecture-contract`; implementation has not started.
 - [x] (2026-07-24) Planning-only initial commit published to `origin/main`.
-- [ ] U1 implementation.
+- [x] (2026-07-24) Milestone 2: installed Bun dependencies, captured the meaningful red proof (`expected [] to deeply equal ArrayContaining` for `ARCH-MODULE-INFRASTRUCTURE`), then made the focused test green.
+- [x] (2026-07-24) Milestones 3-5: implemented the deterministic pure rule kernel, filesystem repository-tree adapter, thin checker script, and self-conforming `architecture-standard` and `runtime` modules.
+- [x] (2026-07-24) Milestone 6: added package/build/lint/type/test gates, bounded compiled entrypoints, source doctrine manifest, consumer contract, and a conservative versioned provider baseline.
+- [ ] Milestone 7: commit-SHA-bound final verification, independent self-review, issue evidence, push, and U1 PR.
 
 ## Surprises & Discoveries
 
@@ -706,6 +709,10 @@ the Decision Log and re-reviewed.
   check; running `./install.sh` from the pinned checkout installed v1.3.3 successfully.
   Response: Corrected the plan command to enter the temporary checkout for installation and
   recorded the actual installed version before initializing issue `da645bd`.
+
+- Observation: Vitest executes these tests in a Node-compatible worker where the global `Bun` object is unavailable.
+  Evidence: The first integration tests failed with `ReferenceError: Bun is not defined`.
+  Response: Used Node-compatible `child_process` and `fs/promises` only in tests; production filesystem IO remains behind the Bun-oriented infrastructure adapter.
 
 ## Decision Log
 
@@ -751,11 +758,20 @@ the Decision Log and re-reviewed.
   mistaking either name or standard for an internal invention.
   Date/Author: 2026-07-24 / Brandon and Codex
 
+- Decision: Record the provider baseline as deliberately incomplete and block U2 promotion.
+  Rationale: The working-directory probe passed for both installed CLIs, but unexecuted full-access, JSON, interruption, review, and fresh-session capabilities cannot be inferred safely.
+  Date/Author: 2026-07-24 / Codex
+
 ## Outcomes & Retrospective
 
 Planning outcome: U1 has a dependency-aware, self-contained execution contract, clean-room
 approval, exact head-bound operator approval, a durable git-native issue, and an isolated
 implementation worktree. It is ready for Milestone 2; implementation has not started.
+
+Implementation outcome (in progress): Milestones 2-6 are implemented. The checker uses pure
+typed rules through an application port and filesystem adapter, passes on Mandem, and rejects the
+malformed fixture with exit 1. Both compiled executables emit their bounded version/help results.
+The provider baseline is intentionally a U2-promotion blocker pending the remaining actual probes.
 
 Revision note (2026-07-24): Rewrote U1 against the complete repository-root `PLANS.md` contract,
 then repaired the clean-room verification findings. Added plain-language orientation, exact
@@ -769,3 +785,7 @@ after reading `PLANS.md`.
 
 Post-merge living update (2026-07-24): Recorded exact approval, unchanged merge, durable issue,
 and isolated-worktree readiness. No implementation instruction changed.
+
+Execution living update (2026-07-24): Recorded Milestones 2-6, the red/green proof, the Vitest
+runtime discovery, the conservative provider decision, and the remaining Milestone 7 work. This
+update keeps the plan restartable from repository state.

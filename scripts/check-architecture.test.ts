@@ -1,5 +1,6 @@
 /** @fileoverview Contract tests for the architecture analyzer. */
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 import { analyzeRepositoryFiles } from "@/modules/architecture-standard";
 
 describe("architecture analyzer", () => {
@@ -14,5 +15,16 @@ describe("architecture analyzer", () => {
     expect(result.violations).toEqual(expect.arrayContaining([
       expect.objectContaining({ ruleId: "ARCH-MODULE-INFRASTRUCTURE", path: "src/modules/runtime" })
     ]));
+  });
+
+  it("returns exit 1 and stable findings for the malformed fixture", () => {
+    try {
+      execFileSync("bun", ["scripts/check-architecture.ts", "tests/fixtures/architecture/malformed"], { encoding: "utf8" });
+      throw new Error("malformed fixture unexpectedly conformed");
+    } catch (error: unknown) {
+      const output = error as { status?: number; stdout?: string };
+      expect(output.status).toBe(1);
+      expect(output.stdout).toContain("ARCH-MODULE-INFRASTRUCTURE src/modules/broken");
+    }
   });
 });
