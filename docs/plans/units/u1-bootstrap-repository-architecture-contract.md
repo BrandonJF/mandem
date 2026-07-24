@@ -671,7 +671,11 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Published planning root
   `a600d340c5306dad64f7405de6bb6b30b0a8f1b7` and initialized U1 issue `da645bd`.
 - [x] (2026-07-24) Prepared the metadata-only authority proposal.
-- [ ] Record exact operator approval and merge this authority head unchanged.
+- [x] (2026-07-24) Recorded exact operator approval for head
+  `b3aa645fa0b4995d01ddb23639d54706e6ea467f` and merged it unchanged as
+  `2e9ad31d4a83c366ee36a3e3247ad4fcb559c573`.
+- [x] (2026-07-24) Created and audited an isolated worktree on
+  `feat/u1-bootstrap-architecture-contract`; implementation has not started.
 - [x] (2026-07-24) Planning-only initial commit published to `origin/main`.
 - [ ] U1 implementation.
 
@@ -749,7 +753,9 @@ the Decision Log and re-reviewed.
 
 ## Outcomes & Retrospective
 
-Planning outcome: U1 now has a dependency-aware, self-contained execution contract. Implementation remains unauthorized until clean-room review and exact operator approval complete.
+Planning outcome: U1 has a dependency-aware, self-contained execution contract, clean-room
+approval, exact head-bound operator approval, a durable git-native issue, and an isolated
+implementation worktree. It is ready for Milestone 2; implementation has not started.
 
 Revision note (2026-07-24): Rewrote U1 against the complete repository-root `PLANS.md` contract,
 then repaired the clean-room verification findings. Added plain-language orientation, exact
@@ -760,3 +766,6 @@ AXI, TOON, and git-native-issue provenance, made the external issue ledger a pre
 requirement, corrected its installer working directory from observed v1.3.3 behavior, and moved
 Docker/runtime ownership to U3. This revision replaces the earlier draft that had not been authored
 after reading `PLANS.md`.
+
+Post-merge living update (2026-07-24): Recorded exact approval, unchanged merge, durable issue,
+and isolated-worktree readiness. No implementation instruction changed.

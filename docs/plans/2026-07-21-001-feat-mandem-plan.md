@@ -35,10 +35,10 @@ implementation authority.
 
 **Product authority:** Brandon is the primary operator and authority for Mandem's default doctrine. Other developers and product owners are secondary users.
 
-**Open blockers:** This revised program ExecPlan and the U1 child ExecPlan must pass clean-room
-review and receive exact operator approval before implementation. The first target is Strategy
-Builder Pro on Brandon's Linux agent host. U1 owns package, executable, and repository-name
-availability checks before publication.
+**Current boundary:** U1 has passed clean-room review, received exact head-bound operator approval,
+and is executable from its isolated worktree. U2-U10 remain unauthorized scaffolds. The first
+consumer target is Strategy Builder Pro on Brandon's Linux agent host. U1 owns package,
+executable, and repository-name availability checks before publication.
 
 ---
 
@@ -988,9 +988,11 @@ published interface.
 - [x] (2026-07-24) Rewrote and clean-room approved the U1 child ExecPlan.
 - [x] (2026-07-24) Established planning root `a600d340c5306dad64f7405de6bb6b30b0a8f1b7`
   and U1 git-native issue `da645bd`.
-- [x] (2026-07-24) Opened the metadata-only U1 authorization proposal.
-- [ ] Record exact operator approval for this authority-PR head and merge it unchanged.
-- [ ] Authorize and execute U1 only after both approvals are durably recorded.
+- [x] (2026-07-24) Recorded exact operator approval for authority head
+  `b3aa645fa0b4995d01ddb23639d54706e6ea467f`, merged it unchanged as
+  `2e9ad31d4a83c366ee36a3e3247ad4fcb559c573`, and created the isolated U1 worktree.
+- [x] (2026-07-24) Authorized U1 only after both approvals were durably recorded.
+- [ ] Execute and complete U1 from its approved child plan and isolated worktree.
 - [ ] Promote and complete U2 through U10 in dependency order.
 
 ## Surprises & Discoveries
@@ -1060,9 +1062,9 @@ published interface.
 ## Outcomes & Retrospective
 
 Current planning outcome: Mandem has a dependency-ordered program ExecPlan in its own repository,
-plus child-plan boundaries for U1 through U10. The program is restartable from durable artifacts and
-no longer depends on the SBP orchestrator conversation. Implementation remains intentionally
-unauthorized while the revised master and U1 undergo clean-room review and exact operator approval.
+plus child-plan boundaries for U1 through U10. The program is restartable from durable artifacts
+and no longer depends on the SBP orchestrator conversation. U1 is authorized and isolated for
+implementation; U2-U10 remain unauthorized until their own reviewed child plans are approved.
 
 ## Deferred / Open Questions
 
@@ -1077,6 +1079,10 @@ into the canonical `PLANS.md`-governed program ExecPlan, then repaired its clean
 Added the missing orientation, plan-of-work, concrete-step, validation, recovery, artifact,
 interface, living-document, empty-repository bootstrap, child-authority, and phase-recovery
 contracts. Recorded Mandem as the sole living home and identified AXI and TOON as pinned,
-licensed external sources rather than Mandem inventions. Implementation authorization remains
-false pending the final verification verdict and exact operator approval. The product contract,
-stable requirements, and U1-U10 technical design were preserved.
+licensed external sources rather than Mandem inventions. Program coordination and child execution
+authority are separate: the master remains non-executable, U1 is now authorized, and U2-U10 remain
+blocked behind their own plan gates. The product contract, stable requirements, and U1-U10
+technical design were preserved.
+
+Post-merge living update (2026-07-24): Recorded the exact approved authority head, merge SHA, and
+fresh U1 worktree readiness. No product requirement or implementation instruction changed.
