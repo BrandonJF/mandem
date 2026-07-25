@@ -1,8 +1,8 @@
-# Mandem Writing Style
+# Clear Writing Style
 
 ## Scope
 
-Apply these rules to every natural-language output about this repository:
+Apply these rules to every natural-language output in scope:
 
 - Chat responses and status updates.
 - Plans, issues, pull requests, reviews, reports, and documentation.
@@ -12,7 +12,7 @@ Apply these rules to every natural-language output about this repository:
 - Logs, errors, warnings, help text, prompts, and generated prose.
 
 Do not rewrite quoted external text. Introduce it accurately and keep the quotation distinct from
-Mandem's own prose.
+the surrounding prose.
 
 ## Voice and register
 

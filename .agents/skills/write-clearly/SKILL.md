@@ -1,6 +1,6 @@
 ---
 name: write-clearly
-description: Apply Mandem's tone, voice, grammar, and editing standard to every natural-language output about this repository. Use before chat responses, plans, issues, pull requests, reviews, reports, commit messages, code comments, docstrings, script or CLI output, logs, errors, help text, prompts, and documentation; and when checking prose for metaphor, aphorism, engagement-driven framing, AI mannerisms, needless abstraction, or excessive formality.
+description: Apply a direct, precise writing standard to natural-language output. Use before chat responses, plans, issues, pull requests, reviews, reports, commit messages, code comments, docstrings, script or CLI output, logs, errors, help text, prompts, and documentation; and when checking prose for metaphor, aphorism, engagement-driven framing, AI mannerisms, needless abstraction, or excessive formality.
 ---
 
 # Write Clearly
