@@ -326,16 +326,78 @@ stable job/check name is `repository-quality`. Configure an active GitHub rulese
 `refs/heads/main` that requires a pull request and successful `repository-quality` before merge.
 Add `.github/CODEOWNERS` assigning every gate-defining path to `@BrandonJF`: `/.github/CODEOWNERS`,
 `/.github/workflows/repository-quality.yml`, `/package.json`, `/bun.lock`, `/.githooks/`,
-`/scripts/check-*`, `/scripts/hooks/`, `/src/modules/architecture-standard/`, `/eslint.config.ts`,
-`/tsconfig.json`, and `/vitest.config.ts`. The ruleset requires code-owner approval when an owned
-path changes, dismisses stale approvals when new commits arrive, requires approval of the most
-recent push, and does not grant agents bypass permission. Routine application implementation PRs
-therefore remain autonomous, while a PR that changes the gate or its transitive implementation
-requires the operator's independent approval of its current head. The threat boundary is accidental
-bypass and autonomous agents, not a repository administrator deliberately disabling their own
-controls. The implementation worker records the ruleset identifier and read-back output in this
-plan. If its credential cannot administer rulesets, it records that exact external dependency under
-`Needs you` and U1A remains incomplete; local hooks alone never satisfy acceptance.
+`/scripts/check-*`, `/scripts/configure-repository-ruleset.ts`,
+`/scripts/configure-repository-ruleset.test.ts`, `/scripts/hooks/`,
+`/src/modules/architecture-standard/`, `/eslint.config.ts`, `/tsconfig.json`, and
+`/vitest.config.ts`. The ruleset requires code-owner approval when an owned path changes, dismisses
+stale approvals when new commits arrive, requires approval of the most recent push, and does not
+grant agents bypass permission. Routine application implementation PRs therefore remain autonomous,
+while a PR that changes the gate or its transitive implementation requires the operator's
+independent approval of its current head. The threat boundary is accidental bypass and autonomous
+agents, not a repository administrator deliberately disabling their own controls. The
+implementation worker records the ruleset identifier and read-back output in this plan. If its
+credential cannot administer rulesets, it records that exact external dependency under `Needs you`
+and U1A remains incomplete; local hooks alone never satisfy acceptance.
+
+Own this external configuration through `scripts/configure-repository-ruleset.ts`, not an
+undocumented UI step. The script requires an authenticated `gh` session whose token has repository
+Administration write permission. It discovers the ruleset named `mandem-repository-quality` with
+`gh api repos/BrandonJF/mandem/rulesets`, creates it with `POST` when absent, and replaces its
+definition with `PUT repos/BrandonJF/mandem/rulesets/<id>` when present. Both calls use GitHub API
+version `2026-03-10` and this exact semantic payload:
+
+    {
+      "name": "mandem-repository-quality",
+      "target": "branch",
+      "enforcement": "active",
+      "bypass_actors": [],
+      "conditions": {
+        "ref_name": {
+          "include": ["refs/heads/main"],
+          "exclude": []
+        }
+      },
+      "rules": [
+        {
+          "type": "pull_request",
+          "parameters": {
+            "allowed_merge_methods": ["merge"],
+            "dismiss_stale_reviews_on_push": true,
+            "require_code_owner_review": true,
+            "require_last_push_approval": true,
+            "required_approving_review_count": 0,
+            "required_review_thread_resolution": true
+          }
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "repository-quality"
+              }
+            ],
+            "strict_required_status_checks_policy": true
+          }
+        },
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        }
+      ]
+    }
+
+`bun run repository-ruleset:apply` performs that idempotent create/update and then reads the exact
+ruleset back. `bun run repository-ruleset:check` is read-only and exits `1` when any field above
+differs, including a nonempty bypass list; it exits `2` for authentication, authorization, API, or
+ambiguous duplicate-name failures. Tests mock only the `gh` process boundary and cover create,
+update, already-conformant, drifted, duplicate, unauthenticated, and unauthorized responses.
+Milestone 7 runs `gh auth status`, then apply and check. On authority failure the worker records the
+command, exit status, and secret-free API response in `Progress`, comments the same concise blocker
+on work item `745eda8`, marks the unit `Needs you`, and stops before claiming completion.
 
 ## Normative Interfaces
 
@@ -453,6 +515,8 @@ The package script names and targets are fixed:
     "hooks:check": "bun scripts/hooks/install.ts --check"
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
     "authoring:check": "bun scripts/hooks/post-write.ts"
+    "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply"
+    "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check"
 
 `bun run check` invokes `docs:audit` and `authored-files:check` after the Bun preflight and before
 typecheck, lint, and tests.
@@ -509,6 +573,8 @@ At completion, the relevant paths include:
       check-documentation.ts
       check-documentation.test.ts
       check-authored-files.ts
+      configure-repository-ruleset.ts
+      configure-repository-ruleset.test.ts
       hooks/
         README.md
         install.ts
@@ -648,8 +714,10 @@ and perform one disposable valid and invalid commit proof.
 
 Configure and read back the required `main` ruleset, including required code-owner review for every
 gate-defining path listed in D7, stale-approval dismissal, and approval of the most recent push.
-Trigger the workflow with the PR and record a successful `repository-quality` check; a skipped,
-pending, or billing-disabled check is not completion evidence.
+Use `bun run repository-ruleset:apply` followed by `bun run repository-ruleset:check`; do not
+configure it manually. Trigger the workflow with the PR and record a successful
+`repository-quality` check; a skipped, pending, or billing-disabled check is not completion
+evidence.
 
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
@@ -676,6 +744,7 @@ Use these focused commands in milestone order:
     bunx vitest run src/modules/architecture-standard/tests/documentation-policy.test.ts
     bunx vitest run src/modules/architecture-standard/tests/authored-source-policy.test.ts
     bunx vitest run scripts/check-documentation.test.ts
+    bunx vitest run scripts/configure-repository-ruleset.test.ts
     bunx vitest run scripts/hooks/hooks.integration.test.ts
     bunx vitest run scripts/hooks/provider-post-write.test.ts
 
@@ -684,9 +753,10 @@ Before domain implementation, the first command must fail named cases
 `rejects broken and unscoped Markdown`. The second must fail
 `requires a leading meaningful fileoverview for every authored source` and
 `rejects unscoped TypeScript`. Before filesystem/Git adapters, the third must fail
-`evaluates added renamed and deleted documents from a Git base`. Before Git-hook implementation,
-the fourth must fail `pre-commit evaluates the staged snapshot` and
-`pre-push classifies every ref update fail closed`. Before provider adapters, the fifth must fail
+`evaluates added renamed and deleted documents from a Git base`. Before ruleset configuration, the
+fourth must fail `creates updates and verifies the canonical repository ruleset`. Before Git-hook
+implementation, the fifth must fail `pre-commit evaluates the staged snapshot` and
+`pre-push classifies every ref update fail closed`. Before provider adapters, the sixth must fail
 `maps Claude write events to checked paths` and
 `maps Codex apply-patch headers to checked paths`. Each red state must be an assertion mismatch for
 the named behavior, not missing module/configuration failure. Record the failing assertion and later
@@ -701,6 +771,7 @@ After the policy and adapters exist, exercise:
     bun run hooks:check
     bun run test:hooks
     bun run authoring:check -- src/modules/runtime/domain/types.ts
+    bun run repository-ruleset:check
 
 Expected successful output is concise and names the checked scope. Malformed fixtures must exit `1`
 and print stable IDs with repository-relative paths. Traversal, Git, or configuration failures must
@@ -712,6 +783,7 @@ Before handoff, run:
     bun run check
     bun run build
     git issue fsck
+    bun run repository-ruleset:check
     git status --short
 
 The install must not change `bun.lock`. The complete gate and build must exit `0`. Issue integrity
@@ -908,9 +980,9 @@ Nucleus mechanisms the operator named. It strengthens their useful behaviors by 
 policy, failing closed in non-interactive execution, avoiding hook mutations, and preserving agent
 vendor neutrality. No implementation is authorized yet.
 
-The next planning action is to update the registry and U2 dependency statement, then run a
-clean-room review at the exact planning commit. The implementation dependency remains the merged
-resolution of work item `5717221`.
+The next planning action is to complete clean-room re-review against the repaired exact revision,
+repair every material finding, and then obtain exact operator approval. The implementation
+dependency remains the merged resolution of work item `5717221`.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
@@ -930,3 +1002,7 @@ Third clean-room repair note (2026-07-25): Made hook installation use Git's work
 configuration and added a two-linked-worktree proof. Protected the required workflow and its
 CODEOWNERS definition with fresh-head operator code-owner approval while preserving autonomous
 routine PRs.
+
+Final document-review note (2026-07-25): Corrected the stale next-planning-action summary so it
+matches the current `Progress` state: the registry and U2 dependency update are already complete;
+clean-room re-review and operator approval remain.
