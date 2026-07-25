@@ -193,9 +193,13 @@ first so U1A adds coverage to a corrected kernel rather than creating conflictin
 ### D5. Git hook inputs and classifications are normative
 
 Store versioned Git entrypoints under `.githooks/` and substantive hook behavior under
-`scripts/hooks/`. `bun run hooks:install` sets this worktree's `core.hooksPath` to `.githooks`;
-`bun run hooks:check` reports whether the active worktree is configured. Installation is
-idempotent and never modifies global Git configuration.
+`scripts/hooks/`. `bun run hooks:install` first checks `extensions.worktreeConfig`. If it is not
+`true`, it runs `git config extensions.worktreeConfig true` once in the common repository, then
+runs `git config --worktree core.hooksPath .githooks`. `bun run hooks:check` reads
+`git config --worktree --get core.hooksPath` and reports whether the active worktree alone is
+configured. Installation is idempotent and never modifies global Git configuration. Integration
+tests create one common repository with two linked worktrees, install in only one, and prove the
+sibling has no worktree-local `core.hooksPath`.
 
 Pre-commit builds a virtual staged snapshot from `HEAD` plus the Git index: start from
 `git ls-tree -r HEAD`, overlay added/copied/modified/renamed index blobs from `git show :<path>`,
@@ -306,14 +310,20 @@ feedback. `bun run check` includes full documentation and authored-source checks
 lint, and tests. README instructions lead with `bun run check`; detailed maintenance and recovery
 live in `docs/development/`.
 
-Add `.github/workflows/repository-quality.yml` as the non-bypassable remote authority. On every pull
+Add `.github/workflows/repository-quality.yml` as the required remote authority. On every pull
 request and every push to `main` or `staging`, it checks out full history, installs Bun `1.3.14`,
 runs `bun install --frozen-lockfile`, `bun run check`, `bun run build`, and `git issue fsck`. Its
 stable job/check name is `repository-quality`. Configure an active GitHub ruleset targeting
 `refs/heads/main` that requires a pull request and successful `repository-quality` before merge.
-The implementation worker records the ruleset identifier and read-back output in this plan. If its
-credential cannot administer rulesets, it records that exact external dependency under `Needs you`
-and U1A remains incomplete; local hooks alone never satisfy acceptance.
+Add `.github/CODEOWNERS` assigning `/.github/workflows/repository-quality.yml` and
+`/.github/CODEOWNERS` to `@BrandonJF`; the ruleset requires code-owner approval when owned files
+change and does not grant agents bypass permission. Routine implementation PRs therefore remain
+autonomous, while a PR that changes its own gate requires the operator's independent approval. The
+threat boundary is accidental bypass and autonomous agents, not a repository administrator
+deliberately disabling their own controls. The implementation worker records the ruleset identifier
+and read-back output in this plan. If its credential cannot administer rulesets, it records that
+exact external dependency under `Needs you` and U1A remains incomplete; local hooks alone never
+satisfy acceptance.
 
 ## Normative Interfaces
 
@@ -465,6 +475,7 @@ At completion, the relevant paths include:
       pre-commit
       pre-push
     .github/
+      CODEOWNERS
       workflows/
         repository-quality.yml
     docs/
@@ -592,7 +603,9 @@ Prove a valid staged TypeScript file commits, a missing fileoverview is rejected
 an unindexed Markdown file is rejected, protected-branch pushes are blocked, code pushes invoke the
 full gate, docs-only pushes invoke the documentation gate, and an indeterminate diff invokes the
 full gate. Snapshot the repository before and after each failure to prove hooks do not mutate files,
-the index, commits, branches, or remotes.
+the index, commits, branches, or remotes. In a two-worktree fixture, prove installation enables
+`extensions.worktreeConfig`, writes only the selected worktree's config, and leaves its sibling's
+hook path unset.
 
 This milestone is complete when hook integration tests pass on Linux and repeated installation
 produces the same local configuration without duplicate or global settings.
@@ -620,9 +633,10 @@ documentation/authored-source architecture, TypeScript, lint, and tests. Run foc
 then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
-Configure and read back the required `main` ruleset. Trigger the workflow with the PR and record a
-successful `repository-quality` check; a skipped, pending, or billing-disabled check is not
-completion evidence.
+Configure and read back the required `main` ruleset, including required code-owner review for
+changes to the workflow or CODEOWNERS file. Trigger the workflow with the PR and record a successful
+`repository-quality` check; a skipped, pending, or billing-disabled check is not completion
+evidence.
 
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
@@ -705,8 +719,9 @@ Acceptance requires all of the following observable behaviors:
 - Generated, vendored, declaration, build, and disposable fixture paths are excluded only where the
   public policy says they are excluded.
 - The real repository passes the same policy used by fixtures.
-- Hook installation changes only the current worktree's local `core.hooksPath`, is repeatable, and
-  reports its state.
+- Hook installation enables Git's worktree-config extension once, changes only the current
+  worktree's `core.hooksPath`, leaves sibling worktrees unchanged, is repeatable, and reports its
+  state.
 - A non-interactive pre-commit rejects missing fileoverview and documentation-index violations.
 - A pre-push on a protected branch is rejected; a normal code push runs the full check; a docs-only
   push runs documentation checks; an uncertain diff runs the full check.
@@ -719,16 +734,19 @@ Acceptance requires all of the following observable behaviors:
   events in their recorded fixtures—including deletes and moves—from the repository root or a
   nested launch directory, and return bounded model-visible feedback on failure.
 - The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
-  `main` ruleset requires both a pull request and that successful check before merge.
+  `main` ruleset requires both a pull request and that successful check before merge. Changes to the
+  workflow or its CODEOWNERS protection require `@BrandonJF` code-owner approval.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
 ## Idempotence and Recovery
 
-Policy checks are read-only and safe to repeat. Hook installation writes one repository-local Git
-setting and is safe to repeat. Capture the previous local `core.hooksPath` in the test fixture; the
-documented uninstall/recovery command restores that value or unsets the local key if none existed.
-Never edit global Git configuration.
+Policy checks are read-only and safe to repeat. Hook installation enables
+`extensions.worktreeConfig` in the common repository if needed, then writes one worktree-local Git
+setting and is safe to repeat. Capture the previous worktree-local `core.hooksPath` in the test
+fixture; the documented uninstall/recovery command restores that value or unsets the worktree-local
+key if none existed. Do not disable `extensions.worktreeConfig` during uninstall because sibling
+worktrees may rely on it. Never edit global Git configuration.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
 Repair the README chain directory by directory, rerunning the full audit after each group. If the
@@ -794,6 +812,8 @@ external sources.
 - [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the program
   dependency model but rejected incomplete revision-snapshot, provider event, and remote-authority
   contracts.
+- [x] (2026-07-25 19:20Z) Ran a third clean-room review at `e597967`; it found the remaining linked
+  worktree configuration leak and self-modifiable workflow gap.
 - [ ] Run clean-room re-review against the repaired exact revision and repair every material finding.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
@@ -888,3 +908,7 @@ Second clean-room repair note (2026-07-25): Added revision-backed changed and pr
 complete root-resolving Claude/Codex hook configurations, typed delete/move events, nested-launch
 tests, maintained YAML and dynamic module README coverage, and a required remote
 `repository-quality` workflow plus `main` ruleset.
+
+Third clean-room repair note (2026-07-25): Made hook installation use Git's worktree-specific
+configuration and added a two-linked-worktree proof. Protected the required workflow and its
+CODEOWNERS definition with operator code-owner approval while preserving autonomous routine PRs.
