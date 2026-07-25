@@ -315,16 +315,18 @@ request and every push to `main` or `staging`, it checks out full history, insta
 runs `bun install --frozen-lockfile`, `bun run check`, `bun run build`, and `git issue fsck`. Its
 stable job/check name is `repository-quality`. Configure an active GitHub ruleset targeting
 `refs/heads/main` that requires a pull request and successful `repository-quality` before merge.
-Add `.github/CODEOWNERS` assigning `/.github/workflows/repository-quality.yml` and
-`/.github/CODEOWNERS` to `@BrandonJF`; the ruleset requires code-owner approval when owned files
-change, dismisses stale approvals when new commits arrive, requires approval of the most recent
-push, and does not grant agents bypass permission. Routine implementation PRs therefore remain
-autonomous, while a PR that changes its own gate requires the operator's independent approval of
-its current head. The threat boundary is accidental bypass and autonomous agents, not a repository
-administrator deliberately disabling their own controls. The implementation worker records the
-ruleset identifier and read-back output in this plan. If its credential cannot administer rulesets,
-it records that exact external dependency under `Needs you` and U1A remains incomplete; local hooks
-alone never satisfy acceptance.
+Add `.github/CODEOWNERS` assigning every gate-defining path to `@BrandonJF`: `/.github/CODEOWNERS`,
+`/.github/workflows/repository-quality.yml`, `/package.json`, `/bun.lock`, `/.githooks/`,
+`/scripts/check-*`, `/scripts/hooks/`, `/src/modules/architecture-standard/`, `/eslint.config.ts`,
+`/tsconfig.json`, and `/vitest.config.ts`. The ruleset requires code-owner approval when an owned
+path changes, dismisses stale approvals when new commits arrive, requires approval of the most
+recent push, and does not grant agents bypass permission. Routine application implementation PRs
+therefore remain autonomous, while a PR that changes the gate or its transitive implementation
+requires the operator's independent approval of its current head. The threat boundary is accidental
+bypass and autonomous agents, not a repository administrator deliberately disabling their own
+controls. The implementation worker records the ruleset identifier and read-back output in this
+plan. If its credential cannot administer rulesets, it records that exact external dependency under
+`Needs you` and U1A remains incomplete; local hooks alone never satisfy acceptance.
 
 ## Normative Interfaces
 
@@ -634,10 +636,10 @@ documentation/authored-source architecture, TypeScript, lint, and tests. Run foc
 then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
-Configure and read back the required `main` ruleset, including required code-owner review for
-changes to the workflow or CODEOWNERS file, stale-approval dismissal, and approval of the most
-recent push. Trigger the workflow with the PR and record a successful `repository-quality` check; a
-skipped, pending, or billing-disabled check is not completion evidence.
+Configure and read back the required `main` ruleset, including required code-owner review for every
+gate-defining path listed in D7, stale-approval dismissal, and approval of the most recent push.
+Trigger the workflow with the PR and record a successful `repository-quality` check; a skipped,
+pending, or billing-disabled check is not completion evidence.
 
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
@@ -736,8 +738,9 @@ Acceptance requires all of the following observable behaviors:
   nested launch directory, and return bounded model-visible feedback on failure.
 - The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
   `main` ruleset requires both a pull request and that successful check before merge. Changes to the
-  workflow or its CODEOWNERS protection require `@BrandonJF` code-owner approval of the current
-  head; a subsequent push dismisses the approval.
+  workflow, canonical commands, hook/check implementations, architecture gate, test/lint/type
+  configuration, lockfile, or CODEOWNERS protection require `@BrandonJF` code-owner approval of the
+  current head; a subsequent push dismisses the approval.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
