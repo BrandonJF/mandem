@@ -4,53 +4,51 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: clean-room-approved
+promotion: planned
 execution_authorized: false
 date: 2026-07-25
 ---
 
 # U1A: Documentation Discoverability and Continuous Authoring Quality Gates
 
-This ExecPlan is a living document governed by the repository-root `PLANS.md`. The sections
-`Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must remain
-current while work proceeds. This revision is planning authority only. No implementation may begin
-until it passes clean-room review, receives exact operator approval, and changes
-`execution_authorized` to `true`.
+The repository-root `PLANS.md` defines how to maintain and execute this ExecPlan. Keep
+`Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current while
+work proceeds. This revision does not authorize implementation. Before implementation begins, a
+clean-room reviewer must approve the exact revision, the operator must approve it, and
+`execution_authorized` must be set to `true`.
 
 ## Purpose / Big Picture
 
 After this work, a human or agent can begin at Mandem's root `README.md` and follow a short chain of
-folder indexes to every maintained document. A new document cannot pass the required repository
-checks unnoticed in an unindexed folder, a TypeScript file cannot pass them without a useful
-leading `@fileoverview`, and a write that
-breaks TypeScript receives immediate feedback where the active agent supports write hooks. The same
-rules remain enforceable without Claude Code, Codex, or any other agent: versioned Git hooks and
-`bun run check` are the authoritative backstops.
+folder indexes to every maintained document. The required checks reject a new document in an
+unindexed folder and an authored TypeScript file without a useful leading `@fileoverview`. When an
+active agent writes TypeScript that breaks type checking, a supported post-write hook returns
+immediate feedback. Versioned Git hooks and `bun run check` enforce the same requirements when
+provider hooks are unavailable.
 
-The visible proof is intentionally simple. `bun run docs:check` prints a concise pass message for
-the real repository and deterministic path-specific failures for malformed fixtures. Removing a
-README link, adding an unindexed document, or adding an authored TypeScript file without
-`@fileoverview` makes the canonical gate fail. A disposable Git repository proves that installed
-hooks reject the same invalid changes. A provider hook test proves supported agent integrations call
-the shared check runner rather than implementing a second policy.
+Verification uses `bun run docs:check` on the repository and malformed fixtures. Tests verify that
+removing a README link, adding an unindexed document, or adding an authored TypeScript file without
+`@fileoverview` causes `bun run check` to fail. Disposable-repository tests verify that installed
+hooks reject the same invalid changes. Provider-hook tests verify that supported integrations call
+the shared check runner instead of implementing policy separately.
 
 ## Scope
 
-This unit creates Mandem's documentation navigation baseline, documentation conformance rules,
+Implementation adds Mandem's documentation navigation baseline, documentation conformance rules,
 versioned Git hooks, and a provider-neutral post-write check command with verified provider
 adapters. It also corrects the current architecture rule's authored-source scope so scripts and
 other declared source roots cannot evade `ARCH-FILEOVERVIEW`.
 
-This unit does not implement Mandem runtime workflow hooks, worker lifecycle orchestration, the TUI,
+This work excludes Mandem runtime workflow hooks, worker lifecycle orchestration, the TUI,
 operating-document compilation, or consumer-repository hook installation. Those belong to U5-U8.
 It does not require a README in every code subdirectory. Documentation directories require local
 indexes; code modules continue to use one module-root README as defined by the architecture
 standard. Generated output, vendored dependencies, Git internals, build output, disposable
 fixtures, and hidden provider configuration are excluded through one explicit policy.
 
-The U1 corrective work item `5717221` is a dependency because it changes the same architecture
-kernel and package contract. Complete or rebase onto that correction before implementing U1A.
-U2 must not be promoted until both `5717221` and U1A are complete.
+The correction tracked in work item `5717221` is a dependency because it changes the same
+architecture kernel and package contract. Complete the correction or rebase onto it before
+implementing U1A. Do not promote U2 until `5717221` and U1A are complete.
 
 ## Context and Orientation
 
@@ -61,26 +59,26 @@ indexes. The root README does not provide a complete navigation chain. The curre
 kernel in `src/modules/architecture-standard/domain/rules.ts` scans TypeScript only below `src/`,
 even though the normative `ARCH-FILEOVERVIEW` rule says it applies to authored TypeScript source.
 
-The Pier Docs repository supplies two relevant behaviors. Its changed-file validator requires each
+Pier Docs implements two relevant behaviors. Its changed-file validator requires each
 non-root Markdown file to have a local README, requires that README to link the file, and requires
 parent READMEs to link child documentation directories all the way to the root. Its full audit also
 reports broken local links and disconnected README directories. Mandem must independently implement
 these behaviors in Bun and TypeScript so Bun remains its only project runtime.
 
-Nucleus supplies three relevant behaviors. Its pre-commit hook examines staged TypeScript files for
+Nucleus implements three relevant behaviors. Its pre-commit hook examines staged TypeScript files for
 `@fileoverview`; its Claude post-tool hook formats and typechecks a file after writes; and its
 versioned pre-push script runs comprehensive verification for code changes with integration tests
 around the hook. Mandem must strengthen this pattern: non-interactive enforcement may not degrade
-to a warning, provider hooks may not own policy, hooks may not create commits, and every hook must
-be testable in a disposable repository.
+to a warning. Provider hooks must call shared policy; they may not contain policy of their own.
+Hooks may not create commits, and every hook must be testable in a disposable repository.
 
 A “documentation directory” is an in-scope directory containing a maintained Markdown file or an
 in-scope child documentation directory. An “index” is that directory's `README.md`. A “navigation
 chain” means each child index is linked from its parent index until the root README is reached. A
 “provider hook” is an optional Claude Code, Codex, or future-agent integration that invokes a shared
 Mandem command after a file write. A “Git hook” is a repository-controlled program Git invokes
-before commit or push. Provider hooks improve feedback speed; Git hooks and `bun run check` decide
-whether work is conformant.
+before commit or push. Provider hooks improve feedback speed. Git hooks and `bun run check` enforce
+conformance.
 
 ## Requirements Trace
 
@@ -131,20 +129,24 @@ Define `documentationPolicyV1` in
 requires a local README, every non-README Markdown file must be linked from that README, and every
 child directory README must be linked from its parent's README.
 
-The manifest also declares three special indexes without requiring READMEs throughout their parent
+The manifest also declares special indexes without requiring READMEs throughout their parent
 paths. Root `README.md` must link `AGENTS.md`, `CLAUDE.md`, `PLANS.md`, `docs/README.md`,
-`scripts/README.md`, `.githooks/README.md`, and `src/modules/README.md`. `scripts/README.md` must
-link each Markdown file and child README below `scripts/`. `src/modules/README.md` must link every
-immediate `src/modules/<name>/README.md`. That dynamic pattern makes every present and future
-module-root README an explicit target of `src/modules/README.md`. Module-root READMEs remain the
-only required code documentation below each module. A new maintained document outside the recursive
-root or declared special indexes produces `DOC-UNSCOPED-DOCUMENT` rather than silently escaping
-policy.
+`scripts/README.md`, `.githooks/README.md`, `src/modules/README.md`, and every checked-in
+`.agents/skills/<name>/SKILL.md`. Each skill's `SKILL.md` acts as the index for that skill
+directory and must link every maintained Markdown file below it, including files under
+`references/`. This preserves the standard skill layout without requiring a separate README.
+`scripts/README.md` must link each Markdown file and child README below `scripts/`.
+`src/modules/README.md` must link every immediate `src/modules/<name>/README.md`. That dynamic
+pattern makes every present and future module-root README an explicit target of
+`src/modules/README.md`. Module-root READMEs remain the only required code documentation below each
+module. A new maintained document outside the recursive root or declared special indexes produces
+`DOC-UNSCOPED-DOCUMENT`.
 
 Exclude any path containing a complete segment `.git`, `.codex`, `.claude`, `.github`,
 `node_modules`, `dist`, or `coverage`; exclude `tests/fixtures/` and a generated/vendor path only
 when its complete segment is `generated`, `vendor`, or `vendored`. The checked-in
-`docs/plans/reviews/` and `docs/solutions/` trees are maintained documentation and are not excluded.
+`docs/plans/reviews/`, `docs/solutions/`, and `.agents/skills/` trees are maintained documentation
+and are not excluded.
 Symbolic links are recorded but never traversed. A resolved local link outside the repository root
 is a `DOC-BROKEN-LOCAL-LINK` finding.
 
@@ -165,9 +167,9 @@ snapshot, so stale links fail.
 
 ### D3. Human-maintained README indexes are checked, not silently rewritten
 
-U1A creates the missing README hierarchy and concise indexes, but the checker does not rewrite
+U1A adds the missing README hierarchy and concise indexes, but the checker does not rewrite
 documentation during `check`, commit, or push. Authors decide titles and descriptions; deterministic
-validation decides whether every file and child directory is reachable. This avoids generated
+checks verify that every file and child directory is reachable. This avoids generated
 tables overwriting useful context and keeps hooks free of hidden mutations. A later explicit
 `docs:sync` command may be planned if index maintenance becomes burdensome.
 
@@ -178,8 +180,8 @@ Define `authoredSourcePolicyV1` beside the documentation policy. Include `src/**
 `*.config.ts`/`*.config.tsx`. This includes current CLI/server files, both modules, checker and hook
 scripts, contract tests, `eslint.config.ts`, and `vitest.config.ts`. Exclude any complete segment
 `.git`, `node_modules`, `dist`, `coverage`, `generated`, `vendor`, or `vendored`; exclude
-`tests/fixtures/**` and files ending `.d.ts`. Any authored `.ts`/`.tsx` outside the include set
-produces `ARCH-UNSCOPED-TYPESCRIPT` until the manifest is deliberately updated.
+`tests/fixtures/**` and files ending `.d.ts`. The checker reports `ARCH-UNSCOPED-TYPESCRIPT` for any
+authored `.ts` or `.tsx` file outside the include set until the manifest is deliberately updated.
 
 The first content after an optional `#!` line must be a JSDoc comment containing `@fileoverview` and
 at least one non-placeholder word before `*/`. Case-insensitive placeholder-only values `todo`,
@@ -248,7 +250,8 @@ short skipped message. The command reports findings but never edits the file.
 
 Claude Code `2.1.219` and Codex CLI `0.145.0` both support `PostToolUse`; U1A implements both.
 Commands resolve the Git root before invoking the adapter so a provider launched from a nested
-directory receives identical behavior. `.claude/settings.json` contains this complete project hook:
+directory receives identical behavior. Add the following complete project hook to
+`.claude/settings.json`:
 
     {
       "hooks": {
@@ -270,7 +273,7 @@ directory receives identical behavior. `.claude/settings.json` contains this com
 Claude event JSON arrives on standard input. Extract `tool_input.file_path` for Write/Edit and every
 distinct `tool_input.edits[].file_path` for MultiEdit.
 
-`.codex/hooks.json` contains this complete project hook:
+Add the following complete project hook to `.codex/hooks.json`:
 
     {
       "description": "Mandem authoring feedback.",
@@ -291,7 +294,7 @@ distinct `tool_input.edits[].file_path` for MultiEdit.
       }
     }
 
-Codex reports the canonical tool name `apply_patch`; parse `*** Add File:`, `*** Update File:`,
+Codex reports the tool name `apply_patch`; parse `*** Add File:`, `*** Update File:`,
 `*** Delete File:`, and `*** Move to:` headers in `tool_input.command`. Codex requires
 project-local hook trust; document `/hooks` as the normal trust path and use
 `--dangerously-bypass-hook-trust` only inside a disposable automated probe.
@@ -302,8 +305,9 @@ An event records `write`, `delete`, `move-from`, or `move-to`. Claude's supporte
 For Codex, Add and Update emit writes, Delete emits delete, and a Move emits both move-from for the
 Update path and move-to for the destination. Delete and move events invoke the full relevant policy
 defined below so stale indexes cannot escape a path-local check.
-Zero valid paths or malformed JSON exits `2` with one concise error. Successful checks exit `0`
-without output. A failed check exits `2` and writes at most 40 lines to standard error; both
+For zero valid paths or malformed JSON, the adapter exits `2` with one concise error. Successful
+checks exit `0` without output. When a check fails, the adapter exits `2` and writes at most 40 lines
+to standard error; both
 providers return that as model-visible feedback after the write. Provider hook failure cannot undo
 the write, which is why Git and `bun run check` remain authoritative.
 
@@ -311,7 +315,7 @@ Provider adapter tests feed recorded, secret-free Claude Write/Edit/MultiEdit an
 events into the adapters and assert selected paths, exit behavior, bounded output, and no repository
 mutation. Future providers add only an event-to-path adapter and call the shared command.
 
-### D7. The canonical gate and documentation explain one workflow
+### D7. The required gate and documentation describe one workflow
 
 Add focused package scripts for full documentation audit, changed documentation validation,
 authored-file validation, hook installation/status, hook integration tests, and post-write
@@ -319,7 +323,7 @@ feedback. `bun run check` includes full documentation and authored-source checks
 lint, and tests. README instructions lead with `bun run check`; detailed maintenance and recovery
 live in `docs/development/`.
 
-Add `.github/workflows/repository-quality.yml` as the required remote authority. On every pull
+Add `.github/workflows/repository-quality.yml` as the required GitHub Actions workflow. On every pull
 request and every push to `main` or `staging`, it checks out full history, installs Bun `1.3.14`,
 runs `bun install --frozen-lockfile`, `bun run check`, `bun run build`, and `git issue fsck`. Its
 stable job/check name is `repository-quality`. Configure an active GitHub ruleset targeting
@@ -331,13 +335,14 @@ Add `.github/CODEOWNERS` assigning every gate-defining path to `@BrandonJF`: `/.
 `/src/modules/architecture-standard/`, `/eslint.config.ts`, `/tsconfig.json`, and
 `/vitest.config.ts`. The ruleset requires code-owner approval when an owned path changes, dismisses
 stale approvals when new commits arrive, requires approval of the most recent push, and does not
-grant agents bypass permission. Routine application implementation PRs therefore remain autonomous,
-while a PR that changes the gate or its transitive implementation requires the operator's
-independent approval of its current head. The threat boundary is accidental bypass and autonomous
-agents, not a repository administrator deliberately disabling their own controls. The
+grant agents bypass permission. Routine application implementation PRs do not require operator
+approval. A PR that changes a gate or its transitive implementation requires the operator to
+approve its current head. These controls protect against accidental bypass and autonomous agents;
+they do not protect against a repository administrator who disables the controls. The
 implementation worker records the ruleset identifier and read-back output in this plan. If its
-credential cannot administer rulesets, it records that exact external dependency under `Needs you`
-and U1A remains incomplete; local hooks alone never satisfy acceptance.
+credential lacks ruleset-administration permission, the implementation worker records that exact
+external dependency under `Needs you`, and U1A remains incomplete. Local hooks alone do not satisfy
+acceptance.
 
 Own this external configuration through `scripts/configure-repository-ruleset.ts`, not an
 undocumented UI step. The script requires an authenticated `gh` session whose token has repository
@@ -393,18 +398,20 @@ version `2026-03-10` and this exact semantic payload:
 `bun run repository-ruleset:apply` performs that idempotent create/update and then reads the exact
 ruleset back. `bun run repository-ruleset:check` is read-only and exits `1` when any field above
 differs, including a nonempty bypass list; it exits `2` for authentication, authorization, API, or
-ambiguous duplicate-name failures. Apply also exits `2` without mutation unless discovery returns
-exactly zero or one matching ruleset. Tests mock only the `gh` process boundary and cover create,
+ambiguous duplicate-name failures. Apply creates or updates a ruleset only when discovery finds
+zero or one matching ruleset. On more than one match, it exits `2` without mutation. Tests mock only
+the `gh` process boundary and cover create,
 update, already-conformant, drifted, duplicate-with-no-mutation, unauthenticated, and unauthorized
 responses.
-Milestone 7 runs `gh auth status`, then apply and check. On authority failure the worker records the
-command, exit status, and secret-free API response in `Progress`, comments the same concise blocker
+Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
+insufficient permission, the worker records the command, exit status, and secret-free API response
+in `Progress`, comments the same concise blocker
 on work item `745eda8`, marks the unit `Needs you`, and stops before claiming completion.
 
 ## Normative Interfaces
 
-The file and export names below are fixed for this unit. Changing one requires updating this plan
-and repeating clean-room review before implementation continues.
+The file and export names below are fixed for this unit. If an implementer changes a file or export
+name, they must update this plan and obtain another clean-room review before continuing.
 
 Extend `src/modules/architecture-standard/domain/types.ts` with:
 
@@ -543,6 +550,14 @@ is clean and a non-current local ref; results follow the outgoing revision, not 
 At completion, the relevant paths include:
 
     README.md
+    .agents/
+      skills/
+        write-clearly/
+          SKILL.md
+          agents/
+            openai.yaml
+          references/
+            style-guide.md
     .claude/
       settings.json
     .codex/
@@ -639,8 +654,8 @@ Make the Milestone 1 tests pass, then add mutation-oriented cases that change on
 a time. Prove every stable ID independently, prove exact catalog identity rather than only catalog
 length, and prove deterministic ordering.
 
-This milestone is complete when in-memory fixtures accept a complete navigation chain and reject
-each malformed condition with the exact expected ID and path.
+This milestone is complete when the evaluator accepts a complete navigation chain and reports the
+exact expected ID and path for each malformed condition.
 
 ### Milestone 3: Add filesystem, Git-diff, and CLI adapters
 
@@ -655,13 +670,13 @@ added, modified, renamed, and deleted README/doc paths, a dirty checkout whose s
 clean, and a non-current local ref. Confirm failure output names the repair in plain language,
 remains bounded, and follows the selected revision rather than the checkout.
 
-This milestone is complete when the real Mandem repository can run both modes and malformed
-fixtures demonstrate each failure class through the public command.
+This milestone is complete when the implementer can run both modes against the Mandem repository
+and malformed fixtures demonstrate each failure class through the public command.
 
 ### Milestone 4: Build the documentation navigation baseline
 
-Create the README hierarchy shown above. Each README explains the folder in one short paragraph,
-links every maintained local Markdown document, and links every in-scope child documentation
+Create the README hierarchy shown above. In each README, write one short paragraph about the
+folder, list every maintained local Markdown document, and list every in-scope child documentation
 directory. Update the root README with a concise documentation map, architecture entrypoint,
 development entrypoint, plans entrypoint, operations entrypoint, and scripts entrypoint.
 
@@ -679,11 +694,12 @@ Write failing integration tests around the actual `.githooks/pre-commit` and
 use cases and minimal entrypoints. Add installation and status commands that operate only on the
 current worktree's local Git configuration.
 
-Prove a valid staged TypeScript file commits, a missing fileoverview is rejected non-interactively,
-an unindexed Markdown file is rejected, protected-branch pushes are blocked, code pushes invoke the
-full gate, docs-only pushes invoke the documentation gate, and an indeterminate diff invokes the
-full gate. Snapshot the repository before and after each failure to prove hooks do not mutate files,
-the index, commits, branches, or remotes. In two-worktree fixtures, prove installation enables
+Prove that Git commits a valid staged TypeScript file, rejects a missing fileoverview
+non-interactively, rejects an unindexed Markdown file, and blocks a protected-branch push. Verify
+that the pre-push hook runs the full gate for code pushes, the documentation gate for docs-only
+pushes, and the full gate for an indeterminate diff. Compare repository snapshots before and after
+each failure to confirm that no hook changes files, the index, commits, branches, or remotes. In
+two-worktree fixtures, prove installation enables
 `extensions.worktreeConfig`, leaves a sibling effectively unset when no common hook existed, and
 migrates a pre-existing common hook value to the sibling before selecting `.githooks` only for the
 installing worktree.
@@ -703,14 +719,16 @@ events to the shared command. Test every event form from D6, including nested la
 multi-file patches, deletes, moves, paths with spaces, out-of-root paths, malformed JSON, failed
 checks, and bounded feedback.
 
-This milestone is complete when a supported provider write event invokes the expected shared check,
-malformed events fail safely, and no adapter owns a distinct policy or changes repository content.
+This milestone is complete when an adapter receives a supported provider write event and invokes
+the expected shared check, rejects malformed events safely, and does not implement a distinct
+policy or change repository content.
 
-### Milestone 7: Integrate the canonical gate and close through review
+### Milestone 7: Integrate the single repository-quality gate and complete review
 
-Add the new checks and hook integration suite to package scripts and add the remote workflow from
-D7. Make `bun run check` fail closed in a deterministic order: Bun preflight,
-documentation/authored-source architecture, TypeScript, lint, and tests. Run focused tests first,
+Add the new checks and hook integration suite to package scripts and add the GitHub Actions workflow
+from D7. Make `bun run check` return a nonzero exit status when any check fails, and run the checks
+in this deterministic order: Bun preflight, documentation/authored-source architecture,
+TypeScript, lint, and tests. Run focused tests first,
 then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
@@ -775,9 +793,10 @@ After the policy and adapters exist, exercise:
     bun run authoring:check -- src/modules/runtime/domain/types.ts
     bun run repository-ruleset:check
 
-Expected successful output is concise and names the checked scope. Malformed fixtures must exit `1`
-and print stable IDs with repository-relative paths. Traversal, Git, or configuration failures must
-exit `2` and explain the failed boundary without a stack trace in normal output.
+Successful commands must print concise output that names the checked scope. Commands that evaluate
+malformed fixtures must exit `1` and print stable IDs with repository-relative paths. Commands that
+encounter traversal, Git, or configuration failures must exit `2` and explain the failed boundary
+without a stack trace in normal output.
 
 Before handoff, run:
 
@@ -806,12 +825,13 @@ Acceptance requires all of the following observable behaviors:
 - Generated, vendored, declaration, build, and disposable fixture paths are excluded only where the
   public policy says they are excluded.
 - The real repository passes the same policy used by fixtures.
-- Hook installation enables Git's worktree-config extension once, removes any inherited common
+- The hook installer enables Git's worktree-config extension once, removes any inherited common
   `core.hooksPath` only after preserving it in every existing worktree, changes only the selected
   worktree to `.githooks`, is repeatable, and reports its state.
 - A non-interactive pre-commit rejects missing fileoverview and documentation-index violations.
-- A pre-push on a protected branch is rejected; a normal code push runs the full check; a docs-only
-  push runs documentation checks; an uncertain diff runs the full check.
+- The pre-push hook rejects a protected-branch push. For a normal code push, it runs the full check;
+  for a docs-only push, it runs documentation checks; and for an uncertain diff, it runs the full
+  check.
 - Pre-push evaluates every outgoing commit snapshot, including a non-current local ref, without
   allowing unrelated dirty checkout content to change the result.
 - Failed hooks do not alter working files, staged content, commits, branches, or remotes.
@@ -841,13 +861,13 @@ configuration.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
 Repair the README chain directory by directory, rerunning the full audit after each group. If the
-installed provider version contradicts the documented PostToolUse contract, stop, record the
-evidence, revise this plan's adapter scope, and repeat clean-room review; do not silently omit an
+installed provider's behavior contradicts the documented PostToolUse contract, stop, record the
+evidence, revise this plan's adapter scope, and repeat clean-room review. Do not silently omit an
 adapter from an approved revision.
 
-If work item `5717221` changes the architecture kernel after this plan is reviewed, stop before
-implementation, rebase the planning branch, revise the consumed interfaces and tests here, and
-repeat clean-room review. If hook execution leaves the worktree changed, treat that as a defect,
+If implementing work item `5717221` changes the architecture kernel after this plan is reviewed,
+stop before implementation, rebase the planning branch, revise the consumed interfaces and tests
+here, and repeat clean-room review. If hook execution leaves the worktree changed, treat that as a defect,
 restore the disposable fixture, add a regression test, and do not continue to PR handoff until the
 mutation is removed.
 
@@ -907,6 +927,10 @@ external sources.
   worktree configuration leak and self-modifiable workflow gap.
 - [x] (2026-07-25 19:40Z) Completed clean-room and mandatory headless document review through
   reviewed commit `a4a5c11`; repaired every P0/P1 plan finding and recorded the durable verdict.
+- [x] (2026-07-25 20:45Z) Marked the `a4a5c11` review as superseded after applying the repository
+  writing standard and adding `.agents/skills/` to the documentation policy. A new review is
+  required for this revision.
+- [ ] Obtain a clean-room review for the exact revised plan.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
 
@@ -978,13 +1002,13 @@ external sources.
 
 ## Outcomes & Retrospective
 
-Planning outcome: U1A now has a bounded, self-contained design grounded in the exact Pier Docs and
-Nucleus mechanisms the operator named. It strengthens their useful behaviors by centralizing
-policy, failing closed in non-interactive execution, avoiding hook mutations, and preserving agent
-vendor neutrality. No implementation is authorized yet.
+Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
+It centralizes policy, fails closed in non-interactive execution, avoids hook mutations, and
+supports both agent vendors. Implementation remains unauthorized.
 
-The next planning action is to obtain exact operator approval of the authority PR revision. The
-implementation dependency remains the merged resolution of work item `5717221`.
+After a new clean-room review approves the edited plan, obtain operator approval for the exact plan
+revision at the authority PR head. U1A still depends on the merged resolution of work item
+`5717221`.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
@@ -1011,4 +1035,5 @@ clean-room re-review and operator approval remain.
 
 Clean-room approval note (2026-07-25): The final reviewed content is commit `a4a5c11`, SHA-256
 `378cf11ff6f27d50d4c789a67a9e3cf135ec7f3a4d5e08cceec9bf12ef7a7bc6`. The durable review lives
-at `docs/plans/reviews/2026-07-25-u1a-clean-room.md`; implementation remains unauthorized.
+at `docs/plans/reviews/2026-07-25-u1a-clean-room.md`. Language and policy changes later superseded
+that review; implementation remains unauthorized.

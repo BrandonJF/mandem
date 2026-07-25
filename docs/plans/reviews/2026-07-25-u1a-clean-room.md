@@ -2,6 +2,8 @@
 
 Date: 2026-07-25
 
+Status: superseded by later language and documentation-policy changes
+
 Reviewed artifact: `docs/plans/units/u1a-documentation-authoring-quality-gates.md`
 
 Reviewed commit: `a4a5c11c627a9cde5316fc9adbf79f8620aa895f`
