@@ -393,8 +393,10 @@ version `2026-03-10` and this exact semantic payload:
 `bun run repository-ruleset:apply` performs that idempotent create/update and then reads the exact
 ruleset back. `bun run repository-ruleset:check` is read-only and exits `1` when any field above
 differs, including a nonempty bypass list; it exits `2` for authentication, authorization, API, or
-ambiguous duplicate-name failures. Tests mock only the `gh` process boundary and cover create,
-update, already-conformant, drifted, duplicate, unauthenticated, and unauthorized responses.
+ambiguous duplicate-name failures. Apply also exits `2` without mutation unless discovery returns
+exactly zero or one matching ruleset. Tests mock only the `gh` process boundary and cover create,
+update, already-conformant, drifted, duplicate-with-no-mutation, unauthenticated, and unauthorized
+responses.
 Milestone 7 runs `gh auth status`, then apply and check. On authority failure the worker records the
 command, exit status, and secret-free API response in `Progress`, comments the same concise blocker
 on work item `745eda8`, marks the unit `Needs you`, and stops before claiming completion.
