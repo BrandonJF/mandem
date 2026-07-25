@@ -193,13 +193,20 @@ first so U1A adds coverage to a corrected kernel rather than creating conflictin
 ### D5. Git hook inputs and classifications are normative
 
 Store versioned Git entrypoints under `.githooks/` and substantive hook behavior under
-`scripts/hooks/`. `bun run hooks:install` first checks `extensions.worktreeConfig`. If it is not
-`true`, it runs `git config extensions.worktreeConfig true` once in the common repository, then
-runs `git config --worktree core.hooksPath .githooks`. `bun run hooks:check` reads
+`scripts/hooks/`. `bun run hooks:install` first reads any common-config `core.hooksPath` directly
+from `<git-common-dir>/config`. If `extensions.worktreeConfig` is not `true`, it enables the
+extension and, when a common hook path existed, copies that value into every existing worktree's
+worktree config before removing only the common key. It then runs
+`git config --worktree core.hooksPath .githooks` in the selected worktree. Perform file and
+worktree operations through argument arrays, not interpolated shell commands. If enumeration,
+migration, or removal fails, exit `2` before replacing the selected worktree's value.
+`bun run hooks:check` reads
 `git config --worktree --get core.hooksPath` and reports whether the active worktree alone is
 configured. Installation is idempotent and never modifies global Git configuration. Integration
-tests create one common repository with two linked worktrees, install in only one, and prove the
-sibling has no worktree-local `core.hooksPath`.
+tests create one common repository with two linked worktrees. With no pre-existing common value,
+install in one and prove the sibling's effective hook path is unset. With a pre-existing common
+value, prove the sibling retains that value worktree-locally while only the selected worktree moves
+to `.githooks`, and prove the common key is absent afterward.
 
 Pre-commit builds a virtual staged snapshot from `HEAD` plus the Git index: start from
 `git ls-tree -r HEAD`, overlay added/copied/modified/renamed index blobs from `git show :<path>`,
@@ -606,9 +613,10 @@ Prove a valid staged TypeScript file commits, a missing fileoverview is rejected
 an unindexed Markdown file is rejected, protected-branch pushes are blocked, code pushes invoke the
 full gate, docs-only pushes invoke the documentation gate, and an indeterminate diff invokes the
 full gate. Snapshot the repository before and after each failure to prove hooks do not mutate files,
-the index, commits, branches, or remotes. In a two-worktree fixture, prove installation enables
-`extensions.worktreeConfig`, writes only the selected worktree's config, and leaves its sibling's
-hook path unset.
+the index, commits, branches, or remotes. In two-worktree fixtures, prove installation enables
+`extensions.worktreeConfig`, leaves a sibling effectively unset when no common hook existed, and
+migrates a pre-existing common hook value to the sibling before selecting `.githooks` only for the
+installing worktree.
 
 This milestone is complete when hook integration tests pass on Linux and repeated installation
 produces the same local configuration without duplicate or global settings.
@@ -722,9 +730,9 @@ Acceptance requires all of the following observable behaviors:
 - Generated, vendored, declaration, build, and disposable fixture paths are excluded only where the
   public policy says they are excluded.
 - The real repository passes the same policy used by fixtures.
-- Hook installation enables Git's worktree-config extension once, changes only the current
-  worktree's `core.hooksPath`, leaves sibling worktrees unchanged, is repeatable, and reports its
-  state.
+- Hook installation enables Git's worktree-config extension once, removes any inherited common
+  `core.hooksPath` only after preserving it in every existing worktree, changes only the selected
+  worktree to `.githooks`, is repeatable, and reports its state.
 - A non-interactive pre-commit rejects missing fileoverview and documentation-index violations.
 - A pre-push on a protected branch is rejected; a normal code push runs the full check; a docs-only
   push runs documentation checks; an uncertain diff runs the full check.
@@ -747,11 +755,13 @@ Acceptance requires all of the following observable behaviors:
 ## Idempotence and Recovery
 
 Policy checks are read-only and safe to repeat. Hook installation enables
-`extensions.worktreeConfig` in the common repository if needed, then writes one worktree-local Git
-setting and is safe to repeat. Capture the previous worktree-local `core.hooksPath` in the test
-fixture; the documented uninstall/recovery command restores that value or unsets the worktree-local
-key if none existed. Do not disable `extensions.worktreeConfig` during uninstall because sibling
-worktrees may rely on it. Never edit global Git configuration.
+`extensions.worktreeConfig` in the common repository if needed, preserves any prior common hook
+value across existing worktrees before removing it, then writes one worktree-local Git setting and
+is safe to repeat. Capture the selected worktree's value before replacement; the documented
+uninstall/recovery command restores that value or unsets the worktree-local key if none existed.
+Do not reconstruct a common hook value or disable `extensions.worktreeConfig` during uninstall
+because sibling worktrees may rely on their worktree-local values. Never edit global Git
+configuration.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
 Repair the README chain directory by directory, rerunning the full audit after each group. If the
