@@ -195,8 +195,9 @@ first so U1A adds coverage to a corrected kernel rather than creating conflictin
 Store versioned Git entrypoints under `.githooks/` and substantive hook behavior under
 `scripts/hooks/`. `bun run hooks:install` first reads any common-config `core.hooksPath` directly
 from `<git-common-dir>/config`. If `extensions.worktreeConfig` is not `true`, it enables the
-extension and, when a common hook path existed, copies that value into every existing worktree's
-worktree config before removing only the common key. It then runs
+extension. Independently of whether the extension was already enabled, when a common hook path
+exists it copies that value into every existing worktree that has no worktree-local override,
+verifies each effective value, and only then removes the common key. It then runs
 `git config --worktree core.hooksPath .githooks` in the selected worktree. Perform file and
 worktree operations through argument arrays, not interpolated shell commands. If enumeration,
 migration, or removal fails, exit `2` before replacing the selected worktree's value.
@@ -206,7 +207,8 @@ configured. Installation is idempotent and never modifies global Git configurati
 tests create one common repository with two linked worktrees. With no pre-existing common value,
 install in one and prove the sibling's effective hook path is unset. With a pre-existing common
 value, prove the sibling retains that value worktree-locally while only the selected worktree moves
-to `.githooks`, and prove the common key is absent afterward.
+to `.githooks`, and prove the common key is absent afterward. Run that migration case once with the
+extension initially disabled and once with it already enabled.
 
 Pre-commit builds a virtual staged snapshot from `HEAD` plus the Git index: start from
 `git ls-tree -r HEAD`, overlay added/copied/modified/renamed index blobs from `git show :<path>`,
