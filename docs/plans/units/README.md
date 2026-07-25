@@ -57,7 +57,7 @@ must revalidate those scaffolds after dependencies complete.
 | Unit | Child scaffold | Depends on | Promotion |
 | --- | --- | --- | --- |
 | U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | corrective work open (`5717221`) |
-| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | Corrected U1 | planned; review required |
+| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | Corrected U1 | clean-room approved; operator approval required |
 | U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A | scaffolded; dependency revalidation invalidated |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
 | U4 | [Work items, ExecPlans, queue, gates, primitive CLI, and projections](./u4-work-items-plans-queue-gates-cli.md) | U2, U3 | scaffolded |

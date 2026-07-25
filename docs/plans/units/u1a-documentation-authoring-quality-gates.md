@@ -4,7 +4,7 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: planned
+promotion: clean-room-approved
 execution_authorized: false
 date: 2026-07-25
 ---
@@ -905,7 +905,8 @@ external sources.
   contracts.
 - [x] (2026-07-25 19:20Z) Ran a third clean-room review at `e597967`; it found the remaining linked
   worktree configuration leak and self-modifiable workflow gap.
-- [ ] Run clean-room re-review against the repaired exact revision and repair every material finding.
+- [x] (2026-07-25 19:40Z) Completed clean-room and mandatory headless document review through
+  reviewed commit `a4a5c11`; repaired every P0/P1 plan finding and recorded the durable verdict.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
 
@@ -982,9 +983,8 @@ Nucleus mechanisms the operator named. It strengthens their useful behaviors by 
 policy, failing closed in non-interactive execution, avoiding hook mutations, and preserving agent
 vendor neutrality. No implementation is authorized yet.
 
-The next planning action is to complete clean-room re-review against the repaired exact revision,
-repair every material finding, and then obtain exact operator approval. The implementation
-dependency remains the merged resolution of work item `5717221`.
+The next planning action is to obtain exact operator approval of the authority PR revision. The
+implementation dependency remains the merged resolution of work item `5717221`.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
@@ -1008,3 +1008,7 @@ routine PRs.
 Final document-review note (2026-07-25): Corrected the stale next-planning-action summary so it
 matches the current `Progress` state: the registry and U2 dependency update are already complete;
 clean-room re-review and operator approval remain.
+
+Clean-room approval note (2026-07-25): The final reviewed content is commit `a4a5c11`, SHA-256
+`378cf11ff6f27d50d4c789a67a9e3cf135ec7f3a4d5e08cceec9bf12ef7a7bc6`. The durable review lives
+at `docs/plans/reviews/2026-07-25-u1a-clean-room.md`; implementation remains unauthorized.
