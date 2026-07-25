@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Clearly"
+  short_description: "Clear, direct writing for Mandem work"
+  default_prompt: "Use $write-clearly to revise this text for direct, natural, precise language."
