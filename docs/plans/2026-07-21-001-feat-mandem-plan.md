@@ -16,24 +16,25 @@ execution_authorized: false
 
 # Mandem - Plan
 
-This program ExecPlan is a living document governed by the repository-root `PLANS.md`. Read
-`PLANS.md` in full before authoring, discussing, reviewing, or executing this plan. Keep
+The repository-root `PLANS.md` defines how to author, review, and execute this program ExecPlan.
+Read `PLANS.md` in full before working with this plan. Keep
 `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current at
 every stopping point.
 
-This file is the canonical program authority for Mandem. The copy previously merged in Strategy
-Builder Pro is historical provenance, not a second living plan. This program plan may coordinate
-planning, review, approval, and execution across U1 through U10, but it never authorizes a worker
-to implement a unit directly. Only the complete child ExecPlan for that unit can do so.
-`program_coordination_authorized` permits that sequencing role. The master's
-`execution_authorized` field remains false permanently so no worker can mistake it for child
-implementation authority.
+This is Mandem's current program plan. The copy previously merged in Strategy Builder Pro is
+historical provenance. This plan coordinates U1 through U10 but does not authorize implementation.
+Only an approved child ExecPlan authorizes its unit. The `program_coordination_authorized` field
+permits sequencing; `execution_authorized` remains permanently `false` on this plan.
 
 ## Purpose / Big Picture
 
-**Objective:** Create Mandem, a standalone open-source agent orchestration system for building TypeScript web applications in Brandon's house architecture through bounded conversations, self-contained ExecPlans, visible coding-agent workers, deterministic gates, and unattended execution.
+**Objective:** Create Mandem, a standalone open-source system that orchestrates agents building
+TypeScript web applications in Brandon's house architecture. It uses bounded conversations,
+self-contained ExecPlans, visible coding-agent workers, deterministic gates, and unattended
+execution.
 
-**Product authority:** Brandon is the primary operator and authority for Mandem's default doctrine. Other developers and product owners are secondary users.
+**Product authority:** Brandon is Mandem's primary operator and defines its default doctrine. Other
+developers and product owners are secondary users.
 
 **Current boundary:** U1 has passed clean-room review, received exact head-bound operator approval,
 and is executable from its isolated worktree. U2-U10 remain unauthorized scaffolds. The first
@@ -100,37 +101,49 @@ conformance fixtures in U7. AXI recommends TOON, but TOON remains an independent
 
 ### Summary
 
-Mandem gives an operator one accessible control surface for directing a visible crew of coding agents.
-It packages Brandon's engineering principles, agent roles, quality gates, and learning loop so projects are built consistently without exposing the operator to orchestration complexity.
+Mandem gives the operator one interface for directing visible coding agents. It packages Brandon's
+engineering principles, roles, quality gates, and learning process so projects follow the same
+process without requiring the operator to manage its internal steps.
 
 ### Problem Frame
 
 Strategy Builder Pro already contains a substantial agent organization: specialized roles, worktree isolation, durable work tracking, reports, review gates, human decision points, and a coordination service.
 That system is coupled to Claude Code, spread across many scripts and instruction files, and embedded in an application repository whose name and product concerns may change.
 
-The reusable value is the engineering system itself.
-Extracting it allows Brandon's projects to share one evolving doctrine and makes the process inspectable without publishing the applications that use it.
+The engineering system is reusable. Moving it into Mandem lets Brandon's projects share one
+evolving doctrine and makes the process inspectable without publishing the applications that use
+it.
 
 ### Key Decisions
 
 **Standalone product.** Mandem lives in its own repository so orchestration and engineering doctrine have a single responsibility separate from any application.
 
-**Opinionated product with a protected process.** Mandem ships Brandon's versioned operating model as the built-in default. Project configuration may override permitted engineering details, but cannot bypass the safety kernel, durable-state rules, observability, evidence requirements, or `Plan -> Work -> Review -> Learn` lifecycle. Open-source users remain free to fork the product.
+**Opinionated product with fixed process requirements.** Mandem ships Brandon's versioned operating
+model as the built-in default. Project configuration may override permitted engineering details,
+but cannot bypass the safety kernel: durable-state rules, observability, evidence requirements, or
+the `Plan -> Work -> Review -> Learn` lifecycle. Open-source users remain free to fork the product.
 
 **One canonical CLI.** Agents and operators use one supported command surface. Existing Strategy Builder Pro scripts become internal implementation details or migration shims rather than public APIs.
 
 **AXI-native interface.** Mandem adopts AXI's ten design principles and uses TOON for agent-facing structured output. Token budget and round-trip count are product constraints.
 
-**Subscription-backed workers.** Mandem launches authenticated vendor CLIs such as Claude Code and Codex rather than calling model APIs. Provider subscriptions, native tools, and native authentication remain usable.
+**Subscription-backed workers.** The Mandem client launches authenticated vendor CLIs such as
+Claude Code and Codex rather than calling model APIs. Provider subscriptions, native tools, and
+native authentication remain usable.
 
-**Bounded conversations and disposable workers.** The stable interface is the Mandem client, not a long-lived lead-agent chat. Every phase opens a fresh, focused agent session in tmux and closes with a durable handoff. Background workers are independently viewable and can be taken over only through an attributable control-plane action.
+**Bounded conversations and disposable workers.** The Mandem client is the stable interface. Every
+phase opens a fresh, focused agent session in tmux and closes with a durable handoff. Background
+workers are independently viewable and can be taken over only through an attributable control-plane
+action.
 
 **Self-contained plans.** Every work item has exactly one canonical ExecPlan maintained according
 to the repository-root `PLANS.md`, whose initial contract was copied from Nucleus. A complete
 ExecPlan, rather than an extracted milestone prompt, is the execution context for every fresh
 worker.
 
-**Git-native work ledger.** Every substantial workflow starts from a project-local git-native issue. GitHub Issues are a concise projection when a GitHub remote exists; they are not the source of truth.
+**Git-native work ledger.** Every substantial workflow starts from a project-local git-native
+issue. GitHub Issues mirror the project-local git-native issue when a GitHub remote exists; they do
+not define workflow state.
 
 **Client and server.** `mandem` is the single host-side CLI/TUI and tmux/agent launcher. `mandem-server` is the Docker-hosted local control plane. They communicate through local event-driven sockets; there is no polling and no public network service.
 
@@ -213,8 +226,11 @@ resident host mode
 - R23. Public language must be understandable to a product owner without requiring knowledge of agent infrastructure.
 - R24. Mandem-specific vocabulary must be introduced only when useful and explained on first use.
 - R25. Every surface must lead with the outcome, decision, failure, or operator action instead of process narration.
-- R26. Verbosity, academic prose, redundant qualification, and fragmented status reporting must be treated as interface defects across CLI output, prompts, reports, issues, plans, reviews, errors, and documentation.
-- R27. The Mandem client must synthesize fleet state into one compact operator view rather than requiring the operator to inspect individual workers or assemble multiple reports.
+- R26. Mandem must treat verbosity, academic prose, redundant qualification, and fragmented status
+  reporting as interface defects across CLI output, prompts, reports, issues, plans, reviews,
+  errors, and documentation.
+- R27. The Mandem client must summarize the state of all workers in one compact operator view
+  rather than requiring the operator to inspect individual workers or assemble multiple reports.
 - R28. Progressive disclosure must keep mechanics available for diagnosis without placing them in the default operator path.
 
 **Observability and provenance**
@@ -270,20 +286,31 @@ resident host mode
 
 **Local client/server operation**
 
-- R65. `mandem` is the only host-side product command. It provides CLI/TUI behavior and internally owns tmux, worktrees, authenticated agent CLI launch, worker viewing, and attributable takeover.
-- R66. `mandem-server` runs locally in Docker, owns queue processing and SQLite, and communicates with the client over local event-driven sockets without polling.
+- R65. `mandem` is the only host-side product command. It provides CLI/TUI behavior and manages
+  tmux, worktrees, authenticated agent CLI launch, worker viewing, and attributable takeover.
+- R66. `mandem-server` runs locally in Docker, processes the queue, stores SQLite data, and
+  communicates with the client over local event-driven sockets without polling.
 - R67. Mandem must expose no public network service in v1. Remote use occurs through SSH or provider facilities such as Claude remote control while bounded sessions remain reconstructable.
 - R68. Linux is the supported v1 platform. macOS is a post-v1 compatibility target expected to reuse the same Docker, tmux, Git, and local-client model; Windows is outside native scope.
 - R69. Operational events and projections live in project-local, gitignored SQLite state under `.mandem/runtime/`; significant lifecycle checkpoints are written to the git-native issue and ExecPlan.
-- R70. The initial built-in event views must later be extended in the same required product path with Alloy, Loki, Grafana, and standard Mandem dashboards; this is a later build phase, not an optional deployment profile.
-- R71. The first usable release must prove one complete SBP vertical slice: initialize and baseline the repository; create or select a git-native work item; produce a compliant ExecPlan in a bounded planning session; pass clean-room review and operator approval; execute unattended with TDD in an isolated worktree using Claude or Codex; open, review, repair, learn, gate, and automatically merge the PR; then restart with all agent conversations closed and reconstruct the complete outcome from durable state.
+- R70. A later required phase must add Alloy, Loki, Grafana, and standard Mandem dashboards to the
+  product installation. This is not an optional deployment profile.
+- R71. The first usable release must prove one complete SBP vertical slice. The process must
+  initialize and baseline the repository, then create or select a git-native work item. A bounded
+  planning session must produce a compliant ExecPlan that passes clean-room review and receives
+  operator approval. Claude or Codex must then execute the work unattended with TDD in an isolated
+  worktree. The process must open the PR, complete review and repair, run Learn and the required
+  gates, and merge automatically. Finally, with all agent conversations closed, a restart must
+  reconstruct the complete outcome from durable state.
 
 ### Key Flows
 
 - F1. Product intent to completed work
   - **Trigger:** The operator describes an outcome or selects existing work.
   - **Actors:** A1, A2, A3, A4
-  - **Steps:** Mandem frames and plans the work, dispatches isolated workers, supervises progress, runs reviews and verification, presents required decisions, integrates the result, and runs the learn stage.
+  - **Steps:** The planning phase creates the plan. The control plane dispatches isolated workers,
+    supervises progress, runs reviews and verification, presents required decisions, integrates the
+    result, and runs Learn.
   - **Outcome:** The operator receives a concise verified outcome with traceable provenance.
 
 - F2. Worker interruption and reconstruction
@@ -315,7 +342,9 @@ resident host mode
 - AE7. **Covers R17-R19.** Given a project overrides a default doctrine rule, when work is executed, then the worker receives the effective override and the final provenance shows that it governed the task.
 - AE8. **Covers R47-R51.** Given an approved plan runs for several days and all agent chats are closed, when a fresh client or provider session reconnects, then it reconstructs the current phase and next action from the git-native issue, complete ExecPlan, commits, and events.
 - AE9. **Covers R48-R54.** Given a plan is drafted, when clean-room review passes and the operator approves its exact revision, then Mandem executes unattended through PR review, repair, Learn, final gates, and automatic merge unless a typed gate requires the operator.
-- AE10. **Covers R58-R60.** Given a behavior change, when its PR reaches Review, then the event and commit history prove an expected failing test preceded production code and the relevant green and browser gates passed.
+- AE10. **Covers R58-R60.** Given a behavior change, when its PR reaches Review, then the event and
+  commit history provide evidence that an expected failing test preceded production code and that
+  the relevant green and browser gates passed.
 - AE11. **Covers R61-R64.** Given Mandem is initialized in SBP, when the architecture analyzer runs, then it produces a deterministic baseline against the Nucleus-derived standard, fails new violations, and creates actionable remediation candidates without blocking on grandfathered debt.
 - AE12. **Covers R71.** Given the first SBP work item completes and all Mandem and vendor sessions are stopped, when Mandem starts again, then the TUI shows the completed lifecycle, approved plan revision, iterations, PR, reviews, Learn outcome, merge, and evidence without reading an old chat transcript.
 - AE13. **Covers R23-R28.** Given a product owner submits or selects an outcome and reaches a typed
@@ -397,7 +426,9 @@ plans are revalidated when an upstream interface changes.
 
 **Target repository:** a new standalone `mandem` repository. Paths in the implementation units are relative to that repository unless explicitly prefixed `Strategy Builder Pro consumer`.
 
-**Product Contract preservation:** clarified R65-R70 through the technical design below without changing their behavior. The persistent host mode is an internal mode of the single `mandem` client, not a third product. R71 remains the release acceptance spine.
+The technical design clarifies R65-R70 without changing their behavior. The persistent host mode
+is an internal mode of the single `mandem` client, not a third product. R71 remains the release
+acceptance criterion.
 
 ### Program Decomposition Contract
 
@@ -417,23 +448,41 @@ Each U-ID owns one child ExecPlan under `docs/plans/units/`. Every child begins 
 4. passes clean-room review and any repair rounds;
 5. receives exact operator approval for that reviewed revision.
 
-Promotion follows `scaffolded -> planned -> clean-room approved -> operator approved -> executable -> complete`. A downstream child may be refined early, but dependency completion invalidates any assumption contradicted by the produced artifacts and requires review refresh before promotion.
+A child plan has these promotion states:
+`scaffolded -> planned -> clean-room approved -> operator approved -> executable -> complete`. A
+downstream child may be refined early, but dependency completion invalidates any assumption
+contradicted by the produced artifacts and requires review refresh before promotion.
 
 The program orchestrator reads this master and the child registry. An implementation worker
 receives only the complete approved child ExecPlan, which must embed every program constraint and
-dependency interface it needs. This prevents two competing execution authorities. A bounded unit
+dependency interface it needs. Keeping the program plan with the orchestrator and providing
+workers only the approved child ExecPlan prevents competing execution authorities. A bounded unit
 packet may aid navigation but can never replace the child ExecPlan.
 
-Mandem is its own first conforming consumer. Its source modules, composition roots, tests, and entrypoints must obey the same Nucleus-derived architecture standard that Mandem enforces in installed projects. No tooling, bootstrap, or internal-control-plane exception may bypass the architecture checker.
+The program must apply Mandem's architecture standard to Mandem itself. Its source modules,
+composition roots, tests, and entrypoints must obey the same Nucleus-derived architecture standard
+that Mandem enforces in installed projects. No tooling, bootstrap code, or internal control-plane
+code may bypass the architecture checker.
 
 ### Key Technical Decisions
 
 - KTD1. **Single Bun package with clean modules.** Build Mandem as one Bun/TypeScript package with two public executables, `mandem` and `mandem-server`. Keep domain boundaries under `src/modules/` using the Nucleus `domain`, `application`, `infrastructure`, and `api` shape. Avoid a workspace/monorepo until independently versioned packages become necessary.
 - KTD2. **One installation and server per project.** `mandem init` commits a stable project ID and pinned versions. `mandem up` starts one project-scoped server container, SQLite volume, local event-driven transport, and persistent host mode. Invocations from worktrees resolve to the owning project rather than creating duplicate servers.
-- KTD3. **Docker server, resident client mode.** Docker owns the durable workflow process and SQLite. The same `mandem` binary runs an internal resident host mode managed by a Linux user service and connected through the local socket. It executes typed host capabilities such as tmux, Git worktrees, and vendor CLIs but never decides workflow transitions.
+- KTD3. **Docker server, resident client mode.** The Docker-hosted server is the durable workflow
+  process and stores SQLite data. The same `mandem` binary runs an internal resident host mode
+  managed by a Linux user service and connected through the local socket. The resident mode
+  executes typed host capabilities such as tmux, Git worktrees, and vendor CLIs but never decides
+  workflow transitions.
 - KTD4. **Versioned command/event protocol.** CLI, TUI, skills, phase agents, workers, and the resident host mode use one schema-versioned protocol and command-result envelope. No client surface writes SQLite or changes workflow state directly. U3 selects the concrete local transport from a blocking spike; it must support push events without polling or a public service.
-- KTD5. **Append-only operational ledger with portable checkpoints.** SQLite stores an append-only event stream and rebuildable projections, using WAL mode and backup-first migrations. Git/hosting state wins for commits, PRs, checks, and merges; the git-native issue and ExecPlan win for portable intent and approved checkpoints; tmux is observational only. Contradictions become a typed reconciliation incident rather than silent repair.
-- KTD6. **Typed state machine rather than script choreography.** Encode every allowed lifecycle transition, prerequisite, lease, invalidation rule, checkpoint, and recovery action centrally. Reuse SBP's pipeline-graph idea—invalid ordering should be unreachable—but cover the full Mandem lifecycle and typed interruption states.
+- KTD5. **Append-only operational ledger with portable checkpoints.** SQLite stores an append-only
+  event stream and rebuildable projections, using WAL mode and backup-first migrations. For
+  commits, PRs, checks, and merges, Git and hosting data take precedence. For portable intent and
+  approved checkpoints, the git-native issue and ExecPlan take precedence. Tmux is observational
+  only. Contradictions create a typed reconciliation incident instead of causing silent repair.
+- KTD6. **Typed state machine.** Encode every allowed lifecycle transition, prerequisite, lease,
+  invalidation rule, checkpoint, and recovery action centrally instead of coordinating them through
+  separate scripts. Reuse SBP's pipeline-graph approach—the design should make invalid ordering
+  unreachable—while covering the full Mandem lifecycle and typed interruption states.
 - KTD7. **Approval binds to immutable intent.** Plan approval records the work item, canonical plan path, the hash of all approval-sensitive content, clean-room verdict, approver, and authority scope. Living-record regions are machine-delimited, schema-validated, and append-only; only progress, discoveries, evidence, and outcomes may enter them without reapproval. Changes elsewhere, or approval-sensitive instructions moved into an exempt region, invalidate approval.
 - KTD8. **Primitive CLI before TUI and skills.** Implement stable AXI commands and TOON result envelopes before presentation layers. OpenTUI's Bun-first React renderer provides the v1 TUI, but every TUI action must map to the same primitive command and yield the same state transition and event history.
 - KTD9. **Provider adapters are capability contracts.** Claude and Codex adapters declare interactive phase support, autonomous execution, instruction injection, permission mode, structured completion, interruption, remote access, and failure classification. Fallback runs only after capability validation and reconciliation proves the prior process no longer owns a mutation lease.
@@ -561,7 +610,12 @@ Each module follows the canonical Nucleus layer shape where the layer is applica
 
 ### State and Checkpoint Contract
 
-The server synchronously checkpoints these facts before acknowledging their transitions: project identity and pins; work-item creation; queue order and dependencies; canonical plan path and approval-sensitive hashes; clean-room verdicts; operator approvals; dispatch attempts; iteration commit SHAs; PR identity and head SHA; typed gate decisions; takeover, release, pause, and cancellation; Learn outcome; merge SHA; verification; and closure. Heartbeats, streaming logs, pane focus, token estimates, and other high-volume telemetry remain SQLite-only.
+Before acknowledging a transition, the server synchronously checkpoints any affected facts:
+project identity and pins; work-item creation; queue order and dependencies; canonical plan path and
+approval-sensitive hashes; clean-room verdicts; operator approvals; dispatch attempts; iteration
+commit SHAs; PR identity and head SHA; typed gate decisions; takeover, release, pause, and
+cancellation; Learn outcome; merge SHA; verification; and closure. Heartbeats, streaming logs, pane
+focus, token estimates, and other high-volume telemetry remain SQLite-only.
 
 Each phase ends with a typed handoff containing its input artifact revisions, verdict or outcome, decisions, blockers, artifact mutations, evidence, provenance, and next allowed transition. If a phase session dies without a valid handoff, the server records interruption and opens a fresh session from the last accepted checkpoint.
 
@@ -611,7 +665,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U2. Define the versioned protocol, lifecycle kernel, and SQLite event model
 
-- **Goal:** Make every mutation, transition, authority decision, event, error, lease, and result envelope explicit before any presentation or provider code exists.
+- **Goal:** Define explicit representations for every mutation, transition, authority decision,
+  event, error, lease, and result envelope before adding presentation or provider code.
 - **Requirements:** R1-R6a, R20-R22, R29-R33, R47-R57, R65-R70; AE2, AE4, AE8
 - **Dependencies:** U1
 - **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/infrastructure/sqlite/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
@@ -629,7 +684,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U3. Build the local server, Docker lifecycle, resident host mode, and reconciliation
 
-- **Goal:** Keep Mandem processing after the interactive client exits and recover safely after container, host-mode, tmux, or machine interruption.
+- **Goal:** Keep Mandem processing running after the interactive client exits, and recover safely
+  after interruption of the container, resident host mode, tmux, or machine.
 - **Requirements:** R3, R7-R12, R29-R33, R65-R70; F2, AE2, AE4, AE8
 - **Dependencies:** U2
 - **Files:** `src/server/**`, `src/cli/commands/init.ts`, `src/cli/commands/up.ts`, `src/cli/commands/down.ts`, `src/cli/commands/reconcile.ts`, `src/modules/runtime/infrastructure/socket/**`, `src/modules/runtime/infrastructure/docker/**`, `src/modules/runtime/infrastructure/service-manager/**`, `src/modules/sessions/**`, `compose.yaml`, `Dockerfile`, `tests/e2e/restart-reconciliation.test.ts`
@@ -698,7 +754,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U6. Execute unattended worktree iterations through PR, Review, Learn, and merge
 
-- **Goal:** Turn an approved queue into autonomous, isolated, test-driven delivery with independent review, learning, exact-SHA merge, and safe cleanup.
+- **Goal:** Enable unattended, isolated, test-driven delivery from an approved queue, including
+  independent review, learning, exact-SHA merge, and safe cleanup.
 - **Requirements:** R4-R5, R47-R60; F1-F3, AE8-AE10
 - **Dependencies:** U2-U5
 - **Files:** `src/modules/workspaces/**`, `src/modules/execution/application/run-*.ts`, `src/modules/execution/application/review-*.ts`, `src/modules/execution/application/learn-*.ts`, `src/modules/execution/application/merge-*.ts`, `src/modules/execution/infrastructure/git/**`, `src/modules/execution/infrastructure/tmux/**`, `assets/operating-docs/workflows/{work,review,learn}/**`, `tests/e2e/unattended-lifecycle.test.ts`, `tests/e2e/takeover-cancel.test.ts`, `tests/e2e/merge-race.test.ts`
@@ -718,7 +775,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U7. Deliver the AXI CLI, TOON output, OpenTUI control surface, and worker witnessability
 
-- **Goal:** Complete and polish the already-stable control-plane CLI, then make it understandable for a product owner and fully navigable from one local terminal interface.
+- **Goal:** Add product-owner-facing CLI rendering and a fully navigable local terminal interface
+  to the stable control-plane CLI.
 - **Requirements:** R20-R33, R55-R57, R65-R69; AE3-AE4
 - **Dependencies:** U2-U6
 - **Files:** `src/cli/**`, `src/tui/**`, `src/modules/runtime/api/result-renderers/**`, `src/modules/sessions/api/**`, `tests/contract/cli-tui-parity.test.ts`, `tests/e2e/tui-workflow.test.ts`
@@ -740,7 +798,9 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U8. Baseline SBP architecture and install Mandem with migration shims
 
-- **Goal:** Install Mandem into SBP transactionally, compile its operating files, baseline architectural debt, and route existing operator entrypoints toward Mandem without creating dual authority.
+- **Goal:** Install Mandem into SBP transactionally, compile its operating files, baseline
+  architectural debt, and replace selected existing operator entrypoints with Mandem shims without
+  creating conflicting implementation instructions.
 - **Requirements:** R13-R19a, R43-R46, R58-R64, R71; AE7, AE10-AE11
 - **Dependencies:** U1-U7
 - **Files:** `src/modules/architecture-standard/**`, `src/cli/commands/init.ts`, `src/cli/commands/architecture.ts`, `assets/architecture-standard/**`, `tests/e2e/init-existing-repo.test.ts`; **Strategy Builder Pro consumer:** `.mandem/config.*`, `.mandem/operating-docs/**`, `AGENTS.md`, `CLAUDE.md`, `package.json`, `scripts/agents/{resume-state,dispatch-task,gate-and-merge}.ts`, `docs/architecture/mandem-baseline.*`
@@ -776,11 +836,18 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ### U10. Add the required Grafana, Alloy, and Loki observability phase
 
-- **Goal:** Turn the stable Mandem event contract into standard operational dashboards, then publish v1 without creating an alternate source of truth or optional installation branch.
+- **Goal:** Add standard operational dashboards based on the stable Mandem event contract, then
+  publish v1 without creating an alternate workflow-state store or installation path.
 - **Requirements:** R29-R33, R70
 - **Dependencies:** U9
 - **Files:** `compose.yaml`, `observability/alloy/config.alloy`, `observability/loki/config.yaml`, `observability/grafana/provisioning/**`, `observability/grafana/dashboards/**`, `tests/e2e/observability-stack.test.ts`, `docs/operations/observability.md`
-- **Approach:** Extend the same Compose installation with Alloy, Loki, and Grafana. Keep service traffic internal to Compose or loopback, expose only the operator-facing Grafana surface, and disable anonymous non-local access. Export structured server/host logs and event-derived metrics while retaining SQLite as the authoritative ledger. Provision dashboards for queue health, phase duration, worker activity, provider failure/fallback, retries, gates, merge latency, architecture debt, and unresolved `Needs you` states. Publish the pinned executable and server image only after this unit and the complete Definition of Done pass.
+- **Approach:** Extend the same Compose installation with Alloy, Loki, and Grafana. Keep service
+  traffic internal to Compose or loopback, expose only the operator-facing Grafana interface, and
+  disable anonymous non-local access. Export structured server and host logs and event-derived
+  metrics while SQLite remains the durable event ledger. Provision dashboards for queue health,
+  phase duration, worker activity, provider failure and fallback, retries, gates, merge latency,
+  architecture debt, and unresolved `Needs you` states. Publish the pinned executable and server
+  image only after this unit and the complete Definition of Done pass.
 - **Execution note:** Start with fixture lifecycle data and prove local-only service bindings before wiring ingestion.
 - **Patterns to follow:** Mandem's finalized event schema from U2/U9 and Grafana provisioning conventions; SBP command-observability classification as the initial signal taxonomy.
 - **Test scenarios:**
@@ -789,7 +856,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Loki unavailability degrades observability visibly but never blocks workflow mutations.
   - Retention and disk limits prevent unbounded growth while preserving SQLite's durable operational history policy.
   - Effective Compose bindings expose no observability listener beyond the intended local operator surface.
-- **Verification:** The standard installation starts the complete stack, dashboards populate from a fixture lifecycle, and removing Grafana/Loki data cannot change Mandem state.
+- **Verification:** The standard installation starts the complete stack, dashboards populate from a
+  fixture lifecycle, and removing Grafana or Loki data cannot change workflow state.
 
 ---
 
@@ -856,11 +924,19 @@ child.
 
 ## System-Wide Impact
 
-- **Operators:** Gain one bounded, reconstructable control surface; approval remains required only for plans and typed authority boundaries.
-- **Agents:** Receive complete, role-specific context through a provider-neutral contract and cannot bypass the server state machine through prompt behavior.
-- **SBP repository:** Keeps current orchestration during migration, gains architecture ratcheting, then moves selected commands behind Mandem shims before the first real vertical slice.
-- **Git and GitHub:** Git-native issues and ExecPlans carry portable workflow facts; Git/PR state supplies code ground truth; GitHub becomes a useful projection rather than the queue authority.
-- **Operations:** Docker owns the durable server; the resident host mode owns host-only capabilities; the later required observability stack consumes structured events.
+- **Operators:** Use one interface that can reconstruct the current state from durable records.
+  Approval remains required only for plans and typed authority boundaries.
+- **Agents:** Receive complete, role-specific context through the same contract for every provider.
+  Prompt behavior cannot bypass the server state machine.
+- **SBP repository:** Retains its current orchestration during migration. The architecture checker
+  prevents new or worsened violations, and selected commands use Mandem shims before the first real
+  vertical slice.
+- **Git and GitHub:** Git-native issues and ExecPlans store portable workflow facts. Git and pull
+  request data define code state. GitHub displays selected queue data but does not define queue
+  state.
+- **Operations:** The Docker-hosted server stores durable workflow state. The resident host mode
+  executes host-only capabilities. The later required observability services consume structured
+  events.
 
 ### Risks and Mitigations
 
@@ -869,10 +945,14 @@ child.
 - **Vendor parity is claimed from launch flags alone.** Use one capability matrix and conformance suite, including interruption, permissions, completion signals, fallback, and context provenance.
 - **The TUI becomes another control plane.** Build it only over primitive commands and assert CLI/TUI/skill event parity.
 - **Living ExecPlans accidentally retain stale approval.** Machine-delimit and schema-check append-only living regions, hash all other content, and reject approval-sensitive instructions inside exempt regions.
-- **Architecture adoption blocks all SBP work.** Baseline stable fingerprints and fail only new/worsened violations while tracking debt reduction.
+- **Architecture checks could block unrelated SBP work.** Baseline stable fingerprints and fail only
+  new or worsened violations while tracking debt reduction.
 - **Legacy and Mandem systems both mutate the same task.** Migrate one command/work-item ownership boundary at a time and fail if dual ownership is detected.
-- **Automatic merge lands stale evidence.** Hold a server integration lease across target refresh, resync, validation, exact-head check, merge, and checkpoint.
-- **Observability escapes the local boundary.** Keep services on internal Compose networking or loopback, expose only the required operator surface, and verify effective bindings.
+- **Automatic merge could use stale evidence.** Hold a server integration lease across target
+  refresh, resync, validation, exact-head check, merge, and checkpoint.
+- **Observability services could accept non-local connections.** Keep services on internal Compose
+  networking or loopback, expose only the required operator interface, and verify effective
+  bindings.
 
 ### Deferred Implementation Notes
 
@@ -932,7 +1012,7 @@ resolve the contradiction, stop in a visible operator-decision state rather than
 The durable program artifacts are this file, `docs/plans/units/README.md`, the ten child ExecPlans,
 their clean-room reviews, git-native work items, commits, pull requests, review and Learn outputs,
 verification evidence, and Mandem’s event ledger once implemented. Chat summaries and tmux panes
-are useful witnesses but are never authoritative state.
+may help an operator inspect work, but they are not authoritative state.
 
 The initial unreviewed U1 prototype was quarantined outside the repository in a temporary host
 archive named `mandem-u1-unreviewed-prototype-2026-07-24.tar.gz`. It is evidence of the process

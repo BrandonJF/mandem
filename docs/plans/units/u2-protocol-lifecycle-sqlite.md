@@ -9,12 +9,14 @@ execution_authorized: false
 
 # U2: Protocol, lifecycle kernel, and SQLite event model
 
-> This is a dependency scaffold, not an executable plan. It must be expanded, clean-room reviewed, and operator approved before implementation dispatch.
+> This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
+> plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold by incorporating every applicable master-program constraint into one
-self-contained U2 child ExecPlan; the master remains sequencing context, not worker authority.
+Expand this scaffold into a self-contained U2 child ExecPlan that incorporates every applicable
+master-program constraint. Use the master program to sequence work; do not treat it as a worker's
+implementation instruction.
 
 ## Dependency Contract
 
@@ -44,7 +46,10 @@ self-contained U2 child ExecPlan; the master remains sequencing context, not wor
 
 ## Architecture Constraint
 
-All source introduced by this unit must follow Mandem's own Nucleus-derived clean architecture. The detailed plan must identify module ownership, layer placement, public API boundaries, composition roots, and deterministic architecture checks for every behavior-bearing slice.
+Authors must place all source code added for this unit in Mandem's Nucleus-derived clean
+architecture. The detailed plan must identify module ownership, layer placement, public API
+boundaries, composition roots, and deterministic architecture checks for each behavior implemented
+by the unit.
 
 ## Decisions Required Before Promotion
 
@@ -55,69 +60,76 @@ All source introduced by this unit must follow Mandem's own Nucleus-derived clea
 
 ## Required Child ExecPlan Content
 
-Before this scaffold becomes `planned`, replace its planning gaps with a nearly self-contained ExecPlan that includes:
+Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
+ExecPlan that includes:
 
 - goal capsule and traced master requirements;
-- current repository state and patterns actually inspected;
+- current repository state and the patterns the plan author inspected;
 - concrete technical decisions and rejected alternatives;
 - repo-relative files and module/layer ownership;
 - test-first scenarios with expected red and green evidence;
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
-- living Progress, Surprises, Decision Log, and Outcomes sections.
+- Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
+  work.
 
 ## Promotion Checklist
 
-- [ ] Expanded against the current repository and complete master ExecPlan
+- [ ] Expanded using the current repository and complete master ExecPlan
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
-- [ ] Self-conforming module boundaries are named
-- [ ] Test scenarios cover happy, edge, failure, and integration paths as applicable
-- [ ] Clean-room review passed at the current revision
-- [ ] Review findings repaired and re-reviewed
+- [ ] The plan names module boundaries that conform to the architecture standard
+- [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] A clean-room reviewer approved the current revision
+- [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision
-- [ ] `execution_authorized` changed to `true` only after approval
+- [ ] Set `execution_authorized` to `true` only after the operator approves the exact reviewed
+  revision
 
 ## Dependency Revalidation
 
-When any dependency completes or changes an artifact consumed here, compare the actual output with this plan's assumptions. Any material mismatch returns the child to `planned` and requires review refresh before execution.
+When a dependency completes or its producer changes a consumed artifact, the plan author must
+compare the output with this plan's assumptions. If it materially differs, the plan author must set
+`promotion` to `planned` and obtain a refreshed review before execution.
 
-U1 dependency revalidation completed on 2026-07-24 against merge
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The repository now provides Bun `1.3.14`, the
-canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the
-versioned 22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a
-completed Claude/Codex capability baseline. U2 must extend the existing `runtime` module, preserve
-those public barrels, keep SQLite behind infrastructure ports, and avoid weakening any U1 rule or
-gate. No material mismatch invalidated the scaffold, but it is not self-contained enough for
-implementation.
+On 2026-07-24, the Mandem program orchestrator revalidated U2 against merged U1 commit
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The merged U1 artifacts include Bun `1.3.14`, the
+canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the versioned
+22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a completed
+Claude/Codex capability baseline. Implement U2 by extending the existing `runtime` module,
+preserving those public barrels, keeping SQLite behind infrastructure ports, and retaining every U1
+rule and gate. The Mandem program orchestrator found no material mismatch that invalidates this scaffold, but the
+scaffold is not self-contained enough for implementation.
 
 ## Progress
 
 - [x] (2026-07-24) Revalidated consumed inputs against merged U1 commit
   `88b9533ab840c9d357a1d09d2341709e2cbdd986`.
-- [ ] Expand this scaffold into a self-contained U2 ExecPlan governed by `PLANS.md`.
-- [ ] Run clean-room review and repair at the exact planned revision.
-- [ ] Obtain exact-revision operator approval before authorization.
+- [ ] Expand this scaffold into a self-contained U2 ExecPlan that follows `PLANS.md`.
+- [ ] Have a clean-room reviewer review the exact planned revision and address the findings.
+- [ ] Obtain the operator's approval of that revision before setting `execution_authorized` to
+  `true`.
 
 ## Surprises & Discoveries
 
-- Observation: U1 completed the provider capability matrix rather than leaving it as a U2
-  promotion blocker.
-  Evidence: `docs/operations/provider-capability-baseline.md` records working-directory,
+- Observation: U1 completed the provider capability matrix. It is no longer a U2 promotion
+  blocker.
+  Evidence: `docs/operations/provider-capability-baseline.md` lists evidence for working-directory,
   full-access, structured completion, interruption, read-only review, and fresh-session recovery.
 
 ## Decision Log
 
 - Decision: Extend U1's existing `runtime` module and public barrels in U2.
-  Rationale: U1's merged package and architecture contract are dependency ground truth; a parallel
-  lifecycle root would fragment the public surface and violate the handoff.
+  Rationale: U1's merged package and architecture contract specify the interfaces U2 must use. A
+  parallel lifecycle root would create a second public surface and conflict with the U1-to-U2
+  handoff.
   Date/Author: 2026-07-24 / Mandem program orchestrator
 
 ## Outcomes & Retrospective
 
-Dependency revalidation found no incompatible U1 output. U2 is dependency-ready for detailed
-planning, but remains `promotion: scaffolded` and `execution_authorized: false`.
+Dependency revalidation found no incompatible U1 output. U2 can proceed to detailed planning, but
+remains `promotion: scaffolded` and `execution_authorized: false`.
 
-Revision note (2026-07-24): Revalidated U2 against U1's actual merged artifacts and recorded the
-concrete interfaces, gates, provider evidence, and module-extension constraint. This update does
-not authorize U2 implementation.
+Revision note (2026-07-24): The Mandem program orchestrator revalidated U2 against U1's actual
+merged artifacts and recorded the concrete interfaces, gates, provider evidence, and
+module-extension constraint. This update does not authorize U2 implementation.
