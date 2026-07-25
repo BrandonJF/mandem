@@ -3,8 +3,8 @@ title: "U1: Bootstrap the standalone repository and architecture contract"
 plan_kind: mandem-child-execplan
 program_unit: U1
 parent: ../2026-07-21-001-feat-mandem-plan.md
-promotion: executable
-execution_authorized: true
+promotion: complete
+execution_authorized: false
 date: 2026-07-24
 ---
 
@@ -688,6 +688,9 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Closed final-review nested-type/process IO and explicit matrix-row findings; provider baseline state is consistently complete.
 - [x] (2026-07-24) Closed final P2 template-literal type interpolation coverage for explicit `any`.
 - [x] (2026-07-24) Ran the required single headless Learn step and added a grounded architecture-gate fixture-matrix learning.
+- [x] (2026-07-24) Merged reviewed PR #4 as
+  `88b9533ab840c9d357a1d09d2341709e2cbdd986`, reran the full check/build/entrypoint/fsck contract
+  on merged `main`, and closed issue `da645bd`.
 
 ## Surprises & Discoveries
 
@@ -775,19 +778,12 @@ the Decision Log and re-reviewed.
 
 ## Outcomes & Retrospective
 
-Planning outcome: U1 has a dependency-aware, self-contained execution contract, clean-room
-approval, exact head-bound operator approval, a durable git-native issue, and an isolated
-implementation worktree. It is ready for Milestone 2; implementation has not started.
-
-Implementation outcome (in progress): Milestones 2-6 are implemented. The checker uses pure
-typed rules through an application port and filesystem adapter, passes on Mandem, and rejects the
-malformed fixture with exit 1. Both compiled executables emit their bounded version/help results.
-The provider baseline has complete direct evidence for the required U2 protocol capabilities.
-
-Verification outcome (2026-07-24): `bun run check` passed architecture checking, strict TypeScript,
-ESLint, and all four Vitest tests; `bun run build` emitted both Linux executables; each emitted its
-expected version and help output. This was observed at
-`87004e92c2610b8e61067be10a1abe5c63ea215d`. The branch remains unmerged pending its U1 PR.
+Completion outcome: U1 delivered the publishable Bun/TypeScript package, two bounded executable
+entrypoints, self-conforming `architecture-standard` and `runtime` modules, the deterministic
+22-rule checker, provider capability evidence, and repository gates. Repeated independent review
+drove test-first repairs until no actionable findings remained. PR #4 merged as
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`; the post-merge check passed all 15 tests, the build
+and four executable version/help invocations passed, and git-native issue integrity passed.
 
 Revision note (2026-07-24): Rewrote U1 against the complete repository-root `PLANS.md` contract,
 then repaired the clean-room verification findings. Added plain-language orientation, exact
@@ -801,6 +797,10 @@ after reading `PLANS.md`.
 
 Post-merge living update (2026-07-24): Recorded exact approval, unchanged merge, durable issue,
 and isolated-worktree readiness. No implementation instruction changed.
+
+Completion update (2026-07-24): Recorded the reviewed PR #4 merge, post-merge verification,
+grounded Learn artifact, durable issue closure, and U2 handoff. No remaining U1 work is authorized
+or required.
 
 Execution living update (2026-07-24): Recorded Milestones 2-6, the red/green proof, the Vitest
 runtime discovery, the conservative provider decision, and the remaining Milestone 7 work. This
@@ -837,3 +837,8 @@ Final-review verification update (2026-07-24): At
 `23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
 regressions passed, each malformed-matrix row asserted its exact ID/path/message fragment, and
 the provider baseline no longer contained stale blocker state. All canonical gates passed.
+
+Terminal-state revision note (2026-07-24): After reviewed PR #4 merged and post-merge verification
+passed, transitioned U1 from executable authority to `promotion: complete` with
+`execution_authorized: false`. This prevents a fresh worker from re-executing a closed unit while
+preserving the exact historical approval and delivery evidence.

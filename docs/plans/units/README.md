@@ -47,8 +47,8 @@ The graph is dependency order, not a prohibition on early planning. Later scaffo
 
 | Unit | Child scaffold | Depends on | Promotion |
 | --- | --- | --- | --- |
-| U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | executable |
-| U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1 | scaffolded |
+| U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | complete |
+| U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1 | scaffolded; dependency revalidated |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
 | U4 | [Work items, ExecPlans, queue, gates, primitive CLI, and projections](./u4-work-items-plans-queue-gates-cli.md) | U2, U3 | scaffolded |
 | U5 | [Operating docs and bounded Claude/Codex sessions](./u5-operating-docs-provider-sessions.md) | U3, U4 | scaffolded |
