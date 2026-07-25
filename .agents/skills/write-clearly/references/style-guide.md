@@ -1,5 +1,19 @@
 # Mandem Writing Style
 
+## Scope
+
+Apply these rules to every natural-language output about this repository:
+
+- Chat responses and status updates.
+- Plans, issues, pull requests, reviews, reports, and documentation.
+- Commit subjects and bodies.
+- Code comments, docstrings, and file overviews.
+- Script, CLI, hook, and test output.
+- Logs, errors, warnings, help text, prompts, and generated prose.
+
+Do not rewrite quoted external text. Introduce it accurately and keep the quotation distinct from
+Mandem's own prose.
+
 ## Voice and register
 
 - Use a direct, calm, conversational register.
@@ -7,6 +21,19 @@
 - Prefer confidence supported by facts. State uncertainty plainly.
 - Avoid academic, legalistic, promotional, therapeutic, or theatrical language.
 - Do not praise routine decisions or restate agreement.
+
+## Literal and informational framing
+
+- Use literal language.
+- Do not use metaphor, analogy, personification, aphorism, slogan, narrative hook, punchline, or
+  rhetorical question.
+- Do not frame information to create suspense, drama, cleverness, warmth, or engagement.
+- Choose the frame that identifies the actor, action, evidence, consequence, and next step most
+  accurately.
+- Do not turn an observation into a general maxim.
+- Do not use a quotation as an ornamental opening or closing.
+- Retain lexicalized technical terms such as “Git branch” or “webhook” when they are the precise
+  names used by the field. Do not extend their original imagery.
 
 ## Agency and grammatical subjects
 
@@ -22,7 +49,7 @@
 - Prefer a finite verb to a nominalization: “approve” over “grant approval”; “decide” over “make a
   decision.”
 - Prefer concrete verbs: “save,” “read,” “run,” “reject,” “merge.”
-- Avoid metaphorical verbs for technical behavior: code does not “ride,” “wrestle,” “escape,”
+- Do not use metaphorical verbs for technical behavior: code does not “ride,” “wrestle,” “escape,”
   “want,” or “move out.”
 - Keep established technical verbs when they are exact: a function “returns”; a process “exits.”
 
@@ -44,7 +71,7 @@
   concrete rule or action when writing for the operator.
 - Avoid vague intensifiers and unsupported adjectives: “robust,” “seamless,” “comprehensive,”
   “powerful,” “significant.”
-- Avoid stock AI vocabulary and metaphors: “load-bearing,” “surface,” “gated,” “belt-and-braces.”
+- Avoid stock AI vocabulary: “load-bearing,” “surface,” “gated,” “belt-and-braces.”
 - Avoid “not X, but Y” unless the reader could reasonably mistake X for Y.
 
 ## Information and length
@@ -68,6 +95,7 @@
 - Identify the actor in every clause.
 - Replace avoidable nominalizations with verbs.
 - Replace vague claims with observable facts.
+- Remove metaphor, aphorism, personification, and engagement-driven framing.
 - Remove internal terminology the audience does not need.
 - Check that the first sentence gives the outcome.
 - Check that any requested action is explicit.
