@@ -122,23 +122,38 @@ Each violation contains a stable rule ID, repository-relative path, and concise 
 sort by rule ID, path, then message. A policy exception must be declared in the versioned policy and
 covered by a test; scripts and hooks may not carry private exclusion lists.
 
-### D2. Documentation scope is explicit and recursive
+### D2. Documentation scope is a versioned manifest, not a heuristic
 
-The documentation checker starts from the repository root and includes maintained Markdown below
-`docs/`, `scripts/`, and any future top-level directory explicitly added to the policy. Root
-`README.md`, module-root READMEs, `AGENTS.md`, `CLAUDE.md`, and `PLANS.md` remain discoverable from
-the root but do not force READMEs into every source layer.
+Define `documentationPolicyV1` in
+`src/modules/architecture-standard/domain/repository-policy.ts`. Its recursively indexed root is
+`docs/`: every directory at or below `docs/` that contains Markdown or an indexed child directory
+requires a local README, every non-README Markdown file must be linked from that README, and every
+child directory README must be linked from its parent's README.
 
-Exclude `.git/`, `.codex/`, `.claude/`, `.github/`, `node_modules/`, `dist/`, `coverage/`,
-disposable test fixtures, and generated or vendored paths named by the policy. Exclusions are
-repo-relative and segment-aware so a normal directory containing a similar substring is not
-accidentally skipped. Symbolic links must not let traversal leave the repository root.
+The manifest also declares three special indexes without requiring READMEs throughout their parent
+paths. Root `README.md` must link `AGENTS.md`, `CLAUDE.md`, `PLANS.md`, `docs/README.md`,
+`scripts/README.md`, `.githooks/README.md`, and `src/modules/README.md`. `scripts/README.md` must
+link each Markdown file and child README below `scripts/`. `src/modules/README.md` must link every
+immediate `src/modules/<name>/README.md`. Module-root READMEs remain the only required code
+documentation below each module. A new Markdown file outside the recursive root or declared special
+indexes produces `DOC-UNSCOPED-MARKDOWN` rather than silently escaping policy.
 
-Every in-scope non-README Markdown file is linked by filename from its local README. Every in-scope
-child documentation directory is linked from the parent's README. Relative links may include
-anchors and query strings, which are ignored when resolving the filesystem target. External,
-`mailto:`, and same-page anchor links are outside the local-target check. Removed README paths are
-validated against tracked parent indexes so stale navigation cannot silently remain.
+Exclude any path containing a complete segment `.git`, `.codex`, `.claude`, `.github`,
+`node_modules`, `dist`, or `coverage`; exclude `tests/fixtures/` and a generated/vendor path only
+when its complete segment is `generated`, `vendor`, or `vendored`. The checked-in
+`docs/plans/reviews/` and `docs/solutions/` trees are maintained documentation and are not excluded.
+Symbolic links are recorded but never traversed. A resolved local link outside the repository root
+is a `DOC-BROKEN-LOCAL-LINK` finding.
+
+Parse inline Markdown links `[label](target)` and reference links `[label][id]` whose
+`[id]: target` definition is in the same README. Strip an optional `<...>` wrapper, query, and
+fragment, decode valid percent escapes, and resolve the remaining target relative to the README
+using POSIX separators. A link to either `child/` or `child/README.md` satisfies the child-index
+rule. Matching is case-sensitive because Linux is the v1 target. Ignore images, HTML links,
+autolinks, external `http:`, `https:`, `mailto:`, and same-page anchors. Backslashes, malformed
+percent escapes, empty local targets, and local targets that do not exist fail as broken local
+links. Removed documents and READMEs are evaluated against the staged or compared repository
+snapshot, so stale links fail.
 
 ### D3. Human-maintained README indexes are checked, not silently rewritten
 
@@ -148,52 +163,92 @@ validation decides whether every file and child directory is reachable. This avo
 tables overwriting useful context and keeps hooks free of hidden mutations. A later explicit
 `docs:sync` command may be planned if index maintenance becomes burdensome.
 
-### D4. `@fileoverview` is enforced from one authored-source manifest
+### D4. `@fileoverview` is enforced from one exact authored-source manifest
 
-The architecture policy declares its authored TypeScript roots and exclusions once. Initial roots
-are `src/`, `scripts/`, and repository configuration files ending in `.ts` or `.tsx`. Test code is
-authored code and requires a fileoverview. Disposable fixtures and declaration files are excluded.
-The comment must begin the file after an optional Unix shebang and must include non-placeholder text;
-an occurrence later in the file or inside a string does not pass.
+Define `authoredSourcePolicyV1` beside the documentation policy. Include `src/**/*.ts`,
+`src/**/*.tsx`, `scripts/**/*.ts`, `scripts/**/*.tsx`, `tests/**/*.ts`, `tests/**/*.tsx`, and root
+`*.config.ts`/`*.config.tsx`. This includes current CLI/server files, both modules, checker and hook
+scripts, contract tests, `eslint.config.ts`, and `vitest.config.ts`. Exclude any complete segment
+`.git`, `node_modules`, `dist`, `coverage`, `generated`, `vendor`, or `vendored`; exclude
+`tests/fixtures/**` and files ending `.d.ts`. Any authored `.ts`/`.tsx` outside the include set
+produces `ARCH-UNSCOPED-TYPESCRIPT` until the manifest is deliberately updated.
+
+The first content after an optional `#!` line must be a JSDoc comment containing `@fileoverview` and
+at least one non-placeholder word before `*/`. Case-insensitive placeholder-only values `todo`,
+`tbd`, `description`, `file`, and `placeholder` fail. An occurrence later in the file, in an
+ordinary comment, or in a string does not pass. Test code is authored code; only disposable fixture
+and declaration files receive the explicit exceptions above.
 
 The existing architecture checker and tests consume this manifest. The U1 corrective plan must land
 first so U1A adds coverage to a corrected kernel rather than creating conflicting repairs.
 
-### D5. Hooks call shared commands and remain recoverable
+### D5. Git hook inputs and classifications are normative
 
 Store versioned Git entrypoints under `.githooks/` and substantive hook behavior under
 `scripts/hooks/`. `bun run hooks:install` sets this worktree's `core.hooksPath` to `.githooks`;
 `bun run hooks:check` reports whether the active worktree is configured. Installation is
 idempotent and never modifies global Git configuration.
 
-Pre-commit checks staged added, copied, modified, or renamed authored TypeScript and Markdown paths.
-It rejects missing fileoverviews and documentation-chain failures without prompting. Pre-push blocks
-direct pushes to protected branches and runs the canonical repository gate for code or configuration
-changes. Documentation-only pushes may run the cheaper documentation gate, but an empty or
-unresolvable diff fails closed into the full check. Hooks never format, stage, commit, amend, push,
-or delete files.
+Pre-commit builds a virtual staged snapshot from `HEAD` plus the Git index: start from
+`git ls-tree -r HEAD`, overlay added/copied/modified/renamed index blobs from `git show :<path>`,
+and remove staged deletions. On an unborn branch, start from an empty tree. Evaluate every affected
+documentation chain and every staged authored TypeScript file against that snapshot. Do not read
+unstaged versions of staged paths. Reject findings without prompting.
+
+Pre-push consumes Git's standard input lines:
+
+    <local-ref> <local-sha> <remote-ref> <remote-sha>
+
+The protected remote refs are exactly `refs/heads/main`, `refs/heads/staging`, and
+`refs/heads/production`; every create, update, or deletion targeting them is rejected. Deleting an
+unprotected remote ref requires no repository check. For an update, compare
+`remote-sha...local-sha`. For a new branch whose remote SHA is all zeroes, compare the merge base
+with `origin/main` when it exists; otherwise compare the empty Git tree with `local-sha`. When
+standard input is empty, use `@{upstream}...HEAD`, then merge-base `origin/main...HEAD`, then
+empty-tree-to-HEAD in that order. Aggregate paths across all updates. If any Git object or diff
+cannot be resolved, run the full gate; never skip.
+
+A change is documentation-only only when every changed path is `README.md`, `AGENTS.md`,
+`CLAUDE.md`, `PLANS.md`, ends in `.md`, or begins `docs/`. Documentation-only invokes
+`bun run docs:audit` and `bun run authored-files:check`. Any package, lockfile, source, test,
+script, hook, provider configuration, workflow, or other path invokes `bun run check`. Hooks never
+format, stage, commit, amend, push, or delete files.
 
 Hook integration tests create temporary Git repositories and mock only external boundaries. They
 exercise the actual checked-in entrypoints, paths with spaces, initial branches without upstreams,
 renames, deletions, protected branches, failing checks, and successful checks.
 
-### D6. Post-write feedback is provider-neutral at the command boundary
+### D6. Claude and Codex both receive thin, versioned post-write adapters
 
 Create one bounded `bun run authoring:check -- <repo-relative-path>` command. For TypeScript writes,
 it runs formatting/lint feedback for that path, the architecture policy, and a project typecheck.
 For Markdown writes, it runs documentation conformance. Unsupported paths exit successfully with a
 short skipped message. The command reports findings but never edits the file.
 
-Before adding provider configuration, probe the installed Claude Code and Codex versions for
-documented post-write hook support and record the commands, result, and version in
-`docs/operations/provider-capability-baseline.md`. Add only adapters proven on the reference host.
-Claude's adapter may parse its write/edit event JSON and invoke the shared command. If Codex has no
-equivalent hook, record that fact rather than inventing parity; Codex still receives the same
-guarantee at Git and canonical-check boundaries. Future adapters call the same command.
+Claude Code `2.1.219` and Codex CLI `0.145.0` both support `PostToolUse`; U1A implements both. Put
+Claude configuration in `.claude/settings.json` with matcher `Write|Edit|MultiEdit`, command
+`bun scripts/hooks/provider-post-write.ts claude`, and timeout 120 seconds. Claude event JSON
+arrives on standard input. Extract `tool_input.file_path` for Write/Edit and every distinct
+`tool_input.edits[].file_path` for MultiEdit.
 
-Provider adapter tests feed recorded, secret-free event fixtures into the adapter and assert the
-selected path, exit behavior, bounded output, and no repository mutation. A malformed or missing
-path produces a concise diagnostic and cannot accidentally invoke a broad destructive target.
+Put Codex configuration in `.codex/hooks.json` with matcher `Edit|Write|apply_patch`, command
+`bun scripts/hooks/provider-post-write.ts codex`, timeout 120 seconds, and status message
+`Checking Mandem authoring quality`. Codex reports the canonical tool name `apply_patch`; extract
+each distinct path from `*** Add File:`, `*** Update File:`, `*** Delete File:`, and
+`*** Move to:` headers in `tool_input.command`. Codex requires project-local hook trust; document
+`/hooks` as the normal trust path and use `--dangerously-bypass-hook-trust` only inside a disposable
+automated probe.
+
+Both adapters require `hook_event_name: PostToolUse`, resolve paths against event `cwd`, reject
+paths outside the Git root, sort and deduplicate paths, and invoke the shared check once per path.
+Zero valid paths or malformed JSON exits `2` with one concise error. Successful checks exit `0`
+without output. A failed check exits `2` and writes at most 40 lines to standard error; both
+providers return that as model-visible feedback after the write. Provider hook failure cannot undo
+the write, which is why Git and `bun run check` remain authoritative.
+
+Provider adapter tests feed recorded, secret-free Claude Write/Edit/MultiEdit and Codex apply-patch
+events into the adapters and assert selected paths, exit behavior, bounded output, and no repository
+mutation. Future providers add only an event-to-path adapter and call the shared command.
 
 ### D7. The canonical gate and documentation explain one workflow
 
@@ -203,11 +258,102 @@ feedback. `bun run check` includes full documentation and authored-source checks
 lint, and tests. README instructions lead with `bun run check`; detailed maintenance and recovery
 live in `docs/development/`.
 
+## Normative Interfaces
+
+The file and export names below are fixed for this unit. Changing one requires updating this plan
+and repeating clean-room review before implementation continues.
+
+Extend `src/modules/architecture-standard/domain/types.ts` with:
+
+    export interface RepositorySnapshot {
+      readonly files: readonly RepositoryFile[];
+    }
+
+    export interface RepositoryPolicy {
+      readonly recursiveDocumentationRoots: readonly string[];
+      readonly rootIndexEntries: readonly string[];
+      readonly specialIndexes: Readonly<Record<string, readonly string[]>>;
+      readonly excludedSegments: readonly string[];
+      readonly excludedPrefixes: readonly string[];
+      readonly authoredSourceIncludes: readonly string[];
+      readonly authoredSourceExcludes: readonly string[];
+    }
+
+Create `src/modules/architecture-standard/domain/repository-policy.ts` exporting
+`documentationPolicyV1`, `authoredSourcePolicyV1`,
+`evaluateDocumentation(snapshot, policy): AnalysisResult`, and
+`evaluateAuthoredSources(snapshot, policy): AnalysisResult`. Extend `domain/rules.ts` with
+`DOC-LOCAL-README`, `DOC-LOCAL-INDEX`, `DOC-PARENT-INDEX`, `DOC-BROKEN-LOCAL-LINK`,
+`DOC-UNSCOPED-MARKDOWN`, and `ARCH-UNSCOPED-TYPESCRIPT`. The existing `RepositoryFile`,
+`RuleViolation`, and `AnalysisResult` remain the common value types.
+
+Create `src/modules/architecture-standard/application/repositories/repository-snapshot.ts` with:
+
+    export interface RepositorySnapshotReader {
+      readWorkingTree(root: string): Promise<RepositorySnapshot>;
+      readStagedTree(root: string): Promise<RepositorySnapshot>;
+    }
+
+    export interface GitChangeReader {
+      changedPaths(root: string, base: string, head: string): Promise<readonly string[]>;
+    }
+
+Create `application/use-cases/analyze-documentation.ts`,
+`application/use-cases/analyze-authored-sources.ts`, and
+`application/use-cases/check-authored-path.ts`. The first two accept a snapshot reader, repository
+root, snapshot mode (`working` or `staged`), and optional changed paths and return
+`Promise<AnalysisResult>`. `checkAuthoredPath` accepts a root, path, and command runner and returns:
+
+    export interface AuthoringCheckResult {
+      readonly path: string;
+      readonly checks: readonly ("documentation" | "architecture" | "lint" | "typecheck")[];
+      readonly violations: readonly RuleViolation[];
+      readonly commandFailures: readonly string[];
+    }
+
+Define `CommandRunner` beside that use case with:
+
+    run(
+      command: readonly string[],
+      cwd: string
+    ): Promise<{ readonly exitCode: number; readonly output: string }>;
+
+Create adapters at
+`infrastructure/repositories/file-system-snapshot.ts`,
+`infrastructure/repositories/git-repository-snapshot.ts`, and
+`infrastructure/services/bun-command-runner.ts`. Provider parsers live at
+`infrastructure/provider-events/claude-post-tool-use.ts` and
+`infrastructure/provider-events/codex-post-tool-use.ts`; each exports a function accepting
+`unknown` and returning `readonly string[]`. Export only domain types, application use cases, and
+API compositions from the module root; never export these infrastructure classes.
+
+Add `api/composition.ts` functions `analyzeDocumentationDirectory`,
+`analyzeAuthoredSourceDirectory`, `analyzeStagedRepository`, and `checkAuthoredPath`. Thin scripts
+call only these public API functions.
+
+The package script names and targets are fixed:
+
+    "docs:audit": "bun scripts/check-documentation.ts --mode full"
+    "docs:check": "bun scripts/check-documentation.ts --mode changed"
+    "authored-files:check": "bun scripts/check-authored-files.ts"
+    "hooks:install": "bun scripts/hooks/install.ts"
+    "hooks:check": "bun scripts/hooks/install.ts --check"
+    "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
+    "authoring:check": "bun scripts/hooks/post-write.ts"
+
+`bun run check` invokes `docs:audit` and `authored-files:check` after the Bun preflight and before
+typecheck, lint, and tests.
+
 ## Expected Repository Shape
 
 At completion, the relevant paths include:
 
     README.md
+    .claude/
+      settings.json
+    .codex/
+      config.toml
+      hooks.json
     .githooks/
       README.md
       pre-commit
@@ -237,19 +383,29 @@ At completion, the relevant paths include:
         pre-commit.ts
         pre-push.ts
         post-write.ts
+        provider-post-write.ts
+        provider-post-write.test.ts
         hooks.integration.test.ts
     src/modules/architecture-standard/
-      domain/
-      application/
-      infrastructure/
-      api/
-      tests/
+      domain/repository-policy.ts
+      application/repositories/repository-snapshot.ts
+      application/use-cases/analyze-documentation.ts
+      application/use-cases/analyze-authored-sources.ts
+      application/use-cases/check-authored-path.ts
+      infrastructure/repositories/file-system-snapshot.ts
+      infrastructure/repositories/git-repository-snapshot.ts
+      infrastructure/services/bun-command-runner.ts
+      infrastructure/provider-events/claude-post-tool-use.ts
+      infrastructure/provider-events/codex-post-tool-use.ts
+      api/composition.ts
+      tests/documentation-policy.test.ts
+      tests/authored-source-policy.test.ts
+    src/modules/README.md
     tests/fixtures/
       documentation/
       provider-hooks/
 
-Exact helper filenames may change during implementation if the public commands, module ownership,
-and observable contracts remain unchanged. New behavior must not be placed directly in shell
+These paths are the implementation contract. New behavior must not be placed directly in shell
 entrypoints.
 
 ## Plan of Work
@@ -331,16 +487,16 @@ the index, commits, branches, or remotes.
 This milestone is complete when hook integration tests pass on Linux and repeated installation
 produces the same local configuration without duplicate or global settings.
 
-### Milestone 6: Add shared post-write feedback and only verified provider adapters
+### Milestone 6: Add shared post-write feedback and both provider adapters
 
 Write failing tests for the provider-neutral path classifier and post-write runner. Implement the
 bounded command, then probe installed Claude Code and Codex hook capabilities in a disposable clean
 Git fixture. Update the provider baseline with exact versions, commands, timeouts, observed output,
 and conclusions.
 
-For every supported provider, add the thinnest configuration/adapter that maps a write event to the
-shared command. Test it with recorded event fixtures. For an unsupported provider, add no fake
-configuration; document the Git and canonical-check fallback.
+Add the exact Claude and Codex configurations from D6 and the thinnest adapters that map their write
+events to the shared command. Test every event form from D6, including multi-file patches, paths
+with spaces, out-of-root paths, malformed JSON, failed checks, and bounded feedback.
 
 This milestone is complete when a supported provider write event invokes the expected shared check,
 malformed events fail safely, and no adapter owns a distinct policy or changes repository content.
@@ -372,9 +528,26 @@ At the start, record and verify the corrected dependency:
     git issue show 5717221
     git issue show 745eda8
 
-During test-first implementation, use focused Bun tests named by the files introduced in each
-milestone. The expected red result is at least one assertion failure describing a missing stable
-rule or hook behavior. A module-resolution failure is not acceptable red evidence.
+Use these focused commands in milestone order:
+
+    bunx vitest run src/modules/architecture-standard/tests/documentation-policy.test.ts
+    bunx vitest run src/modules/architecture-standard/tests/authored-source-policy.test.ts
+    bunx vitest run scripts/check-documentation.test.ts
+    bunx vitest run scripts/hooks/hooks.integration.test.ts
+    bunx vitest run scripts/hooks/provider-post-write.test.ts
+
+Before domain implementation, the first command must fail named cases
+`requires a README and local index through the root chain` and
+`rejects broken and unscoped Markdown`. The second must fail
+`requires a leading meaningful fileoverview for every authored source` and
+`rejects unscoped TypeScript`. Before filesystem/Git adapters, the third must fail
+`evaluates added renamed and deleted documents from a Git base`. Before Git-hook implementation,
+the fourth must fail `pre-commit evaluates the staged snapshot` and
+`pre-push classifies every ref update fail closed`. Before provider adapters, the fifth must fail
+`maps Claude write events to checked paths` and
+`maps Codex apply-patch headers to checked paths`. Each red state must be an assertion mismatch for
+the named behavior, not missing module/configuration failure. Record the failing assertion and later
+passing test in `Progress`.
 
 After the policy and adapters exist, exercise:
 
@@ -424,7 +597,8 @@ Acceptance requires all of the following observable behaviors:
 - Failed hooks do not alter working files, staged content, commits, branches, or remotes.
 - The shared post-write command typechecks a TypeScript write and checks a Markdown write without
   editing either file.
-- Provider configurations exist only for capabilities demonstrated in the versioned baseline.
+- Claude Write/Edit/MultiEdit and Codex apply-patch hooks invoke the shared command with the exact
+  paths in their recorded fixtures and return bounded model-visible feedback on failure.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
@@ -436,9 +610,10 @@ documented uninstall/recovery command restores that value or unsets the local ke
 Never edit global Git configuration.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
-Repair the README chain directory by directory, rerunning the full audit after each group. If a
-provider hook probe fails, record the failure and omit that adapter; Git and canonical checks remain
-the supported path.
+Repair the README chain directory by directory, rerunning the full audit after each group. If the
+installed provider version contradicts the documented PostToolUse contract, stop, record the
+evidence, revise this plan's adapter scope, and repeat clean-room review; do not silently omit an
+adapter from an approved revision.
 
 If work item `5717221` changes the architecture kernel after this plan is reviewed, stop before
 implementation, rebase the planning branch, revise the consumed interfaces and tests here, and
@@ -452,9 +627,9 @@ The `architecture-standard` public barrel must expose typed repository-conforman
 application surfaces without exporting infrastructure. Scripts and hook compositions may select
 filesystem and Git adapters through `api/composition.ts`; normal modules may not deep-import them.
 
-The documentation analyzer accepts a normalized repository snapshot plus explicit scope and returns
-the existing `AnalysisResult` shape or a compatible versioned extension. The changed-file use case
-accepts a base reference through a Git-history port; domain code does not execute Git.
+The documentation analyzer accepts the exact `RepositorySnapshot` and `RepositoryPolicy` interfaces
+defined above and returns the existing `AnalysisResult` shape. The changed-file use case accepts a
+base and head through `GitChangeReader`; domain code does not execute Git.
 
 The post-write application surface accepts one repository-relative path and returns a bounded
 result describing checks run, checks skipped, and findings. Provider adapters translate event input
@@ -466,6 +641,24 @@ proves a small additional parser dependency is necessary. Prefer the existing so
 for Markdown links and file headers. Any new dependency requires a recorded license and rationale
 in this plan and `docs/architecture/third-party-attribution.md`.
 
+## Source Provenance
+
+Pier Docs evidence is pinned to commit
+`ccc61c1161dff39f4c626a8104b1f6a7e3d2ccda`: `scripts/check_doc_discoverability.py`,
+`scripts/audit_readme_discoverability.py`, `.github/workflows/doc-discoverability.yml`,
+`scripts/README.md`, and `README.md`. Nucleus evidence is pinned to commit
+`7265e19cb24cf9e86c3facbd91326227dfa05dd1`: `.husky/pre-commit`,
+`.claude/post-tool-hook.sh`, `scripts/hooks/pre-push/run.sh`,
+`scripts/hooks/pre-push/integration.sh`, and `docs/development/documentation-standards.md`.
+
+Provider-hook contracts were checked against Claude Code `2.1.219` and Codex CLI `0.145.0`.
+Codex's official Hooks reference documents repository-local `.codex/hooks.json`, PostToolUse
+matching for `apply_patch`/Edit/Write, JSON on standard input, project trust, timeout behavior, and
+exit `2` feedback. Claude's PostToolUse behavior is also represented by the pinned Nucleus adapter
+and must be confirmed by the disposable execution probe before its configuration is accepted.
+This plan embeds the required behavior so implementation does not depend on live access to those
+external sources.
+
 ## Progress
 
 - [x] (2026-07-25 18:05Z) Researched Pier Docs recursive README validation, full audit, workflow,
@@ -474,8 +667,10 @@ in this plan and `docs/architecture/third-party-attribution.md`.
   checks, versioned pre-push behavior, and hook integration tests.
 - [x] (2026-07-25 18:05Z) Created and pushed work items `5717221` and `745eda8`.
 - [x] (2026-07-25 18:05Z) Authored this self-contained U1A child ExecPlan.
-- [ ] Update the child registry and U2 dependency status in the planning PR.
-- [ ] Run clean-room review against this exact revision and repair every material finding.
+- [x] (2026-07-25 18:30Z) Updated the master plan, child registry, and U2 dependency status.
+- [x] (2026-07-25 18:30Z) Ran the first clean-room review at `93c2c6b`; it rejected underspecified
+  scope, interfaces, Git/provider hook contracts, link grammar, and focused test evidence.
+- [ ] Run clean-room re-review against the repaired exact revision and repair every material finding.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
 
@@ -507,6 +702,12 @@ in this plan and `docs/architecture/third-party-attribution.md`.
   Evidence: the first planning-worktree check resolved TypeScript outside the installed lock state
   and failed; `bun install --frozen-lockfile` followed by the same check passed all 15 tests.
 
+- Observation: Both current agent vendors now expose PostToolUse hooks, so vendor-neutrality does
+  not require giving up immediate feedback.
+  Evidence: Codex `0.145.0` documents repository-local `.codex/hooks.json` and apply-patch
+  PostToolUse events; Claude `2.1.219` supplies Write/Edit PostToolUse input used by the pinned
+  Nucleus adapter. Both can invoke the same Bun command.
+
 ## Decision Log
 
 - Decision: Track the U1 correctness defects and U1A quality-gate work as separate git-native issues.
@@ -534,6 +735,11 @@ in this plan and `docs/architecture/third-party-attribution.md`.
   policy implementations and merge conflict-driven design.
   Date/Author: 2026-07-25 / Codex orchestrator
 
+- Decision: Implement both Claude and Codex PostToolUse adapters in U1A.
+  Rationale: Both installed versions expose the needed lifecycle point. Thin event-to-path adapters
+  preserve one shared policy while giving either operator surface immediate feedback.
+  Date/Author: 2026-07-25 / Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning outcome: U1A now has a bounded, self-contained design grounded in the exact Pier Docs and
@@ -548,3 +754,8 @@ resolution of work item `5717221`.
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
 foundational unit rather than an informal addition to U2.
+
+Clean-room repair note (2026-07-25): After the first independent review, replaced inferred
+documentation/source scopes with exact manifests; specified Markdown parsing, public interfaces,
+package commands, staged/pre-push Git semantics, Claude/Codex event contracts, focused red/green
+tests, provider failure behavior, source provenance, and the master/registry dependency update.
