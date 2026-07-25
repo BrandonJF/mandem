@@ -20,8 +20,9 @@ until it passes clean-room review, receives exact operator approval, and changes
 ## Purpose / Big Picture
 
 After this work, a human or agent can begin at Mandem's root `README.md` and follow a short chain of
-folder indexes to every maintained document. A new document cannot land unnoticed in an unindexed
-folder, a TypeScript file cannot land without a useful leading `@fileoverview`, and a write that
+folder indexes to every maintained document. A new document cannot pass the required repository
+checks unnoticed in an unindexed folder, a TypeScript file cannot pass them without a useful
+leading `@fileoverview`, and a write that
 breaks TypeScript receives immediate feedback where the active agent supports write hooks. The same
 rules remain enforceable without Claude Code, Codex, or any other agent: versioned Git hooks and
 `bun run check` are the authoritative backstops.
@@ -134,9 +135,11 @@ The manifest also declares three special indexes without requiring READMEs throu
 paths. Root `README.md` must link `AGENTS.md`, `CLAUDE.md`, `PLANS.md`, `docs/README.md`,
 `scripts/README.md`, `.githooks/README.md`, and `src/modules/README.md`. `scripts/README.md` must
 link each Markdown file and child README below `scripts/`. `src/modules/README.md` must link every
-immediate `src/modules/<name>/README.md`. Module-root READMEs remain the only required code
-documentation below each module. A new Markdown file outside the recursive root or declared special
-indexes produces `DOC-UNSCOPED-MARKDOWN` rather than silently escaping policy.
+immediate `src/modules/<name>/README.md`. That dynamic pattern makes every present and future
+module-root README an explicit target of `src/modules/README.md`. Module-root READMEs remain the
+only required code documentation below each module. A new maintained document outside the recursive
+root or declared special indexes produces `DOC-UNSCOPED-DOCUMENT` rather than silently escaping
+policy.
 
 Exclude any path containing a complete segment `.git`, `.codex`, `.claude`, `.github`,
 `node_modules`, `dist`, or `coverage`; exclude `tests/fixtures/` and a generated/vendor path only
@@ -144,6 +147,11 @@ when its complete segment is `generated`, `vendor`, or `vendored`. The checked-i
 `docs/plans/reviews/` and `docs/solutions/` trees are maintained documentation and are not excluded.
 Symbolic links are recorded but never traversed. A resolved local link outside the repository root
 is a `DOC-BROKEN-LOCAL-LINK` finding.
+
+Maintained document extensions below `docs/` are `.md`, `.yaml`, and `.yml`; every one must be
+linked by the local README, while only Markdown files can serve as indexes. This includes
+`docs/sources/doctrine-source-manifest.yaml`. The special root, scripts, hook, and module indexes
+govern Markdown only.
 
 Parse inline Markdown links `[label](target)` and reference links `[label][id]` whose
 `[id]: target` definition is in the same README. Strip an optional `<...>` wrapper, query, and
@@ -225,22 +233,62 @@ it runs formatting/lint feedback for that path, the architecture policy, and a p
 For Markdown writes, it runs documentation conformance. Unsupported paths exit successfully with a
 short skipped message. The command reports findings but never edits the file.
 
-Claude Code `2.1.219` and Codex CLI `0.145.0` both support `PostToolUse`; U1A implements both. Put
-Claude configuration in `.claude/settings.json` with matcher `Write|Edit|MultiEdit`, command
-`bun scripts/hooks/provider-post-write.ts claude`, and timeout 120 seconds. Claude event JSON
-arrives on standard input. Extract `tool_input.file_path` for Write/Edit and every distinct
-`tool_input.edits[].file_path` for MultiEdit.
+Claude Code `2.1.219` and Codex CLI `0.145.0` both support `PostToolUse`; U1A implements both.
+Commands resolve the Git root before invoking the adapter so a provider launched from a nested
+directory receives identical behavior. `.claude/settings.json` contains this complete project hook:
 
-Put Codex configuration in `.codex/hooks.json` with matcher `Edit|Write|apply_patch`, command
-`bun scripts/hooks/provider-post-write.ts codex`, timeout 120 seconds, and status message
-`Checking Mandem authoring quality`. Codex reports the canonical tool name `apply_patch`; extract
-each distinct path from `*** Add File:`, `*** Update File:`, `*** Delete File:`, and
-`*** Move to:` headers in `tool_input.command`. Codex requires project-local hook trust; document
-`/hooks` as the normal trust path and use `--dangerously-bypass-hook-trust` only inside a disposable
-automated probe.
+    {
+      "hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Write|Edit|MultiEdit",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "bun \"$(git rev-parse --show-toplevel)/scripts/hooks/provider-post-write.ts\" claude",
+                "timeout": 120
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+Claude event JSON arrives on standard input. Extract `tool_input.file_path` for Write/Edit and every
+distinct `tool_input.edits[].file_path` for MultiEdit.
+
+`.codex/hooks.json` contains this complete project hook:
+
+    {
+      "description": "Mandem authoring feedback.",
+      "hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Edit|Write|apply_patch",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "bun \"$(git rev-parse --show-toplevel)/scripts/hooks/provider-post-write.ts\" codex",
+                "timeout": 120,
+                "statusMessage": "Checking Mandem authoring quality"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+Codex reports the canonical tool name `apply_patch`; parse `*** Add File:`, `*** Update File:`,
+`*** Delete File:`, and `*** Move to:` headers in `tool_input.command`. Codex requires
+project-local hook trust; document `/hooks` as the normal trust path and use
+`--dangerously-bypass-hook-trust` only inside a disposable automated probe.
 
 Both adapters require `hook_event_name: PostToolUse`, resolve paths against event `cwd`, reject
-paths outside the Git root, sort and deduplicate paths, and invoke the shared check once per path.
+paths outside the Git root, sort and deduplicate events, and invoke the shared check once per event.
+An event records `write`, `delete`, `move-from`, or `move-to`. Claude's supported tools emit writes.
+For Codex, Add and Update emit writes, Delete emits delete, and a Move emits both move-from for the
+Update path and move-to for the destination. Delete and move events invoke the full relevant policy
+defined below so stale indexes cannot escape a path-local check.
 Zero valid paths or malformed JSON exits `2` with one concise error. Successful checks exit `0`
 without output. A failed check exits `2` and writes at most 40 lines to standard error; both
 providers return that as model-visible feedback after the write. Provider hook failure cannot undo
@@ -257,6 +305,15 @@ authored-file validation, hook installation/status, hook integration tests, and 
 feedback. `bun run check` includes full documentation and authored-source checks before typecheck,
 lint, and tests. README instructions lead with `bun run check`; detailed maintenance and recovery
 live in `docs/development/`.
+
+Add `.github/workflows/repository-quality.yml` as the non-bypassable remote authority. On every pull
+request and every push to `main` or `staging`, it checks out full history, installs Bun `1.3.14`,
+runs `bun install --frozen-lockfile`, `bun run check`, `bun run build`, and `git issue fsck`. Its
+stable job/check name is `repository-quality`. Configure an active GitHub ruleset targeting
+`refs/heads/main` that requires a pull request and successful `repository-quality` before merge.
+The implementation worker records the ruleset identifier and read-back output in this plan. If its
+credential cannot administer rulesets, it records that exact external dependency under `Needs you`
+and U1A remains incomplete; local hooks alone never satisfy acceptance.
 
 ## Normative Interfaces
 
@@ -284,7 +341,7 @@ Create `src/modules/architecture-standard/domain/repository-policy.ts` exporting
 `evaluateDocumentation(snapshot, policy): AnalysisResult`, and
 `evaluateAuthoredSources(snapshot, policy): AnalysisResult`. Extend `domain/rules.ts` with
 `DOC-LOCAL-README`, `DOC-LOCAL-INDEX`, `DOC-PARENT-INDEX`, `DOC-BROKEN-LOCAL-LINK`,
-`DOC-UNSCOPED-MARKDOWN`, and `ARCH-UNSCOPED-TYPESCRIPT`. The existing `RepositoryFile`,
+`DOC-UNSCOPED-DOCUMENT`, and `ARCH-UNSCOPED-TYPESCRIPT`. The existing `RepositoryFile`,
 `RuleViolation`, and `AnalysisResult` remain the common value types.
 
 Create `src/modules/architecture-standard/application/repositories/repository-snapshot.ts` with:
@@ -292,17 +349,31 @@ Create `src/modules/architecture-standard/application/repositories/repository-sn
     export interface RepositorySnapshotReader {
       readWorkingTree(root: string): Promise<RepositorySnapshot>;
       readStagedTree(root: string): Promise<RepositorySnapshot>;
+      readRevision(root: string, revision: string): Promise<RepositorySnapshot>;
+    }
+
+    export interface GitChange {
+      readonly status: "A" | "C" | "M" | "R" | "D";
+      readonly oldPath?: string;
+      readonly path: string;
     }
 
     export interface GitChangeReader {
-      changedPaths(root: string, base: string, head: string): Promise<readonly string[]>;
+      changedEntries(
+        root: string,
+        base: string,
+        head: string
+      ): Promise<readonly GitChange[]>;
     }
 
 Create `application/use-cases/analyze-documentation.ts`,
 `application/use-cases/analyze-authored-sources.ts`, and
 `application/use-cases/check-authored-path.ts`. The first two accept a snapshot reader, repository
-root, snapshot mode (`working` or `staged`), and optional changed paths and return
-`Promise<AnalysisResult>`. `checkAuthoredPath` accepts a root, path, and command runner and returns:
+root, snapshot mode (`working`, `staged`, or `revision`), and optional changed entries and return
+`Promise<AnalysisResult>`. Changed analysis expands every old/new parent through its declared
+documentation root, includes each ancestor README, and evaluates that closure against the complete
+head-revision snapshot. `checkAuthoredPath` accepts a root, path, snapshot reader, the named v1
+policies, and command runner and returns:
 
     export interface AuthoringCheckResult {
       readonly path: string;
@@ -318,18 +389,38 @@ Define `CommandRunner` beside that use case with:
       cwd: string
     ): Promise<{ readonly exitCode: number; readonly output: string }>;
 
+For a TypeScript/TSX path, `checkAuthoredPath` evaluates the working snapshot against
+`authoredSourcePolicyV1`, then runs `bunx eslint <repo-relative-path>` and
+`bunx tsc --noEmit` from the Git root. For a maintained document, it evaluates the working snapshot
+against `documentationPolicyV1` and runs no subprocess. A deleted path triggers the full relevant
+working-snapshot policy and does not invoke file-scoped lint. A moved path checks the new path and
+also runs the relevant full policy so stale old-path indexes are detected. An unsupported extension
+returns an empty `checks` list. Each nonzero subprocess contributes one `commandFailures` entry
+containing the command label and at most the first 40 output lines; architecture/document findings
+populate `violations`. The CLI exits `0` only when both arrays are empty, `1` for findings or
+command failures, and `2` for invalid input, traversal, or adapter failure.
+
 Create adapters at
 `infrastructure/repositories/file-system-snapshot.ts`,
 `infrastructure/repositories/git-repository-snapshot.ts`, and
 `infrastructure/services/bun-command-runner.ts`. Provider parsers live at
 `infrastructure/provider-events/claude-post-tool-use.ts` and
 `infrastructure/provider-events/codex-post-tool-use.ts`; each exports a function accepting
-`unknown` and returning `readonly string[]`. Export only domain types, application use cases, and
-API compositions from the module root; never export these infrastructure classes.
+`unknown` and returning `readonly ProviderPathEvent[]`, where:
+
+    export interface ProviderPathEvent {
+      readonly path: string;
+      readonly operation: "write" | "delete" | "move-from" | "move-to";
+    }
+
+Export only domain types, application use cases, and API compositions from the module root; never
+export these infrastructure classes.
 
 Add `api/composition.ts` functions `analyzeDocumentationDirectory`,
 `analyzeAuthoredSourceDirectory`, `analyzeStagedRepository`, and `checkAuthoredPath`. Thin scripts
-call only these public API functions.
+call only these public API functions. Also add
+`checkProviderPostWrite(provider: "claude" | "codex", input: unknown)` there; the API composition
+selects the private provider parser and invokes the public post-write use case.
 
 The package script names and targets are fixed:
 
@@ -343,6 +434,21 @@ The package script names and targets are fixed:
 
 `bun run check` invokes `docs:audit` and `authored-files:check` after the Bun preflight and before
 typecheck, lint, and tests.
+
+`scripts/check-documentation.ts` accepts exactly:
+
+    --mode full
+    --mode changed --base-ref <git-ref> [--head-ref <git-ref>]
+    --mode staged
+
+Full mode reads the working tree. Changed mode requires `--base-ref`, defaults head to `HEAD`, reads
+name-status entries including old and new rename paths, and analyzes the head revision snapshot
+rather than the current checkout. Staged mode reads the virtual staged snapshot from D5. Missing
+values, unknown flags, or unresolvable refs exit `2`.
+
+Pre-push analyzes every distinct nonzero outgoing `local-sha` against its calculated base. It never
+uses the working tree for an outgoing commit. Tests must include a dirty checkout whose outgoing SHA
+is clean and a non-current local ref; results follow the outgoing revision, not checkout content.
 
 ## Expected Repository Shape
 
@@ -358,6 +464,9 @@ At completion, the relevant paths include:
       README.md
       pre-commit
       pre-push
+    .github/
+      workflows/
+        repository-quality.yml
     docs/
       README.md
       architecture/README.md
@@ -451,8 +560,9 @@ entrypoints with exit code `0` for conformance, `1` for findings, and `2` for tr
 configuration, Git, or unexpected failures.
 
 Add integration fixtures that exercise the real filesystem and a disposable Git history. Include
-added, modified, renamed, and deleted README/doc paths. Confirm failure output names the repair in
-plain language and remains bounded.
+added, modified, renamed, and deleted README/doc paths, a dirty checkout whose selected revision is
+clean, and a non-current local ref. Confirm failure output names the repair in plain language,
+remains bounded, and follows the selected revision rather than the checkout.
 
 This milestone is complete when the real Mandem repository can run both modes and malformed
 fixtures demonstrate each failure class through the public command.
@@ -495,18 +605,24 @@ Git fixture. Update the provider baseline with exact versions, commands, timeout
 and conclusions.
 
 Add the exact Claude and Codex configurations from D6 and the thinnest adapters that map their write
-events to the shared command. Test every event form from D6, including multi-file patches, paths
-with spaces, out-of-root paths, malformed JSON, failed checks, and bounded feedback.
+events to the shared command. Test every event form from D6, including nested launch directories,
+multi-file patches, deletes, moves, paths with spaces, out-of-root paths, malformed JSON, failed
+checks, and bounded feedback.
 
 This milestone is complete when a supported provider write event invokes the expected shared check,
 malformed events fail safely, and no adapter owns a distinct policy or changes repository content.
 
 ### Milestone 7: Integrate the canonical gate and close through review
 
-Add the new checks and hook integration suite to package scripts. Make `bun run check` fail closed
-in a deterministic order: Bun preflight, documentation/authored-source architecture, TypeScript,
-lint, and tests. Run focused tests first, then the complete gate from a clean checkout. Install the
-Git hooks in the implementation worktree and perform one disposable valid and invalid commit proof.
+Add the new checks and hook integration suite to package scripts and add the remote workflow from
+D7. Make `bun run check` fail closed in a deterministic order: Bun preflight,
+documentation/authored-source architecture, TypeScript, lint, and tests. Run focused tests first,
+then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
+and perform one disposable valid and invalid commit proof.
+
+Configure and read back the required `main` ruleset. Trigger the workflow with the PR and record a
+successful `repository-quality` check; a skipped, pending, or billing-disabled check is not
+completion evidence.
 
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
@@ -594,11 +710,16 @@ Acceptance requires all of the following observable behaviors:
 - A non-interactive pre-commit rejects missing fileoverview and documentation-index violations.
 - A pre-push on a protected branch is rejected; a normal code push runs the full check; a docs-only
   push runs documentation checks; an uncertain diff runs the full check.
+- Pre-push evaluates every outgoing commit snapshot, including a non-current local ref, without
+  allowing unrelated dirty checkout content to change the result.
 - Failed hooks do not alter working files, staged content, commits, branches, or remotes.
 - The shared post-write command typechecks a TypeScript write and checks a Markdown write without
   editing either file.
 - Claude Write/Edit/MultiEdit and Codex apply-patch hooks invoke the shared command with the exact
-  paths in their recorded fixtures and return bounded model-visible feedback on failure.
+  events in their recorded fixtures—including deletes and moves—from the repository root or a
+  nested launch directory, and return bounded model-visible feedback on failure.
+- The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
+  `main` ruleset requires both a pull request and that successful check before merge.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
@@ -670,6 +791,9 @@ external sources.
 - [x] (2026-07-25 18:30Z) Updated the master plan, child registry, and U2 dependency status.
 - [x] (2026-07-25 18:30Z) Ran the first clean-room review at `93c2c6b`; it rejected underspecified
   scope, interfaces, Git/provider hook contracts, link grammar, and focused test evidence.
+- [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the program
+  dependency model but rejected incomplete revision-snapshot, provider event, and remote-authority
+  contracts.
 - [ ] Run clean-room re-review against the repaired exact revision and repair every material finding.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
@@ -759,3 +883,8 @@ Clean-room repair note (2026-07-25): After the first independent review, replace
 documentation/source scopes with exact manifests; specified Markdown parsing, public interfaces,
 package commands, staged/pre-push Git semantics, Claude/Codex event contracts, focused red/green
 tests, provider failure behavior, source provenance, and the master/registry dependency update.
+
+Second clean-room repair note (2026-07-25): Added revision-backed changed and pre-push evaluation,
+complete root-resolving Claude/Codex hook configurations, typed delete/move events, nested-launch
+tests, maintained YAML and dynamic module README coverage, and a required remote
+`repository-quality` workflow plus `main` ruleset.
