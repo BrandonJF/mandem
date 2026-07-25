@@ -3,8 +3,9 @@
 Mandem orchestrates bounded agent sessions through durable, observable, deterministic workflows.
 Reduce the operator's cognitive load: use plain language, concise output, and explicit outcomes.
 
-Before replying to the operator or writing prose in this repository, read the complete root
-`WRITING.md` and follow it.
+Before replying to the operator or writing prose in this repository, load and follow the
+`write-clearly` skill at `.agents/skills/write-clearly/SKILL.md`. Tools without project-skill
+discovery must read that file and its required style guide directly.
 
 ## Planning and execution
 
