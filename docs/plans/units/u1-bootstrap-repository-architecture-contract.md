@@ -3,8 +3,8 @@ title: "U1: Bootstrap the standalone repository and architecture contract"
 plan_kind: mandem-child-execplan
 program_unit: U1
 parent: ../2026-07-21-001-feat-mandem-plan.md
-promotion: executable
-execution_authorized: true
+promotion: complete
+execution_authorized: false
 date: 2026-07-24
 ---
 
@@ -837,3 +837,8 @@ Final-review verification update (2026-07-24): At
 `23d9b34bdc2e266c0ae66651f666abd2a0481530`, nested `Array<any[]>` and `node:process`
 regressions passed, each malformed-matrix row asserted its exact ID/path/message fragment, and
 the provider baseline no longer contained stale blocker state. All canonical gates passed.
+
+Terminal-state revision note (2026-07-24): After reviewed PR #4 merged and post-merge verification
+passed, transitioned U1 from executable authority to `promotion: complete` with
+`execution_authorized: false`. This prevents a fresh worker from re-executing a closed unit while
+preserving the exact historical approval and delivery evidence.
