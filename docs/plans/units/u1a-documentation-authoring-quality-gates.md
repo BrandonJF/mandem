@@ -4,7 +4,7 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: planned
+promotion: clean-room-approved
 execution_authorized: false
 date: 2026-07-25
 ---
@@ -930,7 +930,9 @@ external sources.
 - [x] (2026-07-25 20:45Z) Marked the `a4a5c11` review as superseded after applying the repository
   writing standard and adding `.agents/skills/` to the documentation policy. A new review is
   required for this revision.
-- [ ] Obtain a clean-room review for the exact revised plan.
+- [x] (2026-07-25 20:50Z) A fresh Terra reviewer approved commit `b73e960` and plan SHA-256
+  `2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339` with no P0/P1
+  blockers.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
 - [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
 
@@ -1037,3 +1039,9 @@ Clean-room approval note (2026-07-25): The final reviewed content is commit `a4a
 `378cf11ff6f27d50d4c789a67a9e3cf135ec7f3a4d5e08cceec9bf12ef7a7bc6`. The durable review lives
 at `docs/plans/reviews/2026-07-25-u1a-clean-room.md`. Language and policy changes later superseded
 that review; implementation remains unauthorized.
+
+Clean-room refresh note (2026-07-25): A fresh Terra reviewer approved the plan version in commit
+`b73e9607897f45a52b4d1beb49b93ecbcfe4d218`, SHA-256
+`2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339`. The reviewer found no
+P0/P1 blockers. The durable verdict is
+`docs/plans/reviews/2026-07-25-u1a-clean-room-refresh.md`; implementation remains unauthorized.
