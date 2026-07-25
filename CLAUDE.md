@@ -3,6 +3,9 @@
 Mandem orchestrates bounded agent sessions through durable, observable, deterministic workflows.
 Reduce the operator's cognitive load: use plain language, concise output, and explicit outcomes.
 
+Before replying to the operator or writing prose in this repository, read the complete root
+`WRITING.md` and follow it.
+
 ## Planning and execution
 
 Before authoring, discussing, reviewing, or executing an ExecPlan, read the complete root
