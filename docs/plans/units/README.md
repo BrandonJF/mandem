@@ -2,24 +2,32 @@
 
 This directory decomposes the program-level ExecPlan at `../2026-07-21-001-feat-mandem-plan.md`.
 
-The master plan defines product intent, architecture, U1-U10 sequencing, and cross-program acceptance. Each file here begins as a non-executable scaffold that makes dependencies and handoffs visible before detailed planning begins.
+The master plan defines product intent, architecture, U1-U10 sequencing, and cross-program
+acceptance. Each child plan begins as a non-executable scaffold. The scaffold lists dependencies
+and handoffs before detailed planning begins.
 
 ## Promotion contract
 
-A child plan moves through:
+A child plan has these promotion states:
 
 `scaffolded -> planned -> clean-room approved -> operator approved -> executable -> complete`
 
-No implementation agent may receive a scaffold. Before promotion to executable, the child must be expanded into a nearly self-contained ExecPlan following `PLANS.md`, validated against the real outputs of completed dependencies, clean-room reviewed, repaired, and approved at an exact revision.
+Do not dispatch a scaffold to an implementation agent. Before promotion to executable, the plan
+author must expand the child into a nearly self-contained ExecPlan that follows `PLANS.md`,
+validate it against the actual outputs of completed dependencies, obtain a clean-room review,
+address review findings, and obtain approval for an exact revision.
 
 The program orchestrator reads the master and registry. An implementation worker receives only the
-complete approved child ExecPlan, which must embed every applicable program constraint and
-dependency interface. A dispatch packet that presents the master as a second implementation
-authority is invalid. Summaries and bounded packets are navigation aids only.
+complete approved child ExecPlan, which must include every applicable program constraint and
+dependency interface. A dispatch is invalid if it directs the worker to treat the master plan as a
+second implementation instruction. Use summaries and bounded packets only for navigation.
 
 ## Architecture invariant
 
-Mandem is the first consumer of its own architecture standard. Every unit must place behavior under the Nucleus-derived `domain/`, `application/`, `infrastructure/`, and `api/` boundaries where applicable, keep composition roots thin, and pass the deterministic architecture checker. There is no tooling or bootstrap exception.
+Authors must apply Mandem's architecture standard to Mandem itself. For every unit, they must place
+behavior under the Nucleus-derived `domain/`, `application/`, `infrastructure/`, and `api/`
+boundaries where applicable and keep composition roots thin. The deterministic architecture
+checker must report success. This requirement also applies to tooling and bootstrap code.
 
 ## Dependency graph
 
@@ -41,7 +49,8 @@ flowchart LR
   U7 --> U8
 ```
 
-The graph is dependency order, not a prohibition on early planning. Later scaffolds should be refined as interfaces stabilize, but must be revalidated after their dependencies complete.
+Use the graph to determine dependency order. Planners may begin later-unit planning early, but they
+must revalidate those scaffolds after dependencies complete.
 
 ## Registry
 
