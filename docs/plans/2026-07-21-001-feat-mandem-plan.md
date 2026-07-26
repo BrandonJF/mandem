@@ -37,9 +37,11 @@ execution.
 developers and product owners are secondary users.
 
 **Current boundary:** U1 merged, but post-merge verification opened corrective work item `5717221`.
-U1A is a newly planned foundational unit for documentation discoverability and continuous
-authoring-quality gates. U2-U10 remain unauthorized, and U2 is blocked until corrected U1 and U1A
-complete. The first consumer target is Strategy Builder Pro on Brandon's Linux agent host.
+U1C is the planned corrective child at
+`docs/plans/units/u1-corrective-architecture-package-contract.md`. U1A is a newly planned
+foundational unit for documentation discoverability and continuous authoring-quality gates. U2-U10
+remain unauthorized, and U2 is blocked until U1C and U1A complete. The first consumer target is
+Strategy Builder Pro on Brandon's Linux agent host.
 
 ---
 
@@ -663,12 +665,31 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
     deferring protocol discovery to U5.
 - **Verification:** A clean checkout installs with Bun, passes the repository check, produces both executables, and contains the complete canonical standard without relying on Nucleus access or Docker.
 
+### U1C. Correct the architecture checker and package contract
+
+- **Goal:** Close the six post-merge U1 silent-pass paths with test-first architecture and package
+  archive/install proof.
+- **Requirements:** R43-R46, R58-R64, R68; KTD12 and KTD14.
+- **Dependencies:** Merged U1 and corrective Git-native issue `5717221`.
+- **Files:** `docs/plans/units/u1-corrective-architecture-package-contract.md`, `package.json`,
+  `tests/contract/package-entrypoints.test.ts`, `scripts/check-architecture.test.ts`,
+  `src/modules/architecture-standard/domain/{rules,repository-policy,types,index}.ts`,
+  `src/modules/architecture-standard/infrastructure/repositories/file-system-tree.ts`, and
+  `docs/architecture/architecture-standard-v1.md`.
+- **Approach:** Add red fixtures first for package omission, alias root export, vendor and direct
+  I/O, authored TypeScript scope, and exact rule set equality. Use an explicit package lifecycle
+  and archive allowlist; prove the clean tarball can install into an empty Bun consumer. Keep rule
+  policy in the architecture-standard domain and preserve stable existing IDs.
+- **Verification:** The exact rule matrix passes, a `git archive HEAD` package contains and installs
+  both declared executables, and `bun run check`, build, and binary probes pass before and after
+  merge.
+
 ### U1A. Enforce documentation discoverability and continuous authoring quality
 
 - **Goal:** Make every maintained document reachable from README indexes, enforce authored
   TypeScript fileoverviews, and provide provider hooks plus vendor-neutral Git/canonical backstops.
 - **Requirements:** R58-R64
-- **Dependencies:** Corrected U1 work item `5717221`
+- **Dependencies:** U1C completion and post-merge verification
 - **Files:** `docs/plans/units/u1a-documentation-authoring-quality-gates.md`,
   `src/modules/architecture-standard/**`, `scripts/check-documentation.ts`,
   `scripts/check-authored-files.ts`, `scripts/hooks/**`, `.githooks/**`, `.claude/settings.json`,
@@ -687,7 +708,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Goal:** Define explicit representations for every mutation, transition, authority decision,
   event, error, lease, and result envelope before adding presentation or provider code.
 - **Requirements:** R1-R6a, R20-R22, R29-R33, R47-R57, R65-R70; AE2, AE4, AE8
-- **Dependencies:** Corrected U1 and U1A
+- **Dependencies:** U1C and U1A
 - **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/infrastructure/sqlite/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
 - **Approach:** Define the versioned command envelope, result envelope, error taxonomy, event envelope, state machine, lease model, approval hashes, gate freshness, cancellation/takeover semantics, and portable checkpoint list. Store append-only events and rebuildable projections in SQLite with WAL, schema migrations, unique idempotency keys, and transactionally updated sequence numbers. Model every finding or routed item with a terminal disposition so completion proves nothing was merely announced and abandoned.
 - **Execution note:** Start with state-machine and replay tests before storage adapters. Then prove the SQLite adapter against the same port contract using temporary databases.
@@ -1099,7 +1120,8 @@ published interface.
   U2 remains unauthorized pending its own complete plan, clean-room review, and exact approval.
 - [x] (2026-07-25) Post-merge verification opened U1 corrective work item `5717221`, created U1A
   work item `745eda8`, and invalidated U2 dependency readiness.
-- [ ] Complete corrected U1 and U1A, then promote and complete U2 through U10 in dependency order.
+- [x] (2026-07-25) Created non-executable U1C corrective child plan for Git-native issue `5717221`.
+- [ ] Complete U1C and U1A, then promote and complete U2 through U10 in dependency order.
 
 ## Surprises & Discoveries
 
@@ -1168,10 +1190,10 @@ published interface.
 ## Outcomes & Retrospective
 
 Current planning outcome: Mandem has a dependency-ordered program ExecPlan in its own repository,
-plus child-plan boundaries for U1, U1A, and U2-U10. The program is restartable from durable
+plus child-plan boundaries for U1, U1C, U1A, and U2-U10. The program is restartable from durable
 artifacts and no longer depends on the SBP orchestrator conversation. U1 merged at
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`, but corrective item `5717221` and U1A item `745eda8`
-must complete before U2 dependency revalidation can run again.
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`, but planned corrective child U1C for item `5717221`
+and U1A item `745eda8` must complete before U2 dependency revalidation can run again.
 
 ## Deferred / Open Questions
 
@@ -1203,3 +1225,8 @@ U1 post-merge correction update (2026-07-25): Recorded corrective work item `571
 documentation/authoring-quality work item `745eda8`, and blocked U2 until both foundational units
 complete. The change keeps the master non-executable and moves implementation detail into the U1A
 child ExecPlan.
+
+U1C planning update (2026-07-25): Added the non-executable corrective child ExecPlan at
+`docs/plans/units/u1-corrective-architecture-package-contract.md` for all six validated
+architecture and package silent-pass findings. U1C is planned only. U1A, U2, and later units remain
+blocked until U1C merges and post-merge verification passes.

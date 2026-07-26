@@ -33,7 +33,7 @@ checker must report success. This requirement also applies to tooling and bootst
 
 ```mermaid
 flowchart LR
-  U1 --> U1A --> U2 --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
+  U1 --> U1C --> U1A --> U2 --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
   U2 --> U4
   U3 --> U5
   U2 --> U6
@@ -56,8 +56,9 @@ must revalidate those scaffolds after dependencies complete.
 
 | Unit | Child scaffold | Depends on | Promotion |
 | --- | --- | --- | --- |
-| U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | corrective work open (`5717221`) |
-| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | Corrected U1 | clean-room approved; operator approval required |
+| U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | complete; corrective work delegated to U1C |
+| U1C | [Correct architecture checker and package contract](./u1-corrective-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | planned; clean-room review and operator approval required |
+| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | blocked until U1C completes; clean-room approval must be refreshed for its exact revision |
 | U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A | scaffolded; dependency revalidation invalidated |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
 | U4 | [Work items, ExecPlans, queue, gates, primitive CLI, and projections](./u4-work-items-plans-queue-gates-cli.md) | U2, U3 | scaffolded |
