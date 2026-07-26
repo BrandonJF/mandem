@@ -6,7 +6,7 @@ parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
 depends_on:
   - U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986
-promotion: planned
+promotion: clean-room-approved
 execution_authorized: false
 date: 2026-07-25
 ---
@@ -37,7 +37,10 @@ implementation changes and pass only after the checker detects the intended viol
 - [x] (2026-07-25 14:20Z) Read the durable Git-native issue and reproduced its implementation
   context from the merged repository state.
 - [x] (2026-07-25 14:20Z) Authored this non-executable corrective child ExecPlan.
-- [ ] Obtain clean-room approval of this exact revision.
+- [x] (2026-07-25 21:15Z) Clean-room review approved plan commit
+  `bbddf1949cd8a3d7d78551bb00129e871a094c63` with SHA-256
+  `24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c`; see
+  `docs/plans/reviews/2026-07-25-u1c-clean-room.md`.
 - [ ] Obtain operator approval of the exact clean-room-approved revision.
 - [ ] Set `execution_authorized: true` without changing implementation instructions, then dispatch
   one isolated implementation worker.
@@ -118,6 +121,12 @@ implementation changes and pass only after the checker detects the intended viol
   `package.json` in the package manifest.
   Date/Author: 2026-07-25 / Codex after fresh clean-room findings
 
+- Decision: Promote U1C to `clean-room-approved` without authorizing implementation.
+  Rationale: The durable review approves the exact implementation instructions at commit
+  `bbddf1949cd8a3d7d78551bb00129e871a094c63`. This follow-up changes only promotion metadata and
+  living records. The operator must still approve the current revision before authorization.
+  Date/Author: 2026-07-25 / Codex
+
 ## Outcomes & Retrospective
 
 Planning outcome: this plan describes the six validated corrections and their test-first proof.
@@ -126,7 +135,8 @@ authored-source rules and binds the package proof to a committed candidate. The 
 uses a pre-fix SHA; the first green package proof uses a candidate SHA after commit. No production
 code has changed, no review has approved this revision, and implementation remains unauthorized. The
 implementation outcome, merge SHA, archive evidence, and downstream revalidation result must be
-added here by the executor and orchestrator.
+added here by the executor and orchestrator. The clean-room review is recorded at
+`docs/plans/reviews/2026-07-25-u1c-clean-room.md`. It does not authorize implementation.
 
 ## Context and Orientation
 
@@ -473,6 +483,9 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Required correction: architecture/package silent-pass paths
     Current package bins: dist/mandem and dist/mandem-server
     Current failure: a clean package archive omits both bins
+    Clean-room review: docs/plans/reviews/2026-07-25-u1c-clean-room.md
+    Reviewed commit: bbddf1949cd8a3d7d78551bb00129e871a094c63
+    Reviewed plan SHA-256: 24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
@@ -518,3 +531,8 @@ steps.
 pre-fix committed SHA, Step 2 keeps package proof pending while architecture checks turn green, and
 Step 3 runs the first green archive/install proof after a candidate commit. The plan now specifies
 the exact Bun 1.3.14 `prepack` lifecycle entry, allowlist, and archive manifest assertions.
+
+2026-07-25: Recorded clean-room approval of commit
+`bbddf1949cd8a3d7d78551bb00129e871a094c63` in
+`docs/plans/reviews/2026-07-25-u1c-clean-room.md`. This update changes promotion and living
+records only. `execution_authorized` remains `false`.
