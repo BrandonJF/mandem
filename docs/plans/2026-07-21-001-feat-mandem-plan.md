@@ -36,10 +36,10 @@ execution.
 **Product authority:** Brandon is Mandem's primary operator and defines its default doctrine. Other
 developers and product owners are secondary users.
 
-**Current boundary:** U1 has passed clean-room review, received exact head-bound operator approval,
-and is executable from its isolated worktree. U2-U10 remain unauthorized scaffolds. The first
-consumer target is Strategy Builder Pro on Brandon's Linux agent host. U1 owns package,
-executable, and repository-name availability checks before publication.
+**Current boundary:** U1 merged, but post-merge verification opened corrective work item `5717221`.
+U1A is a newly planned foundational unit for documentation discoverability and continuous
+authoring-quality gates. U2-U10 remain unauthorized, and U2 is blocked until corrected U1 and U1A
+complete. The first consumer target is Strategy Builder Pro on Brandon's Linux agent host.
 
 ---
 
@@ -663,12 +663,31 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
     deferring protocol discovery to U5.
 - **Verification:** A clean checkout installs with Bun, passes the repository check, produces both executables, and contains the complete canonical standard without relying on Nucleus access or Docker.
 
+### U1A. Enforce documentation discoverability and continuous authoring quality
+
+- **Goal:** Make every maintained document reachable from README indexes, enforce authored
+  TypeScript fileoverviews, and provide provider hooks plus vendor-neutral Git/canonical backstops.
+- **Requirements:** R58-R64
+- **Dependencies:** Corrected U1 work item `5717221`
+- **Files:** `docs/plans/units/u1a-documentation-authoring-quality-gates.md`,
+  `src/modules/architecture-standard/**`, `scripts/check-documentation.ts`,
+  `scripts/check-authored-files.ts`, `scripts/hooks/**`, `.githooks/**`, `.claude/settings.json`,
+  `.codex/hooks.json`, documentation README indexes, and their tests.
+- **Approach:** Adapt Pier Docs' recursive README-chain behavior and Nucleus's immediate authoring
+  feedback into one Bun/TypeScript policy kernel. Provider hooks invoke shared checks for fast
+  feedback; staged Git hooks and `bun run check` remain authoritative. Implement only from the
+  reviewed U1A child plan.
+- **Execution note:** Begin with malformed documentation, authored-source, Git-hook, and provider
+  event fixtures that fail for the intended reason.
+- **Verification:** The real repository and conformant fixtures pass; unindexed docs, missing
+  fileoverviews, invalid staged commits, and malformed provider events fail with concise evidence.
+
 ### U2. Define the versioned protocol, lifecycle kernel, and SQLite event model
 
 - **Goal:** Define explicit representations for every mutation, transition, authority decision,
   event, error, lease, and result envelope before adding presentation or provider code.
 - **Requirements:** R1-R6a, R20-R22, R29-R33, R47-R57, R65-R70; AE2, AE4, AE8
-- **Dependencies:** U1
+- **Dependencies:** Corrected U1 and U1A
 - **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/infrastructure/sqlite/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
 - **Approach:** Define the versioned command envelope, result envelope, error taxonomy, event envelope, state machine, lease model, approval hashes, gate freshness, cancellation/takeover semantics, and portable checkpoint list. Store append-only events and rebuildable projections in SQLite with WAL, schema migrations, unique idempotency keys, and transactionally updated sequence numbers. Model every finding or routed item with a terminal disposition so completion proves nothing was merely announced and abandoned.
 - **Execution note:** Start with state-machine and replay tests before storage adapters. Then prove the SQLite adapter against the same port contract using temporary databases.
@@ -1078,7 +1097,9 @@ published interface.
 - [x] (2026-07-24) Revalidated U2's scaffold against U1's merged package, architecture checker,
   public module surfaces, repository gates, provider capability baseline, and durable evidence.
   U2 remains unauthorized pending its own complete plan, clean-room review, and exact approval.
-- [ ] Promote and complete U2 through U10 in dependency order.
+- [x] (2026-07-25) Post-merge verification opened U1 corrective work item `5717221`, created U1A
+  work item `745eda8`, and invalidated U2 dependency readiness.
+- [ ] Complete corrected U1 and U1A, then promote and complete U2 through U10 in dependency order.
 
 ## Surprises & Discoveries
 
@@ -1147,10 +1168,10 @@ published interface.
 ## Outcomes & Retrospective
 
 Current planning outcome: Mandem has a dependency-ordered program ExecPlan in its own repository,
-plus child-plan boundaries for U1 through U10. The program is restartable from durable artifacts
-and no longer depends on the SBP orchestrator conversation. U1 is complete at merge
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`; U2's dependency inputs have been revalidated against
-that merge, while U2-U10 remain unauthorized until their own reviewed child plans are approved.
+plus child-plan boundaries for U1, U1A, and U2-U10. The program is restartable from durable
+artifacts and no longer depends on the SBP orchestrator conversation. U1 merged at
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`, but corrective item `5717221` and U1A item `745eda8`
+must complete before U2 dependency revalidation can run again.
 
 ## Deferred / Open Questions
 
@@ -1177,3 +1198,8 @@ U1 completion update (2026-07-24): Recorded PR #4 merge
 `88b9533ab840c9d357a1d09d2341709e2cbdd986`, successful post-merge verification, durable Learn,
 closed git-native issue `da645bd`, and U2 dependency revalidation. U2 remains a non-executable
 scaffold.
+
+U1 post-merge correction update (2026-07-25): Recorded corrective work item `5717221`, added U1A
+documentation/authoring-quality work item `745eda8`, and blocked U2 until both foundational units
+complete. The change keeps the master non-executable and moves implementation detail into the U1A
+child ExecPlan.

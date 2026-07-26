@@ -20,12 +20,13 @@ implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U1
+**Depends on:** corrected U1 and U1A
 
 ### Consumes
 
 - U1 architecture standard and module skeleton
 - U1 repository gates
+- U1A documentation, authored-source, Git-hook, and canonical-check gates
 - Master lifecycle, authority, approval, and checkpoint decisions
 
 ### Produces
@@ -92,19 +93,24 @@ When a dependency completes or its producer changes a consumed artifact, the pla
 compare the output with this plan's assumptions. If it materially differs, the plan author must set
 `promotion` to `planned` and obtain a refreshed review before execution.
 
-On 2026-07-24, the Mandem program orchestrator revalidated U2 against merged U1 commit
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The merged U1 artifacts include Bun `1.3.14`, the
-canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the versioned
-22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a completed
-Claude/Codex capability baseline. Implement U2 by extending the existing `runtime` module,
-preserving those public barrels, keeping SQLite behind infrastructure ports, and retaining every U1
-rule and gate. The Mandem program orchestrator found no material mismatch that invalidates this scaffold, but the
-scaffold is not self-contained enough for implementation.
+The Mandem program orchestrator completed the original U1 dependency revalidation on 2026-07-24
+against merge
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The repository now provides Bun `1.3.14`, the
+canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the
+versioned 22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a
+completed Claude/Codex capability baseline. U2 must extend the existing `runtime` module, preserve
+those public barrels, keep SQLite behind infrastructure ports, and avoid weakening any U1 rule or
+gate. Post-merge verification on 2026-07-25 found material package and architecture-gate gaps,
+tracked by work item `5717221`, and the operator added the U1A documentation/authoring-quality
+dependency tracked by `745eda8`. U2 dependency readiness is therefore invalidated until both
+foundational work items merge and this scaffold is revalidated against their actual outputs.
 
 ## Progress
 
 - [x] (2026-07-24) Revalidated consumed inputs against merged U1 commit
   `88b9533ab840c9d357a1d09d2341709e2cbdd986`.
+- [x] (2026-07-25) Invalidated that dependency readiness after corrective U1 findings and the U1A
+  quality-gate dependency were recorded.
 - [ ] Expand this scaffold into a self-contained U2 ExecPlan that follows `PLANS.md`.
 - [ ] Have a clean-room reviewer review the exact planned revision and address the findings.
 - [ ] Obtain the operator's approval of that revision before setting `execution_authorized` to
@@ -127,9 +133,14 @@ scaffold is not self-contained enough for implementation.
 
 ## Outcomes & Retrospective
 
-Dependency revalidation found no incompatible U1 output. U2 can proceed to detailed planning, but
-remains `promotion: scaffolded` and `execution_authorized: false`.
+The original dependency revalidation found no incompatible U1 output, but the 2026-07-25 findings
+and U1A requirement supersede that conclusion. U2 becomes dependency-ready for detailed planning
+only after corrected U1 and U1A complete. It remains `promotion: scaffolded` and
+`execution_authorized: false`.
 
 Revision note (2026-07-24): The Mandem program orchestrator revalidated U2 against U1's actual
 merged artifacts and recorded the concrete interfaces, gates, provider evidence, and
 module-extension constraint. This update does not authorize U2 implementation.
+
+Revision note (2026-07-25): Invalidated U2 dependency readiness after post-merge U1 verification
+opened corrective work item `5717221` and documentation/authoring-quality work item `745eda8`.
