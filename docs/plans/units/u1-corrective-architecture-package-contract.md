@@ -68,6 +68,11 @@ implementation changes and pass only after the checker detects the intended viol
   Evidence: those files use filesystem and process APIs to run tests and render command-line output;
   their required enforcement is fileoverview and explicit-`any`, not production I/O placement.
 
+- Observation: A green package proof needs a committed candidate because `git archive` cannot
+  include uncommitted edits.
+  Evidence: packing an archive of the pre-fix SHA should fail for omitted bins; packing a later
+  candidate SHA can prove the lifecycle-generated archive without reading the worktree.
+
 ## Decision Log
 
 - Decision: Make U1C a separate corrective child rather than reopen completed U1.
@@ -106,12 +111,20 @@ implementation changes and pass only after the checker detects the intended viol
   fixture and declaration exclusions.
   Date/Author: 2026-07-25 / Codex after fresh clean-room findings
 
+- Decision: Set `package.json` to `"prepack": "bun run build"` and
+  `"files": ["dist", "README.md", "LICENSE"]`.
+  Rationale: Bun 1.3.14 runs the `prepack` lifecycle script for `bun pm pack`. The explicit
+  allowlist includes generated executables and the consumer-facing documents while Bun includes
+  `package.json` in the package manifest.
+  Date/Author: 2026-07-25 / Codex after fresh clean-room findings
+
 ## Outcomes & Retrospective
 
 Planning outcome: this plan describes the six validated corrections and their test-first proof.
 After fresh clean-room findings, it now separates production architecture rules from
-authored-source rules and binds the package proof to a committed candidate. No production code has
-changed, no review has approved this revision, and implementation remains unauthorized. The
+authored-source rules and binds the package proof to a committed candidate. The red package test
+uses a pre-fix SHA; the first green package proof uses a candidate SHA after commit. No production
+code has changed, no review has approved this revision, and implementation remains unauthorized. The
 implementation outcome, merge SHA, archive evidence, and downstream revalidation result must be
 added here by the executor and orchestrator.
 
@@ -237,21 +250,33 @@ template expressions. Add conformant script and test fixtures that use allowed p
 filesystem APIs. They prove the production-only applicability boundary and must not emit
 `ARCH-DOMAIN-DEPENDENCY`, `ARCH-APPLICATION-DEPENDENCY`, or `ARCH-IO-PLACEMENT`.
 
-Add a package contract test that creates a disposable directory, obtains a tarball from a clean
-tracked source snapshot, installs that tarball with Bun in a separate empty consumer directory,
-and invokes `node_modules/.bin/mandem --version`, `node_modules/.bin/mandem --help`,
+Before editing production files, capture the committed pre-fix SHA in `PRE_FIX_COMMIT`. Add a
+package contract test that creates a disposable directory, obtains a tarball from that clean
+tracked snapshot, installs that tarball with Bun in a separate empty consumer directory, and
+invokes `node_modules/.bin/mandem --version`, `node_modules/.bin/mandem --help`,
 `node_modules/.bin/mandem-server --version`, and `node_modules/.bin/mandem-server --help`. The
 test must inspect the tarball contents before installation and assert that both `package/dist/mandem`
 and `package/dist/mandem-server` are present and executable. It must not accept a local `dist/`
-directory as evidence. The red test may prove the current package omission from a clean checked-out
-source directory. It must not claim that an uncommitted working tree is the candidate artifact.
+directory as evidence. The test reads `MANDEM_ARCHIVE_COMMIT`; Step 1 supplies the pre-fix SHA.
+The expected red failure is the missing archive entries, not a missing environment variable, test
+fixture, or local build artifact.
 
 ### Milestone 2: Correct the package lifecycle and archive boundary
 
-In `package.json`, add a lifecycle command that runs `bun run build` before `bun pm pack`, and add
-an explicit `files` allowlist that includes the compiled `dist/` executables plus the package files
-needed by a consumer. Keep `dist/` ignored by Git; it is generated output, not source. Do not run
-the build as an import-time side effect or commit generated executables.
+In `package.json`, add exactly this lifecycle entry:
+
+    "prepack": "bun run build"
+
+Bun 1.3.14 runs `prepack` when `bun pm pack` creates a tarball. Add exactly this allowlist entry:
+
+    "files": ["dist", "README.md", "LICENSE"]
+
+Keep `dist/` ignored by Git; it is generated output, not source. Do not run the build as an
+import-time side effect or commit generated executables. The package contract test must parse the
+archive's `package/package.json` and assert all of these exact values: the two `bin` values remain
+`dist/mandem` and `dist/mandem-server`; `scripts.prepack` equals `bun run build`; and `files` equals
+`["dist", "README.md", "LICENSE"]`. It must assert that `package/dist/mandem` and
+`package/dist/mandem-server` exist and are executable after `bun pm pack` runs the lifecycle.
 
 Implement the smallest package metadata changes that make the red package test green. Then commit
 the candidate source, tests, and package metadata before taking the archive. The package contract
@@ -335,20 +360,24 @@ of its then-current revision. U2 through U10 remain blocked.
 Run every command from the repository root with Bun 1.3.14.
 
 1. After clean-room approval, exact operator approval, and the metadata-only authorization change,
-   establish red evidence before production changes.
+   capture the pre-fix commit and establish red evidence before production changes.
 
-       bunx vitest run scripts/check-architecture.test.ts tests/contract/package-entrypoints.test.ts
+       PRE_FIX_COMMIT="$(git rev-parse HEAD)"
+       MANDEM_ARCHIVE_COMMIT="$PRE_FIX_COMMIT" bunx vitest run scripts/check-architecture.test.ts tests/contract/package-entrypoints.test.ts
 
    Expected before implementation: the newly added alias, vendor I/O, direct API, authored-scope,
-   exact-set, root config, real traversal, and archive/install assertions fail. Existing tests must
-   still pass.
+   exact-set, root config, and real traversal assertions fail. The archive/install assertion runs
+   against `PRE_FIX_COMMIT` and fails because the tarball omits the declared `dist` executables.
+   It must not fail for a missing manifest value or an uncommitted artifact.
 
-2. After the smallest implementation changes, run the targeted checks.
+2. After the smallest implementation changes, run architecture-only green checks. The package
+   proof remains pending until the candidate commit exists.
 
        bun run architecture:check
-       bunx vitest run scripts/check-architecture.test.ts tests/contract/package-entrypoints.test.ts
+       bunx vitest run scripts/check-architecture.test.ts
 
-   Expected: the real repository has no architecture findings and every targeted test passes.
+   Expected: the real repository has no architecture findings and the architecture tests pass. Do
+   not run the green package archive/install proof in this step.
 
 3. Commit the green candidate and run package proof against that exact SHA.
 
@@ -357,9 +386,10 @@ Run every command from the repository root with Bun 1.3.14.
        git rev-parse HEAD
        MANDEM_ARCHIVE_COMMIT=<candidate-SHA> bunx vitest run tests/contract/package-entrypoints.test.ts
 
-   Expected: the test reads the displayed candidate SHA from `MANDEM_ARCHIVE_COMMIT`, runs `git archive <SHA>`, and proves the
-   tarball contents and empty-consumer installation. If it fails, repair test-first, amend or create
-   a new candidate, then rerun this step before continuing.
+   Expected: the test reads the displayed candidate SHA from `MANDEM_ARCHIVE_COMMIT`, confirms the
+   exact archive manifest, runs `git archive <SHA>`, and proves the lifecycle-built tarball contents
+   and empty-consumer installation. If it fails, repair test-first, amend or create a new candidate,
+   then rerun this step before continuing.
 
 4. Run the complete repository verification.
 
@@ -408,7 +438,8 @@ Acceptance requires all of the following observable results.
 - The full rule matrix has exact ID set equality and validates every row's ID, path, and message
   fragment.
 - A tarball from `git archive <candidate-SHA>` contains both bin files, installs into an empty directory with
-  Bun, and exposes both installed commands with correct version and help output.
+  Bun, and exposes both installed commands with correct version and help output. Its internal
+  `package.json` has the exact `bin`, `prepack`, and `files` values stated in Milestone 2.
 - `bun run check`, `bun run build`, and the four direct binary probes pass on the exact PR head and
   again after merge.
 
@@ -482,3 +513,8 @@ applicability boundary, requires repository-wide candidate traversal and real CL
 root config fixture, defines direct-I/O false-positive coverage, and binds archive evidence to a
 committed candidate SHA. Review, operator approval, and authorization now precede implementation
 steps.
+
+2026-07-25: Repaired the package-proof sequence. Step 1 runs the red archive test against the
+pre-fix committed SHA, Step 2 keeps package proof pending while architecture checks turn green, and
+Step 3 runs the first green archive/install proof after a candidate commit. The plan now specifies
+the exact Bun 1.3.14 `prepack` lifecycle entry, allowlist, and archive manifest assertions.
