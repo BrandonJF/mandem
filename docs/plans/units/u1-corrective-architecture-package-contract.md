@@ -37,11 +37,14 @@ implementation changes and pass only after the checker detects the intended viol
 - [x] (2026-07-25 14:20Z) Read the durable Git-native issue and reproduced its implementation
   context from the merged repository state.
 - [x] (2026-07-25 14:20Z) Authored this non-executable corrective child ExecPlan.
+- [ ] Obtain clean-room approval of this exact revision.
+- [ ] Obtain operator approval of the exact clean-room-approved revision.
+- [ ] Set `execution_authorized: true` without changing implementation instructions, then dispatch
+  one isolated implementation worker.
 - [ ] Create failing tests for every package and architecture bypass in this plan.
 - [ ] Implement the smallest changes that make the new tests pass.
+- [ ] Commit the candidate implementation, then run the archive/install proof against that commit.
 - [ ] Run the complete verification contract and record the evidence in this document.
-- [ ] Obtain clean-room review and exact operator approval before changing execution authority.
-- [ ] Dispatch an implementation worker only after `execution_authorized: true` is recorded.
 
 ## Surprises & Discoveries
 
@@ -59,6 +62,11 @@ implementation changes and pass only after the checker detects the intended viol
   Evidence: `src/modules/architecture-standard/domain/rules.ts` filters files with
   `path.startsWith("src/")` before checking `ARCH-FILEOVERVIEW` and
   `ARCH-NO-EXPLICIT-ANY`.
+
+- Observation: A broader authored-source scan must not make production architecture rules apply to
+  Mandem's test harness and checker scripts.
+  Evidence: those files use filesystem and process APIs to run tests and render command-line output;
+  their required enforcement is fileoverview and explicit-`any`, not production I/O placement.
 
 ## Decision Log
 
@@ -84,12 +92,28 @@ implementation changes and pass only after the checker detects the intended viol
   repository gate baseline.
   Date/Author: 2026-07-25 / Codex
 
+- Decision: Apply dependency and I/O rules only to production files under `src/`, while applying
+  fileoverview and explicit-`any` rules to every included authored root.
+  Rationale: The first group describes Mandem production architecture. Tests and checker scripts
+  legitimately import and use processes to exercise that architecture, but every authored file
+  still needs a useful overview and must avoid explicit `any`.
+  Date/Author: 2026-07-25 / Codex after fresh clean-room findings
+
+- Decision: Traverse every non-excluded TypeScript candidate before classifying it as included,
+  excluded, or unscoped.
+  Rationale: Traversing only selected roots repeats the original silent pass. Classification after
+  traversal makes a new root visible as `ARCH-UNSCOPED-TYPESCRIPT` while preserving explicit
+  fixture and declaration exclusions.
+  Date/Author: 2026-07-25 / Codex after fresh clean-room findings
+
 ## Outcomes & Retrospective
 
 Planning outcome: this plan describes the six validated corrections and their test-first proof.
-No production code has changed, no review has approved this revision, and implementation remains
-unauthorized. The implementation outcome, merge SHA, archive evidence, and downstream
-revalidation result must be added here by the executor and orchestrator.
+After fresh clean-room findings, it now separates production architecture rules from
+authored-source rules and binds the package proof to a committed candidate. No production code has
+changed, no review has approved this revision, and implementation remains unauthorized. The
+implementation outcome, merge SHA, archive evidence, and downstream revalidation result must be
+added here by the executor and orchestrator.
 
 ## Context and Orientation
 
@@ -107,14 +131,18 @@ reads repository files. `scripts/check-architecture.ts` is the thin command-line
 place: policy belongs in the domain, file traversal in infrastructure, and process output in the
 script.
 
-An authored TypeScript file is a human-maintained `.ts` or `.tsx` file that the explicit policy
-includes. For this correction, the policy includes `src/**/*.ts`, `src/**/*.tsx`, `scripts/**/*.ts`,
-`scripts/**/*.tsx`, `tests/**/*.ts`, `tests/**/*.tsx`, and root `*.config.ts` and `*.config.tsx`.
-It excludes files under complete path segments `.git`, `node_modules`, `dist`, `coverage`,
-`generated`, `vendor`, or `vendored`; paths below `tests/fixtures/`; and declaration files ending
-`.d.ts`. A source-looking file outside the includes is an `ARCH-UNSCOPED-TYPESCRIPT` violation so
-future source roots cannot evade review silently. This policy is also the correction U1A consumes;
-U1A may extend it only through its own reviewed plan.
+The file-system adapter must recursively collect every `.ts` and `.tsx` candidate in the repository
+before rule evaluation. It skips only paths with a complete segment `.git`, `node_modules`, `dist`,
+`coverage`, `generated`, `vendor`, or `vendored`. The policy then classifies each collected path.
+An excluded candidate is a declaration file ending `.d.ts` or any file below `tests/fixtures/` and
+produces no authored-source finding. An included candidate is `src/**/*.ts`, `src/**/*.tsx`,
+`scripts/**/*.ts`, `scripts/**/*.tsx`, `tests/**/*.ts`, `tests/**/*.tsx`, or a root
+`*.config.ts`/`*.config.tsx` file. All other collected candidates are unscoped and produce
+`ARCH-UNSCOPED-TYPESCRIPT`. The real filesystem and CLI integration test must create
+`tools/unscoped.ts` in a disposable repository and prove `bun scripts/check-architecture.ts <root>`
+reports that path and rule. It must also prove that an excluded fixture and declaration file remain
+absent from the report. This policy is also the correction U1A consumes; U1A may extend it only
+through its own reviewed plan.
 
 An I/O import or API accesses the filesystem, a process, a network, a database, or an external
 vendor service. It is allowed only in a module's `infrastructure/` directory, its exact
@@ -148,48 +176,66 @@ fixture matrix: every row needs a fixture that asserts the listed ID, path, and 
 The test must first assert exact set equality between these IDs and `architectureRules.map(rule =>
 rule.id)`; it must not use length comparison or subset matching as a replacement.
 
-| Rule ID | Fixture path | Required message fragment |
-| --- | --- | --- |
-| `ARCH-MODULE-NAME` | `src/modules/Bad_Name` | `lowercase kebab-case` |
-| `ARCH-MODULE-DOMAIN` | `src/modules/Bad_Name` | `contain domain` |
-| `ARCH-MODULE-APPLICATION` | `src/modules/Bad_Name` | `contain application` |
-| `ARCH-MODULE-INFRASTRUCTURE` | `src/modules/Bad_Name` | `contain infrastructure` |
-| `ARCH-MODULE-API` | `src/modules/Bad_Name` | `contain api` |
-| `ARCH-MODULE-README` | `src/modules/Bad_Name` | `README.md` |
-| `ARCH-MODULE-ROOT-BARREL` | `src/modules/no-barrel` | `index.ts` |
-| `ARCH-DOMAIN-TYPES` | `src/modules/Bad_Name` | `domain/types.ts` |
-| `ARCH-API-COMPOSITION` | `src/modules/Bad_Name` | `api/composition.ts` |
-| `ARCH-MODULE-TESTS` | `src/modules/Bad_Name` | `contain tests` |
-| `ARCH-MODULE-TEST-FAKES` | `src/modules/Bad_Name` | `tests/fakes` |
-| `ARCH-DOMAIN-DEPENDENCY` | `src/modules/broken/domain/entity.ts` | `outer layer` |
-| `ARCH-APPLICATION-DEPENDENCY` | `src/modules/broken/application/zod.ts` | `only domain or application` |
-| `ARCH-CROSS-MODULE-DEEP-IMPORT` | `src/modules/broken/application/deep.ts` | `module barrels` |
-| `ARCH-INFRASTRUCTURE-ROOT-EXPORT` | `src/modules/broken/index.ts` | `do not export infrastructure` |
-| `ARCH-IO-PLACEMENT` | `src/modules/broken/domain/io.ts` | `limited to infrastructure` |
-| `ARCH-FILEOVERVIEW` | `scripts/missing-overview.ts` | `@fileoverview` |
-| `ARCH-NO-EXPLICIT-ANY` | `tests/has-any.test.ts` | `explicit any` |
-| `ARCH-UNSCOPED-TYPESCRIPT` | `tools/unscoped.ts` | `not covered by authored-source policy` |
-| `ARCH-DOMAIN-ENTITY-PLACEMENT` | `src/modules/broken/domain/entity.ts` | `types.ts` |
-| `ARCH-COMPONENT-SIZE` | `src/modules/broken/api/Widget.tsx` | `150` |
-| `ARCH-HOOK-SIZE` | `src/modules/broken/application/useThing.ts` | `200` |
-| `ARCH-COMPONENT-STATE` | `src/modules/broken/api/Widget.tsx` | `fewer than five` |
+| Rule ID | Applies to | Fixture path | Required message fragment |
+| --- | --- | --- | --- |
+| `ARCH-MODULE-NAME` | module directories under `src/modules/` | `src/modules/Bad_Name` | `lowercase kebab-case` |
+| `ARCH-MODULE-DOMAIN` | module directories under `src/modules/` | `src/modules/Bad_Name` | `contain domain` |
+| `ARCH-MODULE-APPLICATION` | module directories under `src/modules/` | `src/modules/Bad_Name` | `contain application` |
+| `ARCH-MODULE-INFRASTRUCTURE` | module directories under `src/modules/` | `src/modules/Bad_Name` | `contain infrastructure` |
+| `ARCH-MODULE-API` | module directories under `src/modules/` | `src/modules/Bad_Name` | `contain api` |
+| `ARCH-MODULE-README` | module directories under `src/modules/` | `src/modules/Bad_Name` | `README.md` |
+| `ARCH-MODULE-ROOT-BARREL` | module directories under `src/modules/` | `src/modules/no-barrel` | `index.ts` |
+| `ARCH-DOMAIN-TYPES` | module directories under `src/modules/` | `src/modules/Bad_Name` | `domain/types.ts` |
+| `ARCH-API-COMPOSITION` | module directories under `src/modules/` | `src/modules/Bad_Name` | `api/composition.ts` |
+| `ARCH-MODULE-TESTS` | module directories under `src/modules/` | `src/modules/Bad_Name` | `contain tests` |
+| `ARCH-MODULE-TEST-FAKES` | module directories under `src/modules/` | `src/modules/Bad_Name` | `tests/fakes` |
+| `ARCH-DOMAIN-DEPENDENCY` | production `src/modules/*/domain/**/*.ts(x)` | `src/modules/broken/domain/entity.ts` | `outer layer` |
+| `ARCH-APPLICATION-DEPENDENCY` | production `src/modules/*/application/**/*.ts(x)` | `src/modules/broken/application/zod.ts` | `only domain or application` |
+| `ARCH-CROSS-MODULE-DEEP-IMPORT` | production `src/modules/**/*.ts(x)` | `src/modules/broken/application/deep.ts` | `module barrels` |
+| `ARCH-INFRASTRUCTURE-ROOT-EXPORT` | production module root `src/modules/*/index.ts(x)` | `src/modules/broken/index.ts` | `do not export infrastructure` |
+| `ARCH-IO-PLACEMENT` | production `src/**/*.ts(x)`, subject to allowed locations | `src/modules/broken/domain/io.ts` | `limited to infrastructure` |
+| `ARCH-FILEOVERVIEW` | every included authored candidate | `root-policy.config.ts` | `@fileoverview` |
+| `ARCH-NO-EXPLICIT-ANY` | every included authored candidate | `tests/has-any.test.ts` | `explicit any` |
+| `ARCH-UNSCOPED-TYPESCRIPT` | every collected non-excluded candidate outside the include set | `tools/unscoped.ts` | `not covered by authored-source policy` |
+| `ARCH-DOMAIN-ENTITY-PLACEMENT` | production `src/modules/*/domain/**/*.ts(x)` | `src/modules/broken/domain/entity.ts` | `types.ts` |
+| `ARCH-COMPONENT-SIZE` | production non-barrel `src/modules/**/*.tsx` | `src/modules/broken/api/Widget.tsx` | `150` |
+| `ARCH-HOOK-SIZE` | production non-barrel `src/modules/**/*hook*.ts` and `src/modules/**/*use*.ts` | `src/modules/broken/application/useThing.ts` | `200` |
+| `ARCH-COMPONENT-STATE` | production `src/modules/**/*.tsx` | `src/modules/broken/api/Widget.tsx` | `fewer than five` |
 
-The `ARCH-IO-PLACEMENT` fixture must contain separate cases for `@octokit/rest`, `Bun.connect`,
-`process.stdin`, and `process.stdout.write`. The alias root-barrel fixture must use
-`export * from "@/modules/broken/infrastructure"`; a relative equivalent alone is insufficient.
-The authored-scope fixtures must separately prove an omitted fileoverview in `scripts/`, explicit
-`any` in `tests/`, and a root config file. Each must fail with the existing stable ID.
+The `ARCH-IO-PLACEMENT` fixture must contain separate production-source cases for `@octokit/rest`,
+`Bun.connect`, `process.stdin`, and `process.stdout.write`. It must also include conformant
+`scripts/check-architecture.ts` and `scripts/check-architecture.test.ts` style fixtures that use
+process and filesystem APIs without producing dependency or I/O findings. For every new direct API
+token, add negative cases in a line comment, block comment, ordinary string, and template-literal
+text. Those four forms must produce no I/O finding. An expression that invokes `Bun.connect(...)`
+inside a template literal is executable code and must produce the finding.
+
+The alias root-barrel fixture must use `export * from "@/modules/broken/infrastructure"`; a relative
+equivalent alone is insufficient. The authored-scope fixtures must separately prove an omitted
+fileoverview in `scripts/`, explicit `any` in `tests/`, and missing fileoverview in the root
+`root-policy.config.ts` file. Each must fail with the existing stable ID. A real filesystem/CLI
+test must prove the root config path and `tools/unscoped.ts` are discovered rather than merely
+passed directly to `evaluateArchitecture`.
 
 ## Plan of Work
 
 ### Milestone 1: Write red evidence for every bypass
 
-Before changing production code, extend `scripts/check-architecture.test.ts` and
-`tests/contract/package-entrypoints.test.ts`. Keep the existing conformant fixtures. Add focused
-malformed fixtures for the alias root export, `@octokit/rest` in a domain file, all three direct
-I/O forms, and authored files outside `src/`. Add the exact-ID matrix assertion described above.
+After this exact plan revision is approved and authorized, extend
+`scripts/check-architecture.test.ts` and `tests/contract/package-entrypoints.test.ts` before
+changing production code. Keep the existing conformant fixtures. Add focused malformed fixtures
+for the alias root export, `@octokit/rest` in a domain file, all three direct I/O forms, the root
+config file, and authored files outside `src/`. Add the exact-ID matrix assertion described above.
 Run the focused tests and record that each new assertion fails for its intended missing detection,
 not due to an unrelated parse or fixture failure.
+
+For direct I/O APIs, add four negative fixtures for each of `Bun.connect`, `process.stdin`, and
+`process.stdout.write`: one line comment, one block comment, one ordinary string, and one template
+literal whose text contains the token. Add a positive fixture where a template expression evaluates
+the same API. The evaluator may remove comments and literal text before matching, but it must retain
+template expressions. Add conformant script and test fixtures that use allowed process or
+filesystem APIs. They prove the production-only applicability boundary and must not emit
+`ARCH-DOMAIN-DEPENDENCY`, `ARCH-APPLICATION-DEPENDENCY`, or `ARCH-IO-PLACEMENT`.
 
 Add a package contract test that creates a disposable directory, obtains a tarball from a clean
 tracked source snapshot, installs that tarball with Bun in a separate empty consumer directory,
@@ -197,7 +243,8 @@ and invokes `node_modules/.bin/mandem --version`, `node_modules/.bin/mandem --he
 `node_modules/.bin/mandem-server --version`, and `node_modules/.bin/mandem-server --help`. The
 test must inspect the tarball contents before installation and assert that both `package/dist/mandem`
 and `package/dist/mandem-server` are present and executable. It must not accept a local `dist/`
-directory as evidence.
+directory as evidence. The red test may prove the current package omission from a clean checked-out
+source directory. It must not claim that an uncommitted working tree is the candidate artifact.
 
 ### Milestone 2: Correct the package lifecycle and archive boundary
 
@@ -206,13 +253,19 @@ an explicit `files` allowlist that includes the compiled `dist/` executables plu
 needed by a consumer. Keep `dist/` ignored by Git; it is generated output, not source. Do not run
 the build as an import-time side effect or commit generated executables.
 
-Update the package contract test to create its clean source input from `git archive HEAD`, not the
-current working tree. In that archive directory run `bun install --frozen-lockfile`, then
-`bun pm pack` and capture the emitted tarball path. Install the tarball into a second temporary
-directory with Bun. Use argument arrays for process calls and remove temporary directories in a
-`finally` block. If Bun requires a local install option for a tarball on the current pinned version,
-record the exact supported invocation in the test and plan living sections; do not substitute npm,
-pnpm, yarn, or a globally installed Mandem binary.
+Implement the smallest package metadata changes that make the red package test green. Then commit
+the candidate source, tests, and package metadata before taking the archive. The package contract
+test must require a full candidate SHA through `MANDEM_ARCHIVE_COMMIT`; it fails if the value is
+missing or is not a commit in the current repository. It then creates its clean source input from
+`git archive <SHA>`, never from `HEAD` by implication or from the current working tree. In the archive directory run
+`bun install --frozen-lockfile`, then `bun pm pack` and capture the emitted tarball path. Install
+the tarball into a second temporary directory with Bun. Use argument arrays for process calls and
+remove temporary directories in a `finally` block. If the archive/install proof fails, repair the
+candidate test-first, amend or create a replacement candidate commit, and rerun the entire archive
+proof against the new SHA. Do not merge a commit that has not passed this proof. If Bun requires a
+local install option for a tarball on the current pinned version, record the exact supported
+invocation in the test and plan living sections; do not substitute npm, pnpm, yarn, or a globally
+installed Mandem binary.
 
 ### Milestone 3: Correct rule evaluation through an explicit policy
 
@@ -222,12 +275,22 @@ domain barrel and, only if consumers need it, through the module's existing publ
 path normalization POSIX and repository-relative. Do not put policy lists in the filesystem adapter
 or command-line script.
 
-Update `rules.ts` so it evaluates all supplied authored TypeScript files selected by the policy,
-rather than filtering only `src/`. It must produce `ARCH-UNSCOPED-TYPESCRIPT` for a human-authored
-TypeScript-looking path outside the policy. Continue excluding declarations and disposable test
-fixtures. Ensure `FileSystemTree` supplies candidate TypeScript files from the policy's roots so a
-real `bun run architecture:check` observes scripts, tests, and root config files. Preserve stable
-sorting by rule ID, path, then message.
+Update `rules.ts` so it classifies all supplied TypeScript candidates before applying rules. Apply
+module shape, dependency, root-barrel, I/O, entity, component-size, hook-size, and component-state
+rules only to production `src/` paths identified in the matrix. Apply fileoverview and explicit-any
+rules to every included authored root. Emit `ARCH-UNSCOPED-TYPESCRIPT` for every collected,
+non-excluded candidate outside that include set. Do not emit architecture dependency or I/O findings
+for scripts, tests, or root configuration files. Continue excluding declarations and disposable
+test fixtures.
+
+Update `FileSystemTree` so it recursively returns every non-excluded TypeScript candidate from the
+repository, including `tools/unscoped.ts`, plus the existing Markdown and fixture files required by
+module-shape checks. Add a filesystem integration test that writes a disposable repository with
+`tools/unscoped.ts`, `root-policy.config.ts`, an excluded `tests/fixtures/example.ts`, and an
+excluded declaration file. Invoke the actual `scripts/check-architecture.ts` command against that
+repository and assert its exit status, stdout paths, and rule/message fragments. This test proves
+real traversal and CLI rendering, rather than only domain evaluation. Preserve stable sorting by
+rule ID, path, then message.
 
 Normalize every root-barrel export specifier before the infrastructure check. Treat both relative
 and `@/modules/<same-module>/infrastructure` forms, including descendants, as infrastructure
@@ -249,10 +312,10 @@ verification found the gaps, and do not claim corrected completion until U1C has
 ### Milestone 4: Verify, review, land, and revalidate dependencies
 
 Run the focused red tests before the production edit and preserve their output in U1C's
-`Surprises & Discoveries`. After the green implementation, run the full commands below from the
-repository root. Run the archive/install test from a clean `git archive HEAD` input after all
-source edits are committed to the worker branch, so it proves the candidate commit rather than
-untracked files.
+`Surprises & Discoveries`. After the green implementation, commit the candidate, record its SHA,
+and run the archive/install test from `git archive <candidate-SHA>`. After that proof passes, run
+the full commands below from the repository root. Any repair creates or amends a new candidate and
+requires the focused tests, archive/install proof, and full verification again.
 
 The implementation worker commits only U1C-scoped source, test, package, and U1 documentation
 changes to an isolated branch, pushes it, and opens a pull request. The worker does not merge.
@@ -271,12 +334,14 @@ of its then-current revision. U2 through U10 remain blocked.
 
 Run every command from the repository root with Bun 1.3.14.
 
-1. Establish red evidence before production changes.
+1. After clean-room approval, exact operator approval, and the metadata-only authorization change,
+   establish red evidence before production changes.
 
        bunx vitest run scripts/check-architecture.test.ts tests/contract/package-entrypoints.test.ts
 
    Expected before implementation: the newly added alias, vendor I/O, direct API, authored-scope,
-   exact-set, and archive/install assertions fail. Existing tests must still pass.
+   exact-set, root config, real traversal, and archive/install assertions fail. Existing tests must
+   still pass.
 
 2. After the smallest implementation changes, run the targeted checks.
 
@@ -285,7 +350,18 @@ Run every command from the repository root with Bun 1.3.14.
 
    Expected: the real repository has no architecture findings and every targeted test passes.
 
-3. Run the complete repository verification.
+3. Commit the green candidate and run package proof against that exact SHA.
+
+       git add package.json scripts/check-architecture.test.ts tests/contract/package-entrypoints.test.ts src docs
+       git commit -m "fix: close U1 architecture package gaps"
+       git rev-parse HEAD
+       MANDEM_ARCHIVE_COMMIT=<candidate-SHA> bunx vitest run tests/contract/package-entrypoints.test.ts
+
+   Expected: the test reads the displayed candidate SHA from `MANDEM_ARCHIVE_COMMIT`, runs `git archive <SHA>`, and proves the
+   tarball contents and empty-consumer installation. If it fails, repair test-first, amend or create
+   a new candidate, then rerun this step before continuing.
+
+4. Run the complete repository verification.
 
        bun run check
        bun run build
@@ -297,15 +373,15 @@ Run every command from the repository root with Bun 1.3.14.
    Expected: `bun run check` exits zero, build creates both executables, both version commands
    print `mandem 0.1.0` and `mandem-server 0.1.0`, and both help commands mention `--version`.
 
-4. Run the clean package proof, either through the contract test or its maintained helper.
+5. Repeat the clean package proof after the complete suite.
 
-       bunx vitest run tests/contract/package-entrypoints.test.ts
+       MANDEM_ARCHIVE_COMMIT=<candidate-SHA> bunx vitest run tests/contract/package-entrypoints.test.ts
 
-   Expected: a tarball made from `git archive HEAD` contains both declared executable paths; an
+   Expected: a tarball made from the recorded `git archive <candidate-SHA>` contains both declared executable paths; an
    empty consumer directory installs that tarball with Bun; each installed command produces the
    same version and help evidence. The test must use no globally installed Mandem executable.
 
-5. Before merge and after merge, repeat the exact verification against the tested commit and record
+6. Before merge and after merge, repeat the exact verification against the tested commit and record
    the commit SHA, tarball evidence, test count, and Bun version in this plan's living sections.
 
 ## Validation and Acceptance
@@ -318,13 +394,20 @@ Acceptance requires all of the following observable results.
   findings at the domain file.
 - Fixtures that call `Bun.connect`, access `process.stdin`, or call `process.stdout.write` outside
   allowed locations each produce `ARCH-IO-PLACEMENT`; the same operations in allowed locations do
-  not produce that finding.
-- A missing leading fileoverview in `scripts/`, explicit `any` in `tests/`, and a root config file
-  receive their existing stable violations. An unlisted authored TypeScript path receives
+  not produce that finding. Each new API token in comments, ordinary strings, and template text
+  produces no finding; a template expression that invokes it produces the finding.
+- A missing leading fileoverview in `scripts/`, explicit `any` in `tests/`, and missing
+  fileoverview in root `root-policy.config.ts` receive their existing stable violations. Real
+  filesystem/CLI traversal reports the root config path. An unlisted authored TypeScript path
+  `tools/unscoped.ts` receives
   `ARCH-UNSCOPED-TYPESCRIPT`. Fixture and declaration exclusions do not produce findings.
+- A conformant checker script and test harness fixture may use their required process or filesystem
+  APIs without dependency or I/O findings.
+- On the real repository, `bun run architecture:check` reports no dependency or I/O finding for
+  `scripts/check-architecture.ts` or `scripts/check-architecture.test.ts`.
 - The full rule matrix has exact ID set equality and validates every row's ID, path, and message
   fragment.
-- A tarball from `git archive HEAD` contains both bin files, installs into an empty directory with
+- A tarball from `git archive <candidate-SHA>` contains both bin files, installs into an empty directory with
   Bun, and exposes both installed commands with correct version and help output.
 - `bun run check`, `bun run build`, and the four direct binary probes pass on the exact PR head and
   again after merge.
@@ -336,9 +419,11 @@ directories; these remain ignored or are removed in test cleanup. Never delete s
 use `git reset --hard` to recover.
 
 If a package test fails, keep the failing tarball long enough to inspect its file list and record
-the evidence, then remove only the explicit temporary directory created by that test. If a Bun
-pack or local tarball installation invocation differs from this plan's expected command, update
-the test, this plan's Concrete Steps, and the Decision Log with the supported Bun 1.3.14 command.
+the evidence, then remove only the explicit temporary directory created by that test. Repair the
+source and test with a new red test where needed, amend or replace the candidate commit, and rerun
+the archive/install proof against its new SHA before any merge review. If a Bun pack or local
+tarball installation invocation differs from this plan's expected command, update the test, this
+plan's Concrete Steps, and the Decision Log with the supported Bun 1.3.14 command.
 If a policy change causes unexpected findings in the real repository, add fileoverviews or move
 only genuinely authored files into the declared policy; do not add broad exclusions merely to make
 the check green.
@@ -371,7 +456,8 @@ helpers such as `isAuthoredTypeScriptPath(path: string): boolean` and
 `isExcludedAuthoredPath(path: string): boolean`; it must not expose filesystem or process APIs.
 
 `FileSystemTree.read(root)` remains the infrastructure implementation of `RepositoryTree`. It must
-return all policy candidate files needed for real checks, with repository-relative POSIX paths.
+recursively return every non-excluded TypeScript candidate before policy classification, plus files
+needed for module shape checks, with repository-relative POSIX paths.
 `scripts/check-architecture.ts` remains the only command-line wrapper and retains exit status 0 for
 no findings, 1 for findings, and 2 for unexpected configuration, traversal, or parse failures.
 
@@ -390,3 +476,9 @@ tarball. It must not publish source-only bin references or rely on a pre-existin
 2026-07-25: Created U1C from the durable corrective issue after post-merge verification found six
 reproducible silent-pass paths. The plan leaves implementation unauthorized and keeps U1A and U2
 blocked until the correction merges and passes post-merge verification.
+
+2026-07-25: Repaired the clean-room findings. The plan now gives every architecture rule an exact
+applicability boundary, requires repository-wide candidate traversal and real CLI proof, adds the
+root config fixture, defines direct-I/O false-positive coverage, and binds archive evidence to a
+committed candidate SHA. Review, operator approval, and authorization now precede implementation
+steps.
