@@ -217,7 +217,8 @@ describe("architecture analyzer", () => {
       const paths = [
         `src/modules/runtime/infrastructure/${fixture.name}.ts`,
         "src/modules/runtime/api/composition.ts",
-        "src/cli/main.ts"
+        "src/cli/main.ts",
+        "src/server/main.ts"
       ];
       for (const path of paths) {
         const findings = analyzeRepositoryFiles([{ path, text: `${overview}${fixture.expression};` }]).violations;

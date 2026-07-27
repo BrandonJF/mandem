@@ -78,6 +78,10 @@ implementation changes and pass only after the checker detects the intended viol
   tests passed after regex-literal parsing, production-test exclusion, and allowed-location fixture
   coverage. At repair commit `9d442f375a1556c4c23063e7641a9c1201152cc5`, the full 26-test
   check, exact-SHA archive/install proof, build, and four binary probes passed.
+- [ ] (2026-07-27 20:30Z) Added the final P2 test-only coverage for every declared direct I/O API
+  at `src/server/main.ts`, complementing infrastructure, exact composition, and CLI entrypoint
+  coverage. All 21 focused and 26 full tests, build, and four binary probes pass. Commit,
+  exact-head archive proof, and push remain.
 
 ## Surprises & Discoveries
 
@@ -267,6 +271,10 @@ with escapes and character classes before comment recognition. Module test paths
 checks but skip production rules. Each direct I/O API now has positive infrastructure,
 composition, and entrypoint fixtures. The focused architecture suite passes 21 tests and the full
 suite passes 26 tests.
+
+Final coverage outcome (2026-07-27): The allowed-location table now exercises every declared
+direct I/O API at both bounded entrypoints, infrastructure, and exact composition. This changes
+test coverage only; production behavior is unchanged.
 
 ## Context and Orientation
 
