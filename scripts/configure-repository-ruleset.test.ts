@@ -28,9 +28,21 @@ function client(responses: readonly { readonly exitCode: number; readonly output
   };
 }
 
+function githubReadback(id: number): Record<string, unknown> {
+  return {
+    ...repositoryRuleset,
+    id,
+    rules: repositoryRuleset.rules.map((rule) =>
+      rule.type === "pull_request"
+        ? { ...rule, parameters: { ...rule.parameters, required_reviewers: [] } }
+        : rule,
+    ),
+  };
+}
+
 describe("configure repository ruleset", () => {
   it("creates updates and verifies the canonical repository ruleset", async () => {
-    const created = { ...repositoryRuleset, id: 23 };
+    const created = githubReadback(23);
     const fixture = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
       { exitCode: 0, output: "[]" },

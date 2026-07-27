@@ -1019,9 +1019,9 @@ external sources.
   configurations. Disposable live probes verified Claude Code `2.1.220` Write and Codex CLI
   `0.145.0` apply_patch PostToolUse feedback through the shared adapter; the recorded evidence is
   `docs/operations/provider-capability-baseline.md`.
-- [ ] Complete Milestone 7 external configuration, review, Learn, and implementation PR (completed:
-  local canonical-gate integration, workflow, CODEOWNERS, and ruleset command; remaining: apply and
-  read back the GitHub ruleset, verify the hosted workflow, reviews, Learn, and PR handoff).
+- [ ] Complete Milestone 7 review, Learn, and implementation PR (completed: local canonical-gate
+  integration, workflow, CODEOWNERS, ruleset command, and active GitHub ruleset `19852337`;
+  remaining: verify the hosted workflow, reviews, Learn, and PR handoff).
 - [x] (2026-07-27 21:32Z) Integrated the local Milestone 7 quality-gate work. Added the
   `repository-ruleset:apply` and `repository-ruleset:check` package commands, ordered the canonical
   gate as Bun preflight, documentation, authored-source, architecture, TypeScript, lint, and tests,
@@ -1099,6 +1099,12 @@ external sources.
   Evidence: a direct focused Vitest invocation failed because `MANDEM_ARCHIVE_COMMIT` was unset;
   rerunning with `MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD)` passed.
 
+- Observation: GitHub adds an empty `required_reviewers` array to the pull-request rule when it
+  returns a ruleset, even when the submitted semantic payload omits that optional field.
+  Evidence: ruleset `19852337` matched every required value but the first read-back comparison
+  failed until the comparator normalized this empty server default. The focused regression test
+  failed before the repair and now passes.
+
 ## Decision Log
 
 - Decision: Track the U1 correctness defects and U1A quality-gate work as separate git-native issues.
@@ -1134,6 +1140,13 @@ external sources.
 - Decision: Treat the corrected U1C repository-policy helpers as compatibility surfaces for U1A.
   Rationale: They are already consumed by traversal and architecture evaluation. Deriving them and
   the new policy objects from one manifest prevents scope drift while preserving verified behavior.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
+- Decision: Ignore only GitHub's empty `required_reviewers` read-back default during ruleset
+  comparison.
+  Rationale: The approved payload does not require named reviewers, and an empty server-supplied
+  array does not change its behavior. Every required field and any nonempty reviewer list still
+  participates in drift detection.
   Date/Author: 2026-07-27 / Codex orchestrator
 
 - Decision: Authorize implementation of exact reviewed revision

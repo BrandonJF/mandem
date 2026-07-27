@@ -76,9 +76,25 @@ function conforms(value: RemoteRuleset): boolean {
     enforcement: value.enforcement,
     bypass_actors: value.bypass_actors,
     conditions: value.conditions,
-    rules: value.rules,
+    rules: normalizeRules(value.rules),
   };
   return stableJson(definition) === stableJson(repositoryRuleset);
+}
+
+function normalizeRules(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  return value.map((rule: unknown) => {
+    if (typeof rule !== "object" || rule === null) return rule;
+    const record = rule as Record<string, unknown>;
+    if (record.type !== "pull_request" || typeof record.parameters !== "object" || record.parameters === null) {
+      return rule;
+    }
+    const parameters = { ...(record.parameters as Record<string, unknown>) };
+    if (Array.isArray(parameters.required_reviewers) && parameters.required_reviewers.length === 0) {
+      delete parameters.required_reviewers;
+    }
+    return { ...record, parameters };
+  });
 }
 
 function stableJson(value: unknown): string {
