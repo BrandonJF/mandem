@@ -45,12 +45,48 @@ implementation changes and pass only after the checker detects the intended viol
   `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
 - [x] (2026-07-27 18:20Z) Set `execution_authorized: true` without changing implementation
   instructions; dispatch remains pending until this authorization change merges.
-- [ ] Dispatch
-  one isolated implementation worker.
-- [ ] Create failing tests for every package and architecture bypass in this plan.
-- [ ] Implement the smallest changes that make the new tests pass.
-- [ ] Commit the candidate implementation, then run the archive/install proof against that commit.
-- [ ] Run the complete verification contract and record the evidence in this document.
+- [x] (2026-07-27 18:30Z) Dispatched one isolated implementation worker on
+  `fix/u1-architecture-package` at pre-fix commit
+  `3ac5c4124533c0de0217b4569b09bc068893b63c`.
+- [x] (2026-07-27 18:38Z) Added red package and architecture contracts. Focused tests failed for
+  six checker bypasses and for clean archive entries `package/dist/mandem` and
+  `package/dist/mandem-server`.
+- [x] (2026-07-27 18:45Z) Implemented the scoped repository policy, complete TypeScript
+  traversal, alias root-barrel detection, vendor/direct I/O checks, and package lifecycle metadata.
+  `bun run architecture:check` and `scripts/check-architecture.test.ts` pass.
+- [x] (2026-07-27 18:55Z) Replacing the first candidate after `bun run check` showed that the
+  package contract requires `MANDEM_ARCHIVE_COMMIT` when run through the normal test script.
+  The replacement script supplies the current full Git commit SHA; archive and full verification
+  passed on the replacement commit.
+- [x] (2026-07-27 19:00Z) Committed the candidate and proved its archive/install contract from
+  `git archive` before and after full verification.
+- [x] (2026-07-27 19:00Z) Ran the complete local verification contract. `bun run check` passed
+  20 tests, the build passed, and all four executable probes returned the required output.
+- [x] (2026-07-27 19:40Z) Applied three behavior-preserving simplification findings from PR
+  review: shared authored-path exclusions, precomputed required-directory presence, and one lexical
+  tokenization per included file. At repair commit
+  `013c7999a4ec62e7de5251a2c1d2a2d4a876790e`, typecheck, lint, 15 focused tests, 20 full tests,
+  the exact-SHA archive/install proof, build, and four binary probes passed with Bun 1.3.14.
+- [x] (2026-07-27 20:00Z) Applied all four actionable findings from independent review run
+  `20260727-144030-8af9a917`. The regex-literal regression failed red with no
+  `ARCH-IO-PLACEMENT`, then all 18 focused architecture tests and 23 full tests passed after the
+  scanner repair. At review-repair commit
+  `0afb33726e7b369f03cea7213f81df068c1c7ed2`, the exact-SHA archive/install proof, full check,
+  build, and four binary probes passed.
+- [x] (2026-07-27 20:15Z) Applied all three validated findings from final review run
+  `20260727-145419-d8f830ce`. The exact `/[//]/` regression false-passed red, then 21 focused
+  tests passed after regex-literal parsing, production-test exclusion, and allowed-location fixture
+  coverage. At repair commit `9d442f375a1556c4c23063e7641a9c1201152cc5`, the full 26-test
+  check, exact-SHA archive/install proof, build, and four binary probes passed.
+- [x] (2026-07-27 20:35Z) Added the final P2 test-only coverage for every declared direct I/O API
+  at `src/server/main.ts`, complementing infrastructure, exact composition, and CLI entrypoint
+  coverage. At commit `265912d2c68317627ce40d10c03edd7078aa49c3`, all 21 focused and
+  26 full tests, the exact-SHA archive/install proof, build, and four binary probes passed.
+- [x] (2026-07-27 20:45Z) Final independent review returned clean at code head
+  `82b28af2d0064c571ba67a55e0b1d72411c19e2c`. Review runs
+  `20260727-144030-8af9a917` and `20260727-145419-d8f830ce` produced seven actionable findings;
+  every finding and the final server-entrypoint coverage item were repaired. PR #13 remains
+  unmerged.
 
 ## Surprises & Discoveries
 
@@ -78,6 +114,33 @@ implementation changes and pass only after the checker detects the intended viol
   include uncommitted edits.
   Evidence: packing an archive of the pre-fix SHA should fail for omitted bins; packing a later
   candidate SHA can prove the lifecycle-generated archive without reading the worktree.
+
+- Observation: `bun pm pack` prints a multi-line inventory before its tarball name.
+  Evidence: selecting the final output line resolved to `Packed size`, not the `.tgz` path.
+  Response: The package contract finds the emitted `.tgz` entry in the disposable source directory.
+
+- Observation: The archive/install proof takes about nine seconds on this host.
+  Evidence: Vitest's default five-second test timeout failed after the archive lifecycle build.
+  Response: The bounded package contract has a 30-second per-test timeout.
+
+- Observation: The first required-directory simplification removed repeated array allocation but
+  still rescanned every path for each required directory.
+  Evidence: Efficiency review found `filePaths.some(...)` inside the module-directory matrix.
+  Response: Rule evaluation now precomputes every observed directory prefix once and uses exact
+  set membership for required-directory checks.
+
+- Observation: An escaped slash at the end of a regex body followed by its closing delimiter forms
+  `//` in source text without starting a line comment.
+  Evidence: `/https?:\\/\\//; Bun.connect({});` produced no I/O finding before the review repair.
+  Response: Comment recognition now requires the opening slash to be unescaped; isolated tests
+  retain line-comment, block-comment, string, template-text, and template-expression behavior for
+  each declared direct I/O API.
+
+- Observation: Escape-aware comment detection still cannot distinguish `//` inside a regex
+  character class from a line comment.
+  Evidence: `const slash = /[//]/; const socket = Bun.connect({});` produced no I/O finding.
+  Response: The lexical scanner now consumes JavaScript regex literals, including escapes,
+  character classes, and flags, before it considers comment delimiters.
 
 ## Decision Log
 
@@ -124,6 +187,46 @@ implementation changes and pass only after the checker detects the intended viol
   `package.json` in the package manifest.
   Date/Author: 2026-07-25 / Codex after fresh clean-room findings
 
+- Decision: Use a small lexical scanner for architecture-token matching.
+  Rationale: It ignores comments and literal text while retaining executable template expressions,
+  including direct I/O calls inside a template expression.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Set `MANDEM_ARCHIVE_COMMIT` from `git rev-parse HEAD` in `test:run`.
+  Rationale: The package contract must reject a missing SHA when invoked directly, while the
+  repository's normal full check must supply the exact checked commit automatically.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Keep the archive contract direct-test strict and supply its SHA from the repository
+  test script.
+  Rationale: A direct invocation catches missing or malformed evidence, while `bun run check`
+  verifies the exact checked commit without an operator-provided environment variable.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Apply only the three requested simplification findings in this repair.
+  Rationale: They remove duplicated policy and repeated work without changing findings, traversal,
+  output ordering, or package behavior. Broader lexer restructuring and concurrent filesystem
+  traversal are outside this exact behavior-preserving review repair.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Repair the lexical scanner at comment recognition rather than special-case the I/O
+  matcher or the reported regex.
+  Rationale: An escaped slash cannot begin a JavaScript comment. Checking that invariant preserves
+  all existing literal masking and keeps later executable code visible for every direct I/O API.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Treat any `tests` path segment under `src/` as authored test code, not production code.
+  Rationale: Test files still require file overviews and reject explicit `any`, but their process,
+  filesystem, and network calls exercise production boundaries and must not receive production-only
+  dependency or I/O findings.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Do not add a separate Learn artifact for U1C.
+  Rationale: The regression tests and published architecture standard now record the reusable
+  silent-pass mechanism more directly than another `docs/solutions` summary would. A separate
+  artifact would duplicate those executable and published records.
+  Date/Author: 2026-07-27 / Codex
+
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.
   Rationale: The durable review approves the exact implementation instructions at commit
   `bbddf1949cd8a3d7d78551bb00129e871a094c63`. This follow-up changes only promotion metadata and
@@ -149,6 +252,49 @@ approved PR head `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` with plan SHA-256
 after this metadata-only change merges. The implementation outcome, merge SHA, archive evidence,
 and downstream revalidation result must be added here by the executor and orchestrator. The
 clean-room review is recorded at `docs/plans/reviews/2026-07-25-u1c-clean-room.md`.
+
+Implementation outcome (2026-07-27): The candidate adds the authored-source policy, full
+candidate traversal, alias infrastructure-barrel detection, declared vendor and direct I/O
+matching, and package lifecycle/archive proof. The focused red suite failed for every planned
+silent pass before the implementation. The green local contract passed with Bun 1.3.14: 20 tests,
+build success, both version outputs, and help output containing `--version`. The archive proof
+built from the candidate's `git archive`, found executable `package/dist/mandem` and
+`package/dist/mandem-server`, and invoked both installed binaries in an empty Bun consumer. The
+implementation PR URL, final head, independent review, merge, and post-merge result remain for
+the PR and landing workers.
+
+Simplification outcome (2026-07-27): PR review produced one reuse, one quality, and one efficiency
+repair, all applied without changing rule output or package behavior. The executor skipped two
+broader suggestions: restructuring the lexical scanner and adding concurrent filesystem traversal.
+Those changes exceeded the three requested findings and would increase the proof surface. Full
+verification and clean archive installation passed on the repair commit.
+
+Review-repair outcome (2026-07-27): All four actionable findings from review run
+`20260727-144030-8af9a917` were fixed. The scanner no longer mistakes an escaped regex slash plus
+closing delimiter for a line comment. Each direct I/O API now has isolated comment, string,
+template-text, and executable-template-expression coverage. Authored scripts and application
+vendor imports have exact rule-and-path assertions. No findings were skipped. The repair increased
+the focused architecture suite from 15 to 18 tests and the full suite from 20 to 23 tests.
+
+Final-review outcome (2026-07-27): All three validated findings from review run
+`20260727-145419-d8f830ce` were applied; none were skipped. The scanner consumes regex literals
+with escapes and character classes before comment recognition. Module test paths retain authored
+checks but skip production rules. Each direct I/O API now has positive infrastructure,
+composition, and entrypoint fixtures. The focused architecture suite passes 21 tests and the full
+suite passes 26 tests.
+
+Final coverage outcome (2026-07-27): The allowed-location table now exercises every declared
+direct I/O API at both bounded entrypoints, infrastructure, and exact composition. This changes
+test coverage only; production behavior is unchanged.
+
+Final review outcome (2026-07-27): Independent review is clean at code head
+`82b28af2d0064c571ba67a55e0b1d72411c19e2c`. All findings from review runs
+`20260727-144030-8af9a917` and `20260727-145419-d8f830ce` were repaired. Final code verification
+passed 21 focused tests, 26 full tests, four package-contract tests, both builds, and all four
+binary probes with Bun 1.3.14. The strongest reusable Learn result is the regression suite plus
+`docs/architecture/architecture-standard-v1.md`; no separate `docs/solutions` artifact is
+warranted. The implementation PR is https://github.com/BrandonJF/mandem/pull/13 and remains
+unmerged.
 
 ## Context and Orientation
 
@@ -502,6 +648,32 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Operator-approved plan SHA-256: 1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231
     Operator approval recorded in issue: 2026-07-27
 
+    Simplification repair: 013c7999a4ec62e7de5251a2c1d2a2d4a876790e
+    Simplification verification: Bun 1.3.14; 15 focused and 20 full tests passed
+    Simplification archive proof: both executable entries installed and invoked successfully
+
+    Review repair: 0afb33726e7b369f03cea7213f81df068c1c7ed2
+    Review repair red proof: regex followed by Bun.connect produced no ARCH-IO-PLACEMENT
+    Review repair verification: 18 focused and 23 full tests passed
+    Review repair archive proof: both executable entries installed and invoked successfully
+
+    Final review repair: 9d442f375a1556c4c23063e7641a9c1201152cc5
+    Final review red proof: /[//]/ followed by Bun.connect produced no ARCH-IO-PLACEMENT
+    Final review verification: 21 focused and 26 full tests passed
+    Final review archive proof: both executable entries installed and invoked successfully
+
+    Final P2 coverage: 265912d2c68317627ce40d10c03edd7078aa49c3
+    Final P2 verification: 21 focused and 26 full tests passed
+    Final P2 archive proof: both executable entries installed and invoked successfully
+
+    Final clean review code head: 82b28af2d0064c571ba67a55e0b1d72411c19e2c
+    Review runs: 20260727-144030-8af9a917, 20260727-145419-d8f830ce
+    Review result: clean; all findings repaired
+    Final code verification: Bun 1.3.14; 21 focused, 26 full, 4 package-contract tests
+    Final build evidence: both builds and four binary probes passed
+    Implementation PR: https://github.com/BrandonJF/mandem/pull/13
+    Merge state: unmerged
+
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
 and post-merge verification result.
@@ -557,3 +729,7 @@ records only. `execution_authorized` remains `false`.
 `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`. Set
 `promotion: executable` and `execution_authorized: true`. This update changes only authorization
 metadata and living records; implementation instructions are unchanged.
+
+2026-07-27: Recorded the final clean independent review, repaired review-run history, final code
+verification, Learn outcome, PR URL, and unmerged state. This living-record-only revision changes
+no production, test, or package code.
