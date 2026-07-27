@@ -1,6 +1,9 @@
 /** @fileoverview Contract tests for the architecture analyzer. */
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { analyzeRepositoryFiles, architectureRules } from "@/modules/architecture-standard";
 
 const overview = "/** @fileoverview fixture. */\n";
@@ -65,8 +68,9 @@ describe("architecture analyzer", () => {
   });
 
   it("publishes the full stable rule catalog and deterministic finding order", () => {
-    expect(architectureRules).toHaveLength(22);
-    expect(architectureRules.map(({ id }) => id)).toContain("ARCH-COMPONENT-STATE");
+    expect(architectureRules.map(({ id }) => id)).toEqual([
+      "ARCH-MODULE-NAME", "ARCH-MODULE-DOMAIN", "ARCH-MODULE-APPLICATION", "ARCH-MODULE-INFRASTRUCTURE", "ARCH-MODULE-API", "ARCH-MODULE-README", "ARCH-MODULE-ROOT-BARREL", "ARCH-DOMAIN-TYPES", "ARCH-API-COMPOSITION", "ARCH-MODULE-TESTS", "ARCH-MODULE-TEST-FAKES", "ARCH-DOMAIN-DEPENDENCY", "ARCH-APPLICATION-DEPENDENCY", "ARCH-CROSS-MODULE-DEEP-IMPORT", "ARCH-INFRASTRUCTURE-ROOT-EXPORT", "ARCH-IO-PLACEMENT", "ARCH-FILEOVERVIEW", "ARCH-NO-EXPLICIT-ANY", "ARCH-UNSCOPED-TYPESCRIPT", "ARCH-DOMAIN-ENTITY-PLACEMENT", "ARCH-COMPONENT-SIZE", "ARCH-HOOK-SIZE", "ARCH-COMPONENT-STATE"
+    ]);
     const result = analyzeRepositoryFiles([{ path: "src/modules/CandidateSearch/index.ts", text: "export * from './infrastructure';" }]);
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual([...result.violations.map(({ ruleId }) => ruleId)].sort());
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-MODULE-NAME", "ARCH-INFRASTRUCTURE-ROOT-EXPORT", "ARCH-FILEOVERVIEW"]));
@@ -111,18 +115,22 @@ describe("architecture analyzer", () => {
       { path: "src/modules/no-barrel/README.md", text: "fixture" },
       ...completeModule("broken", [
         { path: "src/modules/broken/domain/entity.ts", text: `${overview}import { x } from "../api/composition";\nexport interface BrokenEntity { value: string; }` },
-        { path: "src/modules/broken/domain/io.ts", text: `${overview}const value = Bun.file("x") as any;\nexport { value };` },
+        { path: "src/modules/broken/domain/io.ts", text: `${overview}import { Octokit } from "@octokit/rest";\nconst value = Bun.connect({});\nprocess.stdin;\nprocess.stdout.write("x");\nexport { Octokit, value };` },
         { path: "src/modules/broken/application/zod.ts", text: `${overview}import { z } from "zod";\nexport { z };` },
         { path: "src/modules/broken/application/deep.ts", text: `${overview}import { x } from "@/modules/other/domain/types";\nexport { x };` },
         { path: "src/modules/broken/api/Widget.tsx", text: `${huge(151)}\nuseState(1);useState(2);useState(3);useState(4);useState(5);` },
         { path: "src/modules/broken/application/useThing.ts", text: huge(201) }
       ]),
-      { path: "src/worker.ts", text: "const value = Bun.file(\"x\");" }
+      { path: "src/worker.ts", text: "const value = Bun.file(\"x\");" },
+      { path: "scripts/missing-overview.ts", text: "export const script = true;" },
+      { path: "tests/has-any.test.ts", text: `${overview}const value: any = true;\nexport { value };` },
+      { path: "root-policy.config.ts", text: "export default {};" },
+      { path: "tools/unscoped.ts", text: `${overview}export const unscoped = true;` }
     ];
     const result = analyzeRepositoryFiles(files);
     const rows = [
       ["ARCH-MODULE-NAME", "src/modules/Bad_Name", "lowercase kebab-case"], ["ARCH-MODULE-DOMAIN", "src/modules/Bad_Name", "contain domain"], ["ARCH-MODULE-APPLICATION", "src/modules/Bad_Name", "contain application"], ["ARCH-MODULE-INFRASTRUCTURE", "src/modules/Bad_Name", "contain infrastructure"], ["ARCH-MODULE-API", "src/modules/Bad_Name", "contain api"], ["ARCH-MODULE-README", "src/modules/Bad_Name", "README.md"], ["ARCH-MODULE-ROOT-BARREL", "src/modules/no-barrel", "index.ts"], ["ARCH-DOMAIN-TYPES", "src/modules/Bad_Name", "domain/types.ts"], ["ARCH-API-COMPOSITION", "src/modules/Bad_Name", "api/composition.ts"], ["ARCH-MODULE-TESTS", "src/modules/Bad_Name", "contain tests"], ["ARCH-MODULE-TEST-FAKES", "src/modules/Bad_Name", "tests/fakes"],
-      ["ARCH-DOMAIN-DEPENDENCY", "src/modules/broken/domain/entity.ts", "outer layer"], ["ARCH-APPLICATION-DEPENDENCY", "src/modules/broken/application/zod.ts", "only domain or application"], ["ARCH-CROSS-MODULE-DEEP-IMPORT", "src/modules/broken/application/deep.ts", "module barrels"], ["ARCH-INFRASTRUCTURE-ROOT-EXPORT", "src/modules/Bad_Name/index.ts", "do not export infrastructure"], ["ARCH-IO-PLACEMENT", "src/modules/broken/domain/io.ts", "limited to infrastructure"], ["ARCH-FILEOVERVIEW", "src/worker.ts", "@fileoverview"], ["ARCH-NO-EXPLICIT-ANY", "src/modules/broken/domain/io.ts", "explicit any"], ["ARCH-DOMAIN-ENTITY-PLACEMENT", "src/modules/broken/domain/entity.ts", "types.ts"], ["ARCH-COMPONENT-SIZE", "src/modules/broken/api/Widget.tsx", "150"], ["ARCH-HOOK-SIZE", "src/modules/broken/application/useThing.ts", "200"], ["ARCH-COMPONENT-STATE", "src/modules/broken/api/Widget.tsx", "fewer than five"]
+      ["ARCH-DOMAIN-DEPENDENCY", "src/modules/broken/domain/entity.ts", "outer layer"], ["ARCH-APPLICATION-DEPENDENCY", "src/modules/broken/application/zod.ts", "only domain or application"], ["ARCH-CROSS-MODULE-DEEP-IMPORT", "src/modules/broken/application/deep.ts", "module barrels"], ["ARCH-INFRASTRUCTURE-ROOT-EXPORT", "src/modules/Bad_Name/index.ts", "do not export infrastructure"], ["ARCH-IO-PLACEMENT", "src/modules/broken/domain/io.ts", "limited to infrastructure"], ["ARCH-FILEOVERVIEW", "root-policy.config.ts", "@fileoverview"], ["ARCH-NO-EXPLICIT-ANY", "tests/has-any.test.ts", "explicit any"], ["ARCH-UNSCOPED-TYPESCRIPT", "tools/unscoped.ts", "not covered by authored-source policy"], ["ARCH-DOMAIN-ENTITY-PLACEMENT", "src/modules/broken/domain/entity.ts", "types.ts"], ["ARCH-COMPONENT-SIZE", "src/modules/broken/api/Widget.tsx", "150"], ["ARCH-HOOK-SIZE", "src/modules/broken/application/useThing.ts", "200"], ["ARCH-COMPONENT-STATE", "src/modules/broken/api/Widget.tsx", "fewer than five"]
     ] as const;
     expect(rows).toHaveLength(architectureRules.length);
     for (const [ruleId, path, messageFragment] of rows) {
@@ -131,5 +139,62 @@ describe("architecture analyzer", () => {
       expect(finding?.message).toContain(messageFragment);
     }
     expect(result.violations).toEqual([...result.violations].sort((left, right) => left.ruleId.localeCompare(right.ruleId) || left.path.localeCompare(right.path) || left.message.localeCompare(right.message)));
+  });
+
+  it("rejects alias infrastructure exports, vendor IO, and direct IO APIs", () => {
+    const result = analyzeRepositoryFiles([...completeModule("broken").filter(({ path }) => path !== "src/modules/broken/index.ts"),
+      { path: "src/modules/broken/index.ts", text: `${overview}export * from "@/modules/broken/infrastructure";` },
+      { path: "src/modules/broken/domain/io.ts", text: `${overview}import { Octokit } from "@octokit/rest";\nconst socket = Bun.connect({});\nprocess.stdin;\nprocess.stdout.write("x");\nexport { Octokit, socket };` }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-INFRASTRUCTURE-ROOT-EXPORT", path: "src/modules/broken/index.ts" }),
+      expect.objectContaining({ ruleId: "ARCH-DOMAIN-DEPENDENCY", path: "src/modules/broken/domain/io.ts" }),
+      expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path: "src/modules/broken/domain/io.ts" })
+    ]));
+  });
+
+  it("ignores direct IO API text while retaining template expressions", () => {
+    const negative = ["// Bun.connect", "/* process.stdin */", 'const text = "process.stdout.write";', "const template = `Bun.connect process.stdin process.stdout.write`;"].join("\n");
+    const result = analyzeRepositoryFiles(completeModule("runtime", [
+      { path: "src/modules/runtime/domain/text.ts", text: `${overview}${negative}\nconst evaluated = \`\${Bun.connect({})}\`;\nexport { evaluated };` }
+    ]));
+    expect(result.violations.filter(({ ruleId }) => ruleId === "ARCH-IO-PLACEMENT")).toHaveLength(1);
+  });
+
+  it("applies authored-source rules without applying production IO rules to scripts and tests", () => {
+    const result = analyzeRepositoryFiles([
+      { path: "scripts/check-architecture.ts", text: `${overview}process.stdout.write("ok");` },
+      { path: "scripts/check-architecture.test.ts", text: `${overview}process.stdin;` },
+      { path: "tests/has-any.test.ts", text: `${overview}const value: any = true;\nexport { value };` },
+      { path: "root-policy.config.ts", text: "export default {};" },
+      { path: "tools/unscoped.ts", text: `${overview}export const unscoped = true;` }
+    ]);
+    expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-FILEOVERVIEW", "ARCH-UNSCOPED-TYPESCRIPT"]));
+    expect(result.violations.map(({ ruleId }) => ruleId)).not.toContain("ARCH-IO-PLACEMENT");
+  });
+
+  it("discovers root configuration and unscoped files through the CLI", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mandem-architecture-"));
+    try {
+      await mkdir(join(root, "tests/fixtures"), { recursive: true });
+      await mkdir(join(root, "tools"), { recursive: true });
+      await writeFile(join(root, "root-policy.config.ts"), "export default {};\n");
+      await writeFile(join(root, "tools/unscoped.ts"), `${overview}export const unscoped = true;\n`);
+      await writeFile(join(root, "tests/fixtures/example.ts"), "export const fixture = true;\n");
+      await writeFile(join(root, "ignored.d.ts"), "declare const ignored: string;\n");
+      try {
+        execFileSync("bun", ["scripts/check-architecture.ts", root], { encoding: "utf8" });
+        throw new Error("fixture unexpectedly conformed");
+      } catch (error: unknown) {
+        const output = error as { status?: number; stdout?: string };
+        expect(output.status).toBe(1);
+        expect(output.stdout).toContain("ARCH-FILEOVERVIEW root-policy.config.ts");
+        expect(output.stdout).toContain("ARCH-UNSCOPED-TYPESCRIPT tools/unscoped.ts");
+        expect(output.stdout).not.toContain("tests/fixtures/example.ts");
+        expect(output.stdout).not.toContain("ignored.d.ts");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

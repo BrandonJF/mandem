@@ -1,7 +1,9 @@
 /** @fileoverview Contract tests for bounded package entrypoints. */
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { assertBunVersion, runtimeVersion } from "@/modules/runtime";
 
 describe("runtime package identity", () => {
@@ -24,4 +26,42 @@ describe("runtime package identity", () => {
       expect(execFileSync(`./${location}`, ["--help"], { encoding: "utf8" }).trim()).toContain("--version");
     }
   });
+
+  it("packs a clean committed archive that installs both declared executables", async () => {
+    const candidate = process.env.MANDEM_ARCHIVE_COMMIT;
+    expect(candidate).toMatch(/^[0-9a-f]{40}$/);
+    if (!candidate) throw new Error("MANDEM_ARCHIVE_COMMIT must name a full commit SHA");
+    execFileSync("git", ["cat-file", "-e", `${candidate}^{commit}`]);
+    const root = await mkdtemp(join(tmpdir(), "mandem-package-"));
+    const source = join(root, "source");
+    const consumer = join(root, "consumer");
+    try {
+      await mkdir(source);
+      await mkdir(consumer);
+      execFileSync("git", ["archive", "--format=tar", "--output", join(root, "source.tar"), candidate]);
+      execFileSync("tar", ["-xf", join(root, "source.tar"), "-C", source], { stdio: "pipe" });
+      execFileSync("bun", ["install", "--frozen-lockfile"], { cwd: source, stdio: "pipe" });
+      execFileSync("bun", ["pm", "pack"], { cwd: source, stdio: "pipe" });
+      const tarballName = (await readdir(source)).find((entry) => entry.endsWith(".tgz"));
+      expect(tarballName).toBeDefined();
+      const tarball = join(source, tarballName ?? "");
+      const entries = execFileSync("tar", ["-tvf", tarball], { encoding: "utf8" });
+      expect(entries).toContain("package/dist/mandem");
+      expect(entries).toContain("package/dist/mandem-server");
+      expect(entries).toMatch(/-rwx\S*.*package\/dist\/mandem\n/);
+      expect(entries).toMatch(/-rwx\S*.*package\/dist\/mandem-server\n/);
+      const archiveManifest = JSON.parse(execFileSync("tar", ["-xOf", tarball, "package/package.json"], { encoding: "utf8" })) as { bin: Record<string, string>; files: string[]; scripts: { prepack: string } };
+      expect(archiveManifest.bin).toEqual({ mandem: "dist/mandem", "mandem-server": "dist/mandem-server" });
+      expect(archiveManifest.scripts.prepack).toBe("bun run build");
+      expect(archiveManifest.files).toEqual(["dist", "README.md", "LICENSE"]);
+      execFileSync("bun", ["add", tarball], { cwd: consumer, stdio: "pipe" });
+      for (const [name, version] of [["mandem", "mandem 0.1.0"], ["mandem-server", "mandem-server 0.1.0"]] as const) {
+        const bin = join(consumer, "node_modules/.bin", name);
+        expect(execFileSync(bin, ["--version"], { encoding: "utf8" }).trim()).toBe(version);
+        expect(execFileSync(bin, ["--help"], { encoding: "utf8" }).trim()).toContain("--version");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

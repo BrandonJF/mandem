@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import type { RepositoryTree } from "../../application/use-cases/analyze-repository";
 import type { RepositoryFile } from "../../domain/types";
 
-const ignored = new Set([".git", "node_modules", "dist", "coverage"]);
+const ignored = new Set([".git", "node_modules", "dist", "coverage", "generated", "vendor", "vendored"]);
 export class FileSystemTree implements RepositoryTree {
   async read(root: string): Promise<RepositoryFile[]> {
     const files: RepositoryFile[] = [];
@@ -13,7 +13,10 @@ export class FileSystemTree implements RepositoryTree {
         if (ignored.has(entry.name)) continue;
         const location = join(directory, entry.name);
         if (entry.isDirectory()) await visit(location);
-        else if (/\.(?:ts|tsx)$/.test(entry.name) || entry.name === "README.md" || entry.name === ".gitkeep") files.push({ path: relative(root, location).replaceAll("\\", "/"), text: await Bun.file(location).text() });
+        else {
+          const path = relative(root, location).replaceAll("\\", "/");
+          if ((/\.(?:ts|tsx)$/.test(entry.name) && !entry.name.endsWith(".d.ts") && !path.startsWith("tests/fixtures/")) || entry.name === "README.md" || entry.name === ".gitkeep") files.push({ path, text: await Bun.file(location).text() });
+        }
       }
     };
     await visit(root);

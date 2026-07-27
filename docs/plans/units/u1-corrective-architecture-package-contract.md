@@ -45,12 +45,23 @@ implementation changes and pass only after the checker detects the intended viol
   `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
 - [x] (2026-07-27 18:20Z) Set `execution_authorized: true` without changing implementation
   instructions; dispatch remains pending until this authorization change merges.
-- [ ] Dispatch
-  one isolated implementation worker.
-- [ ] Create failing tests for every package and architecture bypass in this plan.
-- [ ] Implement the smallest changes that make the new tests pass.
-- [ ] Commit the candidate implementation, then run the archive/install proof against that commit.
-- [ ] Run the complete verification contract and record the evidence in this document.
+- [x] (2026-07-27 18:30Z) Dispatched one isolated implementation worker on
+  `fix/u1-architecture-package` at pre-fix commit
+  `3ac5c4124533c0de0217b4569b09bc068893b63c`.
+- [x] (2026-07-27 18:38Z) Added red package and architecture contracts. Focused tests failed for
+  six checker bypasses and for clean archive entries `package/dist/mandem` and
+  `package/dist/mandem-server`.
+- [x] (2026-07-27 18:45Z) Implemented the scoped repository policy, complete TypeScript
+  traversal, alias root-barrel detection, vendor/direct I/O checks, and package lifecycle metadata.
+  `bun run architecture:check` and `scripts/check-architecture.test.ts` pass.
+- [x] (2026-07-27 18:55Z) Replacing the first candidate after `bun run check` showed that the
+  package contract requires `MANDEM_ARCHIVE_COMMIT` when run through the normal test script.
+  The replacement script supplies the current full Git commit SHA; archive and full verification
+  passed on the replacement commit.
+- [x] (2026-07-27 19:00Z) Committed the candidate and proved its archive/install contract from
+  `git archive` before and after full verification.
+- [x] (2026-07-27 19:00Z) Ran the complete local verification contract. `bun run check` passed
+  20 tests, the build passed, and all four executable probes returned the required output.
 
 ## Surprises & Discoveries
 
@@ -78,6 +89,14 @@ implementation changes and pass only after the checker detects the intended viol
   include uncommitted edits.
   Evidence: packing an archive of the pre-fix SHA should fail for omitted bins; packing a later
   candidate SHA can prove the lifecycle-generated archive without reading the worktree.
+
+- Observation: `bun pm pack` prints a multi-line inventory before its tarball name.
+  Evidence: selecting the final output line resolved to `Packed size`, not the `.tgz` path.
+  Response: The package contract finds the emitted `.tgz` entry in the disposable source directory.
+
+- Observation: The archive/install proof takes about nine seconds on this host.
+  Evidence: Vitest's default five-second test timeout failed after the archive lifecycle build.
+  Response: The bounded package contract has a 30-second per-test timeout.
 
 ## Decision Log
 
@@ -124,6 +143,22 @@ implementation changes and pass only after the checker detects the intended viol
   `package.json` in the package manifest.
   Date/Author: 2026-07-25 / Codex after fresh clean-room findings
 
+- Decision: Use a small lexical scanner for architecture-token matching.
+  Rationale: It ignores comments and literal text while retaining executable template expressions,
+  including direct I/O calls inside a template expression.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Set `MANDEM_ARCHIVE_COMMIT` from `git rev-parse HEAD` in `test:run`.
+  Rationale: The package contract must reject a missing SHA when invoked directly, while the
+  repository's normal full check must supply the exact checked commit automatically.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Keep the archive contract direct-test strict and supply its SHA from the repository
+  test script.
+  Rationale: A direct invocation catches missing or malformed evidence, while `bun run check`
+  verifies the exact checked commit without an operator-provided environment variable.
+  Date/Author: 2026-07-27 / Codex
+
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.
   Rationale: The durable review approves the exact implementation instructions at commit
   `bbddf1949cd8a3d7d78551bb00129e871a094c63`. This follow-up changes only promotion metadata and
@@ -149,6 +184,16 @@ approved PR head `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` with plan SHA-256
 after this metadata-only change merges. The implementation outcome, merge SHA, archive evidence,
 and downstream revalidation result must be added here by the executor and orchestrator. The
 clean-room review is recorded at `docs/plans/reviews/2026-07-25-u1c-clean-room.md`.
+
+Implementation outcome (2026-07-27): The candidate adds the authored-source policy, full
+candidate traversal, alias infrastructure-barrel detection, declared vendor and direct I/O
+matching, and package lifecycle/archive proof. The focused red suite failed for every planned
+silent pass before the implementation. The green local contract passed with Bun 1.3.14: 20 tests,
+build success, both version outputs, and help output containing `--version`. The archive proof
+built from the candidate's `git archive`, found executable `package/dist/mandem` and
+`package/dist/mandem-server`, and invoked both installed binaries in an empty Bun consumer. The
+implementation PR URL, final head, independent review, merge, and post-merge result remain for
+the PR and landing workers.
 
 ## Context and Orientation
 

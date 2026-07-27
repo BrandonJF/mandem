@@ -691,8 +691,18 @@ the Decision Log and re-reviewed.
 - [x] (2026-07-24) Merged reviewed PR #4 as
   `88b9533ab840c9d357a1d09d2341709e2cbdd986`, reran the full check/build/entrypoint/fsck contract
   on merged `main`, and closed issue `da645bd`.
+- [x] (2026-07-27) Post-merge verification found package and architecture checker silent-pass gaps.
+  U1C owns the correction at `docs/plans/units/u1-corrective-architecture-package-contract.md`.
+  U1 remains historically complete; corrected completion requires U1C to merge and pass its
+  post-merge verification.
 
 ## Surprises & Discoveries
+
+- Observation: Post-merge verification found that clean package archives omitted both declared
+  executables and that several architecture rules had bypasses.
+  Evidence: Work item `5717221b-f9e6-4c8f-abca-77a1ad3811bf` and U1C's red contract tests.
+  Response: Created U1C as a separately approved corrective plan; do not claim the corrected
+  package and checker behavior until U1C merges.
 
 - Observation: The program-level U1-U10 implementation units were not sufficiently self-contained for direct engineer dispatch.
   Evidence: The first U1 worker had to infer architecture-checker and repository decisions from a bounded unit packet.
@@ -729,6 +739,11 @@ the Decision Log and re-reviewed.
   Response: Replaced the narrow checks with import-specifier collection plus normalized relative/alias resolution and LF-aware line counting.
 
 ## Decision Log
+
+- Decision: Preserve U1's completed historical record and correct its post-merge gaps through U1C.
+  Rationale: The merged U1 commit remains durable history, while U1C records the review,
+  authorization, implementation, and verification required for the correction.
+  Date/Author: 2026-07-27 / Brandon and Codex
 
 - Decision: Treat the master plan as a program ExecPlan and U1-U10 as child-plan boundaries.
   Rationale: Cross-program dependency reasoning and implementation-level self-containment are different planning altitudes.
@@ -842,3 +857,8 @@ Terminal-state revision note (2026-07-24): After reviewed PR #4 merged and post-
 passed, transitioned U1 from executable authority to `promotion: complete` with
 `execution_authorized: false`. This prevents a fresh worker from re-executing a closed unit while
 preserving the exact historical approval and delivery evidence.
+
+Corrective revision note (2026-07-27): Post-merge verification found package and checker
+silent-pass gaps. U1C owns the correction at
+`docs/plans/units/u1-corrective-architecture-package-contract.md`; this plan does not claim
+corrected completion until U1C merges and its post-merge verification passes.
