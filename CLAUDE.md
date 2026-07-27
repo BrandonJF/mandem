@@ -8,6 +8,17 @@ Before producing any natural-language output about this repository, load and fol
 messages, code comments, and script output. Tools without project-skill discovery must read that
 file and its required style guide directly.
 
+## Work tracking
+
+Before substantial repository work or a status answer, load and follow
+`.agents/skills/track-git-native-issues/SKILL.md`. Start with the open git-native issues, then use
+the selected issue's references to inspect its ExecPlan, branch, pull request, and commits. Keep the
+issue's phase, blocker, verified result, and next action current through meaningful transitions.
+
+Use git-native issues for live work status, ExecPlans for complete implementation instructions, Git
+for code state, and GitHub for pull-request state. Do not infer the next work item from the plan
+registry or pull-request list without reconciling it with the open issues.
+
 ## Planning and execution
 
 Before authoring, discussing, reviewing, or executing an ExecPlan, read the complete root

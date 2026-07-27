@@ -1,0 +1,4 @@
+interface:
+  display_name: "Track Git-Native Issues"
+  short_description: "Use git-native issues as the work entry point"
+  default_prompt: "Use $track-git-native-issues to find the active work and keep its status current."

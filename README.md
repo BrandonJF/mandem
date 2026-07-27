@@ -3,7 +3,9 @@
 Mandem orchestrates bounded agent sessions through durable, observable workflows.
 
 Agents use the [write-clearly skill](./.agents/skills/write-clearly/SKILL.md) before communicating
-or writing prose in this repository.
+or writing prose in this repository. They use the
+[git-native issue skill](./.agents/skills/track-git-native-issues/SKILL.md) to find active work and
+keep its status current.
 
 Run `bun run check` to validate this repository, then `bun run build` to create the two bounded executables.
 
