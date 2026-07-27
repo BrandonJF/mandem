@@ -5,7 +5,7 @@ program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
 promotion: clean-room-approved
-execution_authorized: false
+execution_authorized: true
 date: 2026-07-25
 ---
 
@@ -13,9 +13,9 @@ date: 2026-07-25
 
 The repository-root `PLANS.md` defines how to maintain and execute this ExecPlan. Keep
 `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current while
-work proceeds. This revision does not authorize implementation. Before implementation begins, a
-clean-room reviewer must approve the exact revision, the operator must approve it, and
-`execution_authorized` must be set to `true`.
+work proceeds. A clean-room reviewer approved exact revision
+`148819ea580606ed2be81a5bec58072471da9dba`, the operator approved that revision, and this metadata
+update records `execution_authorized: true` without changing its implementation scope.
 
 ## Purpose / Big Picture
 
@@ -988,7 +988,9 @@ external sources.
 - [x] (2026-07-27) The final post-U1C clean-room review found no P0, P1, or P2 blockers after one
   remaining terminology mismatch was repaired. Promoted the plan to `clean-room-approved`;
   implementation remains unauthorized.
-- [ ] Obtain exact operator approval and set `execution_authorized: true`.
+- [x] (2026-07-27) The operator approved exact plan revision
+  `148819ea580606ed2be81a5bec58072471da9dba`; set `execution_authorized: true` without changing
+  implementation scope.
 - [ ] Dispatch U1A from an isolated implementation worktree.
 
 ## Surprises & Discoveries
@@ -1067,15 +1069,25 @@ external sources.
   the new policy objects from one manifest prevents scope drift while preserving verified behavior.
   Date/Author: 2026-07-27 / Codex orchestrator
 
+- Decision: Authorize implementation of exact reviewed revision
+  `148819ea580606ed2be81a5bec58072471da9dba`.
+  Rationale: The operator explicitly approved that clean-room-approved revision. This metadata and
+  living-record update does not change its implementation instructions.
+  Date/Author: 2026-07-27 / Brandon and Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
 It centralizes policy, fails closed in non-interactive execution, avoids hook mutations, and
-supports both agent vendors. Implementation remains unauthorized.
+supports both agent vendors. The operator authorized implementation of the exact reviewed revision
+on 2026-07-27.
 
-After a new clean-room review approves the edited plan, obtain operator approval for the exact plan
-revision at the authority PR head. Work item `5717221` is resolved; no dependency remains before
-review, but implementation remains unauthorized.
+Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
+exact plan revision. No dependency remains before implementation.
+
+Operator approval note (2026-07-27): Brandon approved exact plan revision
+`148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
+records the approval without changing the reviewed implementation scope.
 
 Post-U1C revalidation note (2026-07-27): Rebased the plan's assumptions on merge
 `27d4abe1a2815bfef1bec56c71bc6d90880ef035`. The corrected kernel already owns authored-source
