@@ -67,6 +67,11 @@ implementation changes and pass only after the checker detects the intended viol
   tokenization per included file. At repair commit
   `013c7999a4ec62e7de5251a2c1d2a2d4a876790e`, typecheck, lint, 15 focused tests, 20 full tests,
   the exact-SHA archive/install proof, build, and four binary probes passed with Bun 1.3.14.
+- [ ] (2026-07-27 19:55Z) Applied all four actionable findings from independent review run
+  `20260727-144030-8af9a917`. The regex-literal regression failed red with no
+  `ARCH-IO-PLACEMENT`, then all 18 focused architecture tests and 23 full tests passed after the
+  scanner repair. Build and four binary probes pass. Exact-head archive proof, commit, and push
+  remain.
 
 ## Surprises & Discoveries
 
@@ -108,6 +113,13 @@ implementation changes and pass only after the checker detects the intended viol
   Evidence: Efficiency review found `filePaths.some(...)` inside the module-directory matrix.
   Response: Rule evaluation now precomputes every observed directory prefix once and uses exact
   set membership for required-directory checks.
+
+- Observation: An escaped slash at the end of a regex body followed by its closing delimiter forms
+  `//` in source text without starting a line comment.
+  Evidence: `/https?:\\/\\//; Bun.connect({});` produced no I/O finding before the review repair.
+  Response: Comment recognition now requires the opening slash to be unescaped; isolated tests
+  retain line-comment, block-comment, string, template-text, and template-expression behavior for
+  each declared direct I/O API.
 
 ## Decision Log
 
@@ -174,6 +186,12 @@ implementation changes and pass only after the checker detects the intended viol
   Rationale: They remove duplicated policy and repeated work without changing findings, traversal,
   output ordering, or package behavior. Broader lexer restructuring and concurrent filesystem
   traversal are outside this exact behavior-preserving review repair.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Repair the lexical scanner at comment recognition rather than special-case the I/O
+  matcher or the reported regex.
+  Rationale: An escaped slash cannot begin a JavaScript comment. Checking that invariant preserves
+  all existing literal masking and keeps later executable code visible for every direct I/O API.
   Date/Author: 2026-07-27 / Codex
 
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.

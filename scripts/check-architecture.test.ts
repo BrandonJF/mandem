@@ -161,15 +161,67 @@ describe("architecture analyzer", () => {
     expect(result.violations.filter(({ ruleId }) => ruleId === "ARCH-IO-PLACEMENT")).toHaveLength(1);
   });
 
+  it("retains prohibited IO after a regex literal containing adjacent slashes", () => {
+    const result = analyzeRepositoryFiles([
+      { path: "src/regex-then-io.ts", text: `${overview}const url = /https?:\\/\\//; Bun.connect({});\nexport { url };` }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path: "src/regex-then-io.ts" })
+    ]));
+  });
+
+  it("isolates literal and executable coverage for every direct IO API", () => {
+    const cases = [
+      { name: "bun-connect", token: "Bun.connect", expression: "Bun.connect({})" },
+      { name: "process-stdin", token: "process.stdin", expression: "process.stdin" },
+      { name: "process-stdout-write", token: "process.stdout.write", expression: 'process.stdout.write("x")' }
+    ] as const;
+    for (const fixture of cases) {
+      const negativeForms = [
+        `// ${fixture.token}`,
+        `/* ${fixture.token} */`,
+        `const text = "${fixture.token}";`,
+        `const text = \`${fixture.token}\`;`
+      ];
+      for (const [index, text] of negativeForms.entries()) {
+        const path = `src/${fixture.name}-negative-${index}.ts`;
+        const findings = analyzeRepositoryFiles([{ path, text: `${overview}${text}` }]).violations;
+        expect(findings, `${fixture.name} negative form ${index}`).not.toEqual(expect.arrayContaining([
+          expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
+        ]));
+      }
+      const path = `src/${fixture.name}-template-expression.ts`;
+      const findings = analyzeRepositoryFiles([{ path, text: `${overview}const value = \`\${${fixture.expression}}\`;` }]).violations;
+      expect(findings, `${fixture.name} executable template expression`).toEqual(expect.arrayContaining([
+        expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
+      ]));
+    }
+  });
+
+  it("rejects vendor IO imports from application files", () => {
+    const path = "src/modules/runtime/application/octokit.ts";
+    const result = analyzeRepositoryFiles(completeModule("runtime", [
+      { path, text: `${overview}import { Octokit } from "@octokit/rest";\nexport { Octokit };` }
+    ]));
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-APPLICATION-DEPENDENCY", path }),
+      expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
+    ]));
+  });
+
   it("applies authored-source rules without applying production IO rules to scripts and tests", () => {
     const result = analyzeRepositoryFiles([
       { path: "scripts/check-architecture.ts", text: `${overview}process.stdout.write("ok");` },
       { path: "scripts/check-architecture.test.ts", text: `${overview}process.stdin;` },
+      { path: "scripts/missing-overview.ts", text: "export const missing = true;" },
       { path: "tests/has-any.test.ts", text: `${overview}const value: any = true;\nexport { value };` },
       { path: "root-policy.config.ts", text: "export default {};" },
       { path: "tools/unscoped.ts", text: `${overview}export const unscoped = true;` }
     ]);
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-FILEOVERVIEW", "ARCH-UNSCOPED-TYPESCRIPT"]));
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "scripts/missing-overview.ts" })
+    ]));
     expect(result.violations.map(({ ruleId }) => ruleId)).not.toContain("ARCH-IO-PLACEMENT");
   });
 

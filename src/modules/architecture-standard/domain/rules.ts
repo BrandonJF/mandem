@@ -18,12 +18,13 @@ function moduleNames(files: readonly RepositoryFile[]): string[] { return [...ne
 function specifiers(text: string): string[] { return [...text.matchAll(importExpression)].map((match) => match[1] ?? match[2]).filter((value): value is string => value !== undefined); }
 function resolveSpecifier(filePath: string, specifier: string): string | undefined { if (specifier.startsWith("@/")) return `src/${specifier.slice(2)}`; if (!specifier.startsWith(".")) return undefined; return normalize(`${dirname(filePath)}/${specifier}`).replaceAll("\\", "/").replace(/\.(?:ts|tsx|js|jsx)$/, ""); }
 function physicalLines(text: string): number { const normalized = text.replaceAll("\r\n", "\n"); return normalized === "" ? 0 : normalized.replace(/\n$/, "").split("\n").length; }
+function isEscaped(text: string, index: number): boolean { let backslashes = 0; for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor -= 1) backslashes += 1; return backslashes % 2 === 1; }
 function codeTokens(text: string): string {
   let result = ""; let index = 0;
   while (index < text.length) {
     const current = text[index] ?? ""; const next = text[index + 1] ?? "";
-    if (current === "/" && next === "/") { index = text.indexOf("\n", index + 2); if (index < 0) break; result += "\n"; index += 1; continue; }
-    if (current === "/" && next === "*") { const end = text.indexOf("*/", index + 2); index = end < 0 ? text.length : end + 2; result += " "; continue; }
+    if (current === "/" && next === "/" && !isEscaped(text, index)) { index = text.indexOf("\n", index + 2); if (index < 0) break; result += "\n"; index += 1; continue; }
+    if (current === "/" && next === "*" && !isEscaped(text, index)) { const end = text.indexOf("*/", index + 2); index = end < 0 ? text.length : end + 2; result += " "; continue; }
     if (current === "\"" || current === "'") { const quote = current; index += 1; while (index < text.length && text[index] !== quote) index += text[index] === "\\" ? 2 : 1; index += 1; result += " "; continue; }
     if (current === "`") { index += 1; while (index < text.length && text[index] !== "`") { if (text[index] === "\\") { index += 2; continue; } if (text[index] === "$" && text[index + 1] === "{") { const start = index + 2; let depth = 1; index = start; while (index < text.length && depth > 0) { if (text[index] === "{") depth += 1; if (text[index] === "}") depth -= 1; index += 1; } result += codeTokens(text.slice(start, index - 1)); continue; } index += 1; } index += 1; result += " "; continue; }
     result += current; index += 1;
