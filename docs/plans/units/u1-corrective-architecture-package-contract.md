@@ -78,10 +78,10 @@ implementation changes and pass only after the checker detects the intended viol
   tests passed after regex-literal parsing, production-test exclusion, and allowed-location fixture
   coverage. At repair commit `9d442f375a1556c4c23063e7641a9c1201152cc5`, the full 26-test
   check, exact-SHA archive/install proof, build, and four binary probes passed.
-- [ ] (2026-07-27 20:30Z) Added the final P2 test-only coverage for every declared direct I/O API
+- [x] (2026-07-27 20:35Z) Added the final P2 test-only coverage for every declared direct I/O API
   at `src/server/main.ts`, complementing infrastructure, exact composition, and CLI entrypoint
-  coverage. All 21 focused and 26 full tests, build, and four binary probes pass. Commit,
-  exact-head archive proof, and push remain.
+  coverage. At commit `265912d2c68317627ce40d10c03edd7078aa49c3`, all 21 focused and
+  26 full tests, the exact-SHA archive/install proof, build, and four binary probes passed.
 
 ## Surprises & Discoveries
 
@@ -641,6 +641,10 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Final review red proof: /[//]/ followed by Bun.connect produced no ARCH-IO-PLACEMENT
     Final review verification: 21 focused and 26 full tests passed
     Final review archive proof: both executable entries installed and invoked successfully
+
+    Final P2 coverage: 265912d2c68317627ce40d10c03edd7078aa49c3
+    Final P2 verification: 21 focused and 26 full tests passed
+    Final P2 archive proof: both executable entries installed and invoked successfully
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
