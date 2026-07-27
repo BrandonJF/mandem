@@ -10,3 +10,6 @@ The repository-owned `track-git-native-issues` skill uses Mandem's work-ledger r
 installed command's public interface. Its design also considered the GPL-2.0
 `remenoscodes/claude-git-native-issue` plugin as a behavioral reference. Mandem does not copy or
 bundle that plugin's code, hooks, or skill text.
+
+Mandem's vendor-neutral discovery structure also considered the MIT-licensed `obra/superpowers`
+repository, which keeps reusable skills separate from harness-specific plugin adapters.
