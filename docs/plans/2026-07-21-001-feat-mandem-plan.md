@@ -1121,6 +1121,8 @@ published interface.
 - [x] (2026-07-25) Post-merge verification opened U1 corrective work item `5717221`, created U1A
   work item `745eda8`, and invalidated U2 dependency readiness.
 - [x] (2026-07-25) Created non-executable U1C corrective child plan for Git-native issue `5717221`.
+- [x] (2026-07-27) Recorded exact operator approval and authorized U1C for implementation after
+  planning PR #12 merges.
 - [ ] Complete U1C and U1A, then promote and complete U2 through U10 in dependency order.
 
 ## Surprises & Discoveries
@@ -1230,3 +1232,8 @@ U1C planning update (2026-07-25): Added the non-executable corrective child Exec
 `docs/plans/units/u1-corrective-architecture-package-contract.md` for all six validated
 architecture and package silent-pass findings. U1C is planned only. U1A, U2, and later units remain
 blocked until U1C merges and post-merge verification passes.
+
+U1C authorization update (2026-07-27): Recorded exact operator approval of planning PR #12 head
+`75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` and plan SHA-256
+`1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`. Authorized U1C only;
+implementation begins after the metadata-only authorization change merges.

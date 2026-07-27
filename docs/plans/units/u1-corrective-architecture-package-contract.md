@@ -6,8 +6,8 @@ parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
 depends_on:
   - U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986
-promotion: clean-room-approved
-execution_authorized: false
+promotion: executable
+execution_authorized: true
 date: 2026-07-25
 ---
 
@@ -15,10 +15,9 @@ date: 2026-07-25
 
 This child ExecPlan is a living document governed by the repository-root `PLANS.md`. Read that
 file in full before executing this plan. Keep `Progress`, `Surprises & Discoveries`, `Decision
-Log`, and `Outcomes & Retrospective` current. This revision does not authorize implementation.
-Implementation may begin only after a clean-room reviewer approves this exact revision, the
-operator approves the same revision, and `execution_authorized` changes to `true` without changing
-the instructions below.
+Log`, and `Outcomes & Retrospective` current. This authorization revision permits implementation
+after it merges. The clean-room reviewer and operator approved the preceding exact revision, and
+`execution_authorized` changed to `true` without changing the implementation instructions below.
 
 ## Purpose / Big Picture
 
@@ -41,8 +40,12 @@ implementation changes and pass only after the checker detects the intended viol
   `bbddf1949cd8a3d7d78551bb00129e871a094c63` with SHA-256
   `24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c`; see
   `docs/plans/reviews/2026-07-25-u1c-clean-room.md`.
-- [ ] Obtain operator approval of the exact clean-room-approved revision.
-- [ ] Set `execution_authorized: true` without changing implementation instructions, then dispatch
+- [x] (2026-07-27 18:20Z) Operator approved PR head
+  `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` and plan SHA-256
+  `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
+- [x] (2026-07-27 18:20Z) Set `execution_authorized: true` without changing implementation
+  instructions; dispatch remains pending until this authorization change merges.
+- [ ] Dispatch
   one isolated implementation worker.
 - [ ] Create failing tests for every package and architecture bypass in this plan.
 - [ ] Implement the smallest changes that make the new tests pass.
@@ -127,16 +130,25 @@ implementation changes and pass only after the checker detects the intended viol
   living records. The operator must still approve the current revision before authorization.
   Date/Author: 2026-07-25 / Codex
 
+- Decision: Authorize the exact operator-approved U1C revision for implementation.
+  Rationale: The operator explicitly approved PR head
+  `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` and plan SHA-256
+  `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
+  This metadata and living-record update does not change implementation instructions.
+  Date/Author: 2026-07-27 / Brandon and Codex
+
 ## Outcomes & Retrospective
 
 Planning outcome: this plan describes the six validated corrections and their test-first proof.
 After fresh clean-room findings, it now separates production architecture rules from
 authored-source rules and binds the package proof to a committed candidate. The red package test
 uses a pre-fix SHA; the first green package proof uses a candidate SHA after commit. No production
-code has changed, no review has approved this revision, and implementation remains unauthorized. The
-implementation outcome, merge SHA, archive evidence, and downstream revalidation result must be
-added here by the executor and orchestrator. The clean-room review is recorded at
-`docs/plans/reviews/2026-07-25-u1c-clean-room.md`. It does not authorize implementation.
+code has changed. The clean-room review approved the current instructions, and the operator
+approved PR head `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` with plan SHA-256
+`1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`. Implementation is authorized
+after this metadata-only change merges. The implementation outcome, merge SHA, archive evidence,
+and downstream revalidation result must be added here by the executor and orchestrator. The
+clean-room review is recorded at `docs/plans/reviews/2026-07-25-u1c-clean-room.md`.
 
 ## Context and Orientation
 
@@ -486,6 +498,9 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Clean-room review: docs/plans/reviews/2026-07-25-u1c-clean-room.md
     Reviewed commit: bbddf1949cd8a3d7d78551bb00129e871a094c63
     Reviewed plan SHA-256: 24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c
+    Operator-approved PR head: 75817d04b68cc29323ab1eaa6d9fdcec00d47fa0
+    Operator-approved plan SHA-256: 1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231
+    Operator approval recorded in issue: 2026-07-27
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
@@ -536,3 +551,9 @@ the exact Bun 1.3.14 `prepack` lifecycle entry, allowlist, and archive manifest 
 `bbddf1949cd8a3d7d78551bb00129e871a094c63` in
 `docs/plans/reviews/2026-07-25-u1c-clean-room.md`. This update changes promotion and living
 records only. `execution_authorized` remains `false`.
+
+2026-07-27: Recorded the operator's exact approval of PR head
+`75817d04b68cc29323ab1eaa6d9fdcec00d47fa0` and plan SHA-256
+`1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`. Set
+`promotion: executable` and `execution_authorized: true`. This update changes only authorization
+metadata and living records; implementation instructions are unchanged.

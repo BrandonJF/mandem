@@ -57,7 +57,7 @@ must revalidate those scaffolds after dependencies complete.
 | Unit | Child scaffold | Depends on | Promotion |
 | --- | --- | --- | --- |
 | U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | complete; corrective work delegated to U1C |
-| U1C | [Correct architecture checker and package contract](./u1-corrective-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | clean-room approved; exact operator approval required |
+| U1C | [Correct architecture checker and package contract](./u1-corrective-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | executable; implementation begins after authorization PR #12 merges |
 | U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | blocked until U1C completes; clean-room approval must be refreshed for its exact revision |
 | U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A | scaffolded; dependency revalidation invalidated |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
