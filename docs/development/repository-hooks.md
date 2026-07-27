@@ -15,3 +15,9 @@ disposable automated probe.
 
 Install versioned Git hooks in the current worktree with `bun run hooks:install`. Check that
 worktree's setting with `bun run hooks:check`. Installation does not change global Git settings.
+
+GitHub runs the `repository-quality` check for pull requests and for pushes to `main` and `staging`.
+Repository administrators can verify the required `main` protection with
+`bun run repository-ruleset:check`. They can create or update that protection with
+`bun run repository-ruleset:apply`; the command requires an authenticated GitHub CLI session with
+repository administration permission.

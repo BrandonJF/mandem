@@ -1019,7 +1019,16 @@ external sources.
   configurations. Disposable live probes verified Claude Code `2.1.220` Write and Codex CLI
   `0.145.0` apply_patch PostToolUse feedback through the shared adapter; the recorded evidence is
   `docs/operations/provider-capability-baseline.md`.
-- [ ] Integrate Milestone 7, complete review and Learn, and open the implementation PR.
+- [ ] Complete Milestone 7 external configuration, review, Learn, and implementation PR (completed:
+  local canonical-gate integration, workflow, CODEOWNERS, and ruleset command; remaining: apply and
+  read back the GitHub ruleset, verify the hosted workflow, reviews, Learn, and PR handoff).
+- [x] (2026-07-27 21:32Z) Integrated the local Milestone 7 quality-gate work. Added the
+  `repository-ruleset:apply` and `repository-ruleset:check` package commands, ordered the canonical
+  gate as Bun preflight, documentation, authored-source, architecture, TypeScript, lint, and tests,
+  added the `repository-quality` workflow and gate-path CODEOWNERS entries, and added the mocked
+  GitHub ruleset create, update, conformance, drift, duplicate, authentication, and authorization
+  tests. The initial focused test failed because `configure-repository-ruleset.ts` did not exist;
+  after implementation, the focused suite passed 3 tests and `bun run check` passed 50 tests.
 
 ## Surprises & Discoveries
 
@@ -1084,6 +1093,11 @@ external sources.
 - Observation: Codex PostToolUse passes its apply-patch event after prior provider writes remain in
   the disposable repository, so a full documentation check can report both old and new violations.
   Evidence: the Codex probe returned findings for `codex-probe.md` and the earlier `probe.md`.
+
+- Observation: The package archive contract test needs an explicit commit SHA when it runs outside
+  the `test:run` package command.
+  Evidence: a direct focused Vitest invocation failed because `MANDEM_ARCHIVE_COMMIT` was unset;
+  rerunning with `MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD)` passed.
 
 ## Decision Log
 
@@ -1152,6 +1166,12 @@ external sources.
   source policy, so a future provider can add one parser without duplicating conformance rules.
   Date/Author: 2026-07-27 / Codex implementation worker
 
+- Decision: Test repository-ruleset behavior through a typed `gh` process boundary and leave real
+  ruleset application to the orchestrator.
+  Rationale: The command needs deterministic local coverage without changing remote repository
+  administration state. The implementation worker's bounded scope excludes that external mutation.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1176,6 +1196,12 @@ snapshot, CLI, and existing architecture suite passes 31 tests. The next impleme
 build the README navigation baseline in Milestone 4; the full documentation audit already passes
 against the current checked-out baseline, but `bun run check` will include the new checks only in the
 later package-gate integration milestone.
+
+The local Milestone 7 work is complete. `bun run check` now runs the documentation and
+authored-source checks before the existing architecture, TypeScript, lint, and test stages. The
+repository includes the required workflow, code-owner map, and tested GitHub ruleset command. The
+remaining Milestone 7 work requires repository-administration access and hosted workflow evidence;
+the orchestrator owns those actions.
 
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
@@ -1232,3 +1258,9 @@ and Codex event parsers, exact project configurations, focused event fixtures, a
 maintenance guide, and recorded disposable probe evidence. The Claude probe used installed
 version `2.1.220`; the plan's required `2.1.219` behavior remains compatible. No Milestone 7
 workflow, CODEOWNERS, ruleset, or canonical-gate integration was added.
+
+Milestone 7 local implementation note (2026-07-27): Added the deterministic canonical package
+gate, the `repository-quality` workflow, code-owner entries for all D7 gate paths, and the
+repository-ruleset apply/check command with process-boundary tests. This update records completed
+local work and explicitly leaves the authorized external ruleset mutation, hosted workflow proof,
+review, Learn, and PR work to the orchestrator.

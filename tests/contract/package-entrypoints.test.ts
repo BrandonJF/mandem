@@ -7,6 +7,15 @@ import { join } from "node:path";
 import { assertBunVersion, runtimeVersion } from "@/modules/runtime";
 
 describe("runtime package identity", () => {
+  it("runs the repository checks in the documented deterministic order", async () => {
+    const manifest = JSON.parse(await readFile("package.json", "utf8")) as { scripts: Record<string, string> };
+    expect(manifest.scripts.check).toBe(
+      "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint && bun run test:run",
+    );
+    expect(manifest.scripts["repository-ruleset:apply"]).toBe("bun scripts/configure-repository-ruleset.ts --apply");
+    expect(manifest.scripts["repository-ruleset:check"]).toBe("bun scripts/configure-repository-ruleset.ts --check");
+  });
+
   it("provides deterministic bounded version output for both executables", () => {
     expect(runtimeVersion("mandem")).toBe("mandem 0.1.0");
     expect(runtimeVersion("mandem-server")).toBe("mandem-server 0.1.0");

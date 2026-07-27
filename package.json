@@ -20,13 +20,15 @@
     "hooks:check": "bun scripts/hooks/install.ts --check",
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts",
     "authoring:check": "bun scripts/hooks/post-write.ts",
+    "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply",
+    "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check",
     "preflight:bun": "bun scripts/preflight-bun.ts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx eslint .",
     "test:run": "MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD) bunx vitest run",
     "build": "bun build --compile --outfile dist/mandem src/cli/main.ts && bun build --compile --outfile dist/mandem-server src/server/main.ts",
     "prepack": "bun run build",
-    "check": "bun run preflight:bun && bun run architecture:check && bun run typecheck && bun run lint && bun run test:run"
+    "check": "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint && bun run test:run"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
