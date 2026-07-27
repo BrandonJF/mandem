@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -eu
+
+repository_root=$(git rev-parse --show-toplevel)
+exec bun "$repository_root/scripts/hooks/pre-push.ts"

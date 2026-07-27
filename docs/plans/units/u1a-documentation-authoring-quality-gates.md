@@ -1003,7 +1003,15 @@ external sources.
   identifiers; the focused suite now passes 31 tests. `bunx tsc --noEmit`, focused ESLint, `bun run
   architecture:check`, `bun scripts/check-documentation.ts --mode full`, and `bun
   scripts/check-authored-files.ts --mode full` also pass.
-- [ ] Implement and verify Milestones 4–6.
+- [x] (2026-07-27 21:20Z) Implemented Milestone 4 documentation navigation baseline at
+  `ed04f2d`; the full documentation policy and repository check pass.
+- [x] (2026-07-27 21:30Z) Implemented and verified Milestone 5. The initial hook integration suite
+  failed because both checked-in entrypoints were absent (`expected null to be 0/1`). The focused
+  suite now passes three disposable-repository tests covering staged TypeScript and documentation
+  rejection, protected refs, documentation-only/code/indeterminate pre-push classification, and
+  worktree-local hook installation with common-value migration. `bunx tsc --noEmit` and
+  `git diff --check` pass.
+- [ ] Implement and verify Milestone 6 shared provider post-write adapters.
 - [ ] Integrate Milestone 7, complete review and Learn, and open the implementation PR.
 
 ## Surprises & Discoveries
@@ -1055,6 +1063,11 @@ external sources.
   each skill now contains generated `agents/openai.yaml` metadata.
   Evidence: the root README must link `.agents/OPERATING.md` for the repository navigation chain;
   `openai.yaml` is provider metadata rather than maintained Markdown documentation.
+
+- Observation: A disposable hook fixture can execute the checked-in entrypoints by symlinking
+  `.githooks/` and `scripts/` while retaining its own Git index and refs.
+  Evidence: the first hook test run failed only because `.githooks/pre-commit` and
+  `.githooks/pre-push` did not exist; after adding them, the staged-snapshot assertion passed.
 
 ## Decision Log
 
@@ -1112,12 +1125,21 @@ external sources.
   exported views add `DOC-*` rules without changing that compatibility surface.
   Date/Author: 2026-07-27 / Codex implementation worker
 
+- Decision: Make hook entrypoints POSIX shell launchers and keep policy execution in TypeScript.
+  Rationale: Git can execute the checked-in entrypoints directly, while the shared architecture
+  composition remains the only location that evaluates repository policy.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
 It centralizes policy, fails closed in non-interactive execution, avoids hook mutations, and
 supports both agent vendors. The operator authorized implementation of the exact reviewed revision
 on 2026-07-27.
+
+Milestone 5 is complete. Versioned hooks evaluate the staged snapshot before commits and selected
+commit snapshots before pushes. The installer confines `.githooks` to the selected worktree while
+preserving a prior common hook path in sibling worktrees. Milestone 6 remains.
 
 Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
 exact plan revision. No dependency remains before implementation.
