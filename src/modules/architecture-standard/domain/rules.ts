@@ -31,22 +31,24 @@ function codeTokens(text: string): string {
   return result;
 }
 function ioAllowed(path: string, layer: string | undefined): boolean { return layer === "infrastructure" || path.endsWith("/api/composition.ts") || path === "src/cli/main.ts" || path === "src/server/main.ts"; }
-function directIo(text: string): boolean { return /\b(?:Bun\.(?:file|write|spawn|serve|connect)|process\.(?:cwd|exit|env|stdin)|process\.stdout\.write|fetch\s*\()/.test(codeTokens(text)); }
+function directIo(tokens: string): boolean { return /\b(?:Bun\.(?:file|write|spawn|serve|connect)|process\.(?:cwd|exit|env|stdin)|process\.stdout\.write|fetch\s*\()/.test(tokens); }
 
 export function evaluateArchitecture(files: readonly RepositoryFile[]): AnalysisResult {
-  const paths = new Set(files.map(({ path }) => path)); const violations: RuleViolation[] = [];
+  const paths = new Set(files.map(({ path }) => path)); const directories = new Set<string>(); const violations: RuleViolation[] = [];
+  for (const path of paths) for (let separator = path.indexOf("/"); separator >= 0; separator = path.indexOf("/", separator + 1)) directories.add(path.slice(0, separator));
   for (const name of moduleNames(files)) {
     const root = `src/modules/${name}`;
     if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) violations.push(violation("ARCH-MODULE-NAME", root));
-    for (const [item, id] of requiredDirectories) if (![...paths].some((path) => path.startsWith(`${root}/${item}/`))) violations.push(violation(id, root));
+    for (const [item, id] of requiredDirectories) if (!directories.has(`${root}/${item}`)) violations.push(violation(id, root));
     for (const [item, id] of requiredFiles) if (!paths.has(`${root}/${item}`)) violations.push(violation(id, root));
     const barrel = files.find((file) => file.path === `${root}/index.ts`);
     if (barrel && specifiers(barrel.text).map((specifier) => resolveSpecifier(barrel.path, specifier)).some((path) => path === `${root}/infrastructure` || path?.startsWith(`${root}/infrastructure/`))) violations.push(violation("ARCH-INFRASTRUCTURE-ROOT-EXPORT", barrel.path));
   }
   for (const file of files.filter(({ path }) => /\.tsx?$/.test(path) && !isExcludedAuthoredPath(path))) {
-    if (isIncludedAuthoredTypeScriptPath(file.path)) {
+    const included = isIncludedAuthoredTypeScriptPath(file.path); const tokens = included ? codeTokens(file.text) : "";
+    if (included) {
       if (!file.text.startsWith("/** @fileoverview")) violations.push(violation("ARCH-FILEOVERVIEW", file.path));
-      if (explicitAnyPattern.test(codeTokens(file.text))) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path));
+      if (explicitAnyPattern.test(tokens)) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path));
     } else violations.push(violation("ARCH-UNSCOPED-TYPESCRIPT", file.path));
     if (!isProductionTypeScriptPath(file.path)) continue;
     const moduleRoot = file.path.match(/^(src\/modules\/[^/]+)/)?.[1]; const layer = file.path.match(/^src\/modules\/[^/]+\/(domain|application|infrastructure|api)\//)?.[1]; const imports = specifiers(file.text); const allowed = ioAllowed(file.path, layer);
@@ -58,7 +60,7 @@ export function evaluateArchitecture(files: readonly RepositoryFile[]): Analysis
       if (moduleRoot && targetModule && targetModule !== moduleRoot.slice("src/modules/".length) && resolved !== `src/modules/${targetModule}`) violations.push(violation("ARCH-CROSS-MODULE-DEEP-IMPORT", file.path));
       if (!allowed && isIoPackage) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
     }
-    if (!allowed && directIo(file.text)) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
+    if (!allowed && directIo(tokens)) violations.push(violation("ARCH-IO-PLACEMENT", file.path));
     const lines = physicalLines(file.text); const isBarrel = /\/index\.tsx?$/.test(file.path);
     if (!isBarrel && /\.tsx$/.test(file.path) && lines > 150) violations.push(violation("ARCH-COMPONENT-SIZE", file.path));
     if (!isBarrel && /(?:use|hook)[^/]*\.ts$/i.test(file.path) && lines > 200) violations.push(violation("ARCH-HOOK-SIZE", file.path));

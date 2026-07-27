@@ -2,6 +2,7 @@
 import { readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import type { RepositoryTree } from "../../application/use-cases/analyze-repository";
+import { isExcludedAuthoredPath } from "../../domain/repository-policy";
 import type { RepositoryFile } from "../../domain/types";
 
 const ignored = new Set([".git", "node_modules", "dist", "coverage", "generated", "vendor", "vendored"]);
@@ -15,7 +16,7 @@ export class FileSystemTree implements RepositoryTree {
         if (entry.isDirectory()) await visit(location);
         else {
           const path = relative(root, location).replaceAll("\\", "/");
-          if ((/\.(?:ts|tsx)$/.test(entry.name) && !entry.name.endsWith(".d.ts") && !path.startsWith("tests/fixtures/")) || entry.name === "README.md" || entry.name === ".gitkeep") files.push({ path, text: await Bun.file(location).text() });
+          if ((/\.(?:ts|tsx)$/.test(entry.name) && !isExcludedAuthoredPath(path)) || entry.name === "README.md" || entry.name === ".gitkeep") files.push({ path, text: await Bun.file(location).text() });
         }
       }
     };

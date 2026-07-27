@@ -62,6 +62,10 @@ implementation changes and pass only after the checker detects the intended viol
   `git archive` before and after full verification.
 - [x] (2026-07-27 19:00Z) Ran the complete local verification contract. `bun run check` passed
   20 tests, the build passed, and all four executable probes returned the required output.
+- [ ] (2026-07-27 19:35Z) Applied three behavior-preserving simplification findings from PR
+  review: shared authored-path exclusions, precomputed required-directory presence, and one lexical
+  tokenization per included file. Typecheck, lint, and 15 focused tests pass; full exact-head
+  verification, archive proof, commit, and push remain.
 
 ## Surprises & Discoveries
 
@@ -97,6 +101,12 @@ implementation changes and pass only after the checker detects the intended viol
 - Observation: The archive/install proof takes about nine seconds on this host.
   Evidence: Vitest's default five-second test timeout failed after the archive lifecycle build.
   Response: The bounded package contract has a 30-second per-test timeout.
+
+- Observation: The first required-directory simplification removed repeated array allocation but
+  still rescanned every path for each required directory.
+  Evidence: Efficiency review found `filePaths.some(...)` inside the module-directory matrix.
+  Response: Rule evaluation now precomputes every observed directory prefix once and uses exact
+  set membership for required-directory checks.
 
 ## Decision Log
 
@@ -157,6 +167,12 @@ implementation changes and pass only after the checker detects the intended viol
   test script.
   Rationale: A direct invocation catches missing or malformed evidence, while `bun run check`
   verifies the exact checked commit without an operator-provided environment variable.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Apply only the three requested simplification findings in this repair.
+  Rationale: They remove duplicated policy and repeated work without changing findings, traversal,
+  output ordering, or package behavior. Broader lexer restructuring and concurrent filesystem
+  traversal are outside this exact behavior-preserving review repair.
   Date/Author: 2026-07-27 / Codex
 
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.
