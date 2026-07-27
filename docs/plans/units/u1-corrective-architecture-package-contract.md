@@ -73,11 +73,11 @@ implementation changes and pass only after the checker detects the intended viol
   scanner repair. At review-repair commit
   `0afb33726e7b369f03cea7213f81df068c1c7ed2`, the exact-SHA archive/install proof, full check,
   build, and four binary probes passed.
-- [ ] (2026-07-27 20:10Z) Applied all three validated findings from final review run
+- [x] (2026-07-27 20:15Z) Applied all three validated findings from final review run
   `20260727-145419-d8f830ce`. The exact `/[//]/` regression false-passed red, then 21 focused
   tests passed after regex-literal parsing, production-test exclusion, and allowed-location fixture
-  coverage. The full 26-test check, build, and four binary probes pass. Commit, exact-head archive
-  proof, and push remain.
+  coverage. At repair commit `9d442f375a1556c4c23063e7641a9c1201152cc5`, the full 26-test
+  check, exact-SHA archive/install proof, build, and four binary probes passed.
 
 ## Surprises & Discoveries
 
@@ -260,6 +260,13 @@ closing delimiter for a line comment. Each direct I/O API now has isolated comme
 template-text, and executable-template-expression coverage. Authored scripts and application
 vendor imports have exact rule-and-path assertions. No findings were skipped. The repair increased
 the focused architecture suite from 15 to 18 tests and the full suite from 20 to 23 tests.
+
+Final-review outcome (2026-07-27): All three validated findings from review run
+`20260727-145419-d8f830ce` were applied; none were skipped. The scanner consumes regex literals
+with escapes and character classes before comment recognition. Module test paths retain authored
+checks but skip production rules. Each direct I/O API now has positive infrastructure,
+composition, and entrypoint fixtures. The focused architecture suite passes 21 tests and the full
+suite passes 26 tests.
 
 ## Context and Orientation
 
@@ -621,6 +628,11 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Review repair red proof: regex followed by Bun.connect produced no ARCH-IO-PLACEMENT
     Review repair verification: 18 focused and 23 full tests passed
     Review repair archive proof: both executable entries installed and invoked successfully
+
+    Final review repair: 9d442f375a1556c4c23063e7641a9c1201152cc5
+    Final review red proof: /[//]/ followed by Bun.connect produced no ARCH-IO-PLACEMENT
+    Final review verification: 21 focused and 26 full tests passed
+    Final review archive proof: both executable entries installed and invoked successfully
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
