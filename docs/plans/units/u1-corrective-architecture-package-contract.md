@@ -82,6 +82,11 @@ implementation changes and pass only after the checker detects the intended viol
   at `src/server/main.ts`, complementing infrastructure, exact composition, and CLI entrypoint
   coverage. At commit `265912d2c68317627ce40d10c03edd7078aa49c3`, all 21 focused and
   26 full tests, the exact-SHA archive/install proof, build, and four binary probes passed.
+- [x] (2026-07-27 20:45Z) Final independent review returned clean at code head
+  `82b28af2d0064c571ba67a55e0b1d72411c19e2c`. Review runs
+  `20260727-144030-8af9a917` and `20260727-145419-d8f830ce` produced seven actionable findings;
+  every finding and the final server-entrypoint coverage item were repaired. PR #13 remains
+  unmerged.
 
 ## Surprises & Discoveries
 
@@ -216,6 +221,12 @@ implementation changes and pass only after the checker detects the intended viol
   dependency or I/O findings.
   Date/Author: 2026-07-27 / Codex
 
+- Decision: Do not add a separate Learn artifact for U1C.
+  Rationale: The regression tests and published architecture standard now record the reusable
+  silent-pass mechanism more directly than another `docs/solutions` summary would. A separate
+  artifact would duplicate those executable and published records.
+  Date/Author: 2026-07-27 / Codex
+
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.
   Rationale: The durable review approves the exact implementation instructions at commit
   `bbddf1949cd8a3d7d78551bb00129e871a094c63`. This follow-up changes only promotion metadata and
@@ -275,6 +286,15 @@ suite passes 26 tests.
 Final coverage outcome (2026-07-27): The allowed-location table now exercises every declared
 direct I/O API at both bounded entrypoints, infrastructure, and exact composition. This changes
 test coverage only; production behavior is unchanged.
+
+Final review outcome (2026-07-27): Independent review is clean at code head
+`82b28af2d0064c571ba67a55e0b1d72411c19e2c`. All findings from review runs
+`20260727-144030-8af9a917` and `20260727-145419-d8f830ce` were repaired. Final code verification
+passed 21 focused tests, 26 full tests, four package-contract tests, both builds, and all four
+binary probes with Bun 1.3.14. The strongest reusable Learn result is the regression suite plus
+`docs/architecture/architecture-standard-v1.md`; no separate `docs/solutions` artifact is
+warranted. The implementation PR is https://github.com/BrandonJF/mandem/pull/13 and remains
+unmerged.
 
 ## Context and Orientation
 
@@ -646,6 +666,14 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Final P2 verification: 21 focused and 26 full tests passed
     Final P2 archive proof: both executable entries installed and invoked successfully
 
+    Final clean review code head: 82b28af2d0064c571ba67a55e0b1d72411c19e2c
+    Review runs: 20260727-144030-8af9a917, 20260727-145419-d8f830ce
+    Review result: clean; all findings repaired
+    Final code verification: Bun 1.3.14; 21 focused, 26 full, 4 package-contract tests
+    Final build evidence: both builds and four binary probes passed
+    Implementation PR: https://github.com/BrandonJF/mandem/pull/13
+    Merge state: unmerged
+
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
 and post-merge verification result.
@@ -701,3 +729,7 @@ records only. `execution_authorized` remains `false`.
 `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`. Set
 `promotion: executable` and `execution_authorized: true`. This update changes only authorization
 metadata and living records; implementation instructions are unchanged.
+
+2026-07-27: Recorded the final clean independent review, repaired review-run history, final code
+verification, Learn outcome, PR URL, and unmerged state. This living-record-only revision changes
+no production, test, or package code.
