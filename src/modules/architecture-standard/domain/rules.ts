@@ -1,6 +1,6 @@
 /** @fileoverview Pure deterministic Mandem architecture rules. */
 import { dirname, normalize } from "node:path";
-import { isExcludedAuthoredPath, isIncludedAuthoredTypeScriptPath, isProductionTypeScriptPath } from "./repository-policy";
+import { hasUsefulFileoverview, isExcludedAuthoredPath, isIncludedAuthoredTypeScriptPath, isProductionTypeScriptPath } from "./repository-policy";
 import type { AnalysisResult, ArchitectureRule, RepositoryFile, RuleViolation } from "./types";
 
 const ruleDescriptions = {
@@ -53,7 +53,7 @@ export function evaluateArchitecture(files: readonly RepositoryFile[]): Analysis
   for (const file of files.filter(({ path }) => /\.tsx?$/.test(path) && !isExcludedAuthoredPath(path))) {
     const included = isIncludedAuthoredTypeScriptPath(file.path); const tokens = included ? codeTokens(file.text) : "";
     if (included) {
-      if (!file.text.startsWith("/** @fileoverview")) violations.push(violation("ARCH-FILEOVERVIEW", file.path));
+      if (!hasUsefulFileoverview(file.text)) violations.push(violation("ARCH-FILEOVERVIEW", file.path));
       if (explicitAnyPattern.test(tokens)) violations.push(violation("ARCH-NO-EXPLICIT-ANY", file.path));
     } else violations.push(violation("ARCH-UNSCOPED-TYPESCRIPT", file.path));
     if (!isProductionTypeScriptPath(file.path)) continue;

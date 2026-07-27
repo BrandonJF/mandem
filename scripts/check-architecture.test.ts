@@ -107,6 +107,19 @@ describe("architecture analyzer", () => {
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
   });
 
+  it("uses the authored-source fileoverview semantics for shebangs and placeholders", () => {
+    const result = analyzeRepositoryFiles([
+      { path: "src/cli.ts", text: "#!/usr/bin/env bun\n/** @fileoverview command. */\nexport {};" },
+      { path: "src/placeholder.ts", text: "/** @fileoverview todo */\nexport {};" }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "src/placeholder.ts" })
+    ]));
+    expect(result.violations).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "src/cli.ts" })
+    ]));
+  });
+
   it("detects any in a template-literal type without scanning ordinary strings", () => {
     const result = analyzeRepositoryFiles(completeModule("runtime", [{ path: "src/modules/runtime/domain/template.ts", text: `${overview}type Template = \`\${any}\`;\nconst ordinary = "any";\nexport { ordinary };` }]));
     expect(result.violations.map(({ ruleId }) => ruleId)).toContain("ARCH-NO-EXPLICIT-ANY");

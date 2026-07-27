@@ -1,6 +1,6 @@
 /** @fileoverview Focused documentation-policy contract tests. */
 import { describe, expect, it } from "vitest";
-import { evaluateAuthoredSources, evaluateDocumentation, repositoryRules } from "@/modules/architecture-standard";
+import { authoredSourcePolicyV1, evaluateAuthoredSources, evaluateDocumentation, repositoryRules } from "@/modules/architecture-standard";
 
 const snapshot = (files: Record<string, string>) => ({ files: Object.entries(files).map(([path, text]) => ({ path, text })) });
 const validDocumentation = {
@@ -70,5 +70,22 @@ describe("documentation policy", () => {
       expect.objectContaining({ ruleId: "ARCH-UNSCOPED-TYPESCRIPT", path: "tools/unscoped.ts" })
     ]));
     expect(result.violations.map(({ path }) => path)).not.toEqual(expect.arrayContaining(["tests/fixtures/example.ts", "generated/file.ts", "types.d.ts"]));
+  });
+
+  it("uses the supplied authored-source policy for inclusion and exclusion", () => {
+    const policy = {
+      ...authoredSourcePolicyV1,
+      authoredSourceIncludes: ["custom/"],
+      authoredSourceExcludes: ["custom/ignored/"]
+    };
+    const result = evaluateAuthoredSources(snapshot({
+      "custom/missing.ts": "export {};",
+      "custom/ignored/missing.ts": "export {};",
+      "src/missing.ts": "export {};"
+    }), policy);
+    expect(result.violations).toEqual([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "custom/missing.ts" }),
+      expect.objectContaining({ ruleId: "ARCH-UNSCOPED-TYPESCRIPT", path: "src/missing.ts" })
+    ]);
   });
 });

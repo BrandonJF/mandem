@@ -30,20 +30,29 @@ function hasExcludedSegment(path: string, policy: RepositoryPolicy): boolean {
   return normalizePath(path).split("/").some((segment) => policy.excludedSegments.includes(segment));
 }
 
-export function isExcludedAuthoredPath(path: string): boolean {
-  const normalized = normalizePath(path);
-  return normalized.endsWith(".d.ts") || documentationPolicyV1.authoredSourceExcludes.some((prefix) => prefix.endsWith("/") && normalized.startsWith(prefix)) || hasExcludedSegment(normalized, documentationPolicyV1);
+function matchesAuthoredPathPattern(path: string, pattern: string): boolean {
+  if (pattern.endsWith("/")) return path.startsWith(pattern);
+  if (pattern.startsWith("*.")) return path.endsWith(pattern.slice(1));
+  return path === pattern;
 }
 
-export function isIncludedAuthoredTypeScriptPath(path: string): boolean {
+function authoredPathMatch(path: string, policy: RepositoryPolicy): { excluded: boolean; included: boolean; production: boolean } {
   const normalized = normalizePath(path);
-  if (!typeScriptPath.test(normalized)) return false;
-  return normalized.startsWith("src/") || normalized.startsWith("scripts/") || normalized.startsWith("tests/") || /^[^/]+\.config\.tsx?$/.test(normalized);
+  const excluded = policy.authoredSourceExcludes.some((pattern) => matchesAuthoredPathPattern(normalized, pattern)) || hasExcludedSegment(normalized, policy);
+  const included = typeScriptPath.test(normalized) && !excluded && policy.authoredSourceIncludes.some((pattern) => matchesAuthoredPathPattern(normalized, pattern));
+  return { excluded, included, production: typeScriptPath.test(normalized) && normalized.startsWith("src/") && !/(?:^|\/)tests(?:\/|$)/.test(normalized) };
 }
 
-export function isProductionTypeScriptPath(path: string): boolean {
-  const normalized = normalizePath(path);
-  return typeScriptPath.test(normalized) && normalized.startsWith("src/") && !/(?:^|\/)tests(?:\/|$)/.test(normalized);
+export function isExcludedAuthoredPath(path: string, policy: RepositoryPolicy = authoredSourcePolicyV1): boolean {
+  return authoredPathMatch(path, policy).excluded;
+}
+
+export function isIncludedAuthoredTypeScriptPath(path: string, policy: RepositoryPolicy = authoredSourcePolicyV1): boolean {
+  return authoredPathMatch(path, policy).included;
+}
+
+export function isProductionTypeScriptPath(path: string, policy: RepositoryPolicy = authoredSourcePolicyV1): boolean {
+  return authoredPathMatch(path, policy).production;
 }
 
 function finding(ruleId: string, path: string, message: string): RuleViolation {
@@ -107,7 +116,7 @@ function readmeLinks(path: string, text: string): Array<{ target: string; resolv
   return targets.map((value) => ({ target: value, resolved: (() => { const decoded = decodeTarget(value); return decoded === undefined || decoded === "" ? decoded : resolveLink(path, decoded); })() }));
 }
 
-function overviewIsUseful(text: string): boolean {
+export function hasUsefulFileoverview(text: string): boolean {
   const content = text.replace(/^#![^\n]*(?:\n|$)/, "");
   const match = content.match(/^\/\*\*([\s\S]*?)\*\//);
   if (!match || !/@fileoverview\b/i.test(match[1] ?? "")) return false;
@@ -160,10 +169,9 @@ export function evaluateAuthoredSources(snapshot: RepositorySnapshot, policy: Re
   const violations: RuleViolation[] = [];
   for (const file of snapshot.files) {
     const path = normalizePath(file.path);
-    if (!typeScriptPath.test(path) || isExcludedAuthoredPath(path)) continue;
-    if (!isIncludedAuthoredTypeScriptPath(path)) violations.push(finding("ARCH-UNSCOPED-TYPESCRIPT", path, "add this TypeScript path to the authored-source policy"));
-    else if (!overviewIsUseful(file.text)) violations.push(finding("ARCH-FILEOVERVIEW", path, "start with a useful JSDoc @fileoverview comment"));
+    if (!typeScriptPath.test(path) || isExcludedAuthoredPath(path, policy)) continue;
+    if (!isIncludedAuthoredTypeScriptPath(path, policy)) violations.push(finding("ARCH-UNSCOPED-TYPESCRIPT", path, "add this TypeScript path to the authored-source policy"));
+    else if (!hasUsefulFileoverview(file.text)) violations.push(finding("ARCH-FILEOVERVIEW", path, "start with a useful JSDoc @fileoverview comment"));
   }
-  void policy;
   return sorted(violations);
 }

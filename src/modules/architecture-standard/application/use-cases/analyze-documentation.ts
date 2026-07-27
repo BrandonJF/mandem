@@ -1,9 +1,10 @@
 /** @fileoverview Application use case for documentation-policy analysis. */
 import { documentationPolicyV1, evaluateDocumentation } from "../../domain/repository-policy";
-import type { AnalysisResult, RepositorySnapshot } from "../../domain/types";
+import type { AnalysisResult } from "../../domain/types";
 import type { GitChange, RepositorySnapshotReader } from "../repositories/repository-snapshot";
+import { readRepositorySnapshot, type SnapshotMode } from "./read-repository-snapshot";
 
-export type SnapshotMode = "working" | "staged" | "revision";
+export type { SnapshotMode } from "./read-repository-snapshot";
 export interface DocumentationAnalysisRequest {
   readonly root: string;
   readonly mode: SnapshotMode;
@@ -11,15 +12,8 @@ export interface DocumentationAnalysisRequest {
   readonly changes?: readonly GitChange[];
 }
 
-async function snapshot(reader: RepositorySnapshotReader, request: DocumentationAnalysisRequest): Promise<RepositorySnapshot> {
-  if (request.mode === "working") return reader.readWorkingTree(request.root);
-  if (request.mode === "staged") return reader.readStagedTree(request.root);
-  if (!request.revision) throw new Error("revision mode requires a revision");
-  return reader.readRevision(request.root, request.revision);
-}
-
 export async function analyzeDocumentation(reader: RepositorySnapshotReader, request: DocumentationAnalysisRequest): Promise<AnalysisResult> {
-  const result = evaluateDocumentation(await snapshot(reader, request), documentationPolicyV1);
+  const result = evaluateDocumentation(await readRepositorySnapshot(reader, request), documentationPolicyV1);
   if (!request.changes || request.changes.length === 0) return result;
   const affected = new Set<string>();
   for (const change of request.changes) for (const candidate of [change.path, change.oldPath]) {
