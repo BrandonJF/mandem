@@ -3,6 +3,19 @@
 Mandem orchestrates bounded agent sessions through durable, observable, deterministic workflows.
 Reduce the operator's cognitive load with plain language, concise output, and explicit outcomes.
 
+## Vendor-neutral agent policy
+
+Repository behavior must not depend on one agent vendor's instruction file. Keep shared policy,
+workflows, and judgment rules in repository-owned documents and skills. Vendor entry files such as
+`AGENTS.md` and `CLAUDE.md` are thin discovery adapters that point agents to the same shared
+contract.
+
+When adding agent guidance, change the shared document or skill first. Add vendor-specific
+configuration only when a harness requires it, keep that adapter as small as possible, and do not
+let it become a second source of policy. See
+[`docs/architecture/agent-vendor-neutrality.md`](../docs/architecture/agent-vendor-neutrality.md)
+for the rationale and placement test.
+
 ## Required skills
 
 Before producing natural-language output about this repository, load and follow

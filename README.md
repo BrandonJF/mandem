@@ -6,6 +6,8 @@ Agent entry files point to the shared [operating contract](./.agents/OPERATING.m
 routes every supported agent to the same repository skills, including
 [clear writing](./.agents/skills/write-clearly/SKILL.md) and
 [git-native issue tracking](./.agents/skills/track-git-native-issues/SKILL.md).
+The [agent vendor-neutrality principle](./docs/architecture/agent-vendor-neutrality.md) explains
+why shared behavior lives behind thin harness-specific discovery adapters.
 
 Run `bun run check` to validate this repository, then `bun run build` to create the two bounded executables.
 
