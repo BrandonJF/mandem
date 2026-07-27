@@ -1011,7 +1011,14 @@ external sources.
   rejection, protected refs, documentation-only/code/indeterminate pre-push classification, and
   worktree-local hook installation with common-value migration. `bunx tsc --noEmit` and
   `git diff --check` pass.
-- [ ] Implement and verify Milestone 6 shared provider post-write adapters.
+- [x] (2026-07-27 21:25Z) Implemented and verified Milestone 6. The initial provider-adapter
+  suite failed because the adapter and provider configurations were absent (`expected 1 to be 2`
+  and missing `.claude/settings.json`). The focused suite now passes seven tests covering Claude
+  Write/Edit/MultiEdit, Codex add/update/delete/move headers, nested directories, duplicate paths,
+  spaces, malformed input, out-of-root paths, bounded failures, no fixture mutation, and exact
+  configurations. Disposable live probes verified Claude Code `2.1.220` Write and Codex CLI
+  `0.145.0` apply_patch PostToolUse feedback through the shared adapter; the recorded evidence is
+  `docs/operations/provider-capability-baseline.md`.
 - [ ] Integrate Milestone 7, complete review and Learn, and open the implementation PR.
 
 ## Surprises & Discoveries
@@ -1068,6 +1075,15 @@ external sources.
   `.githooks/` and `scripts/` while retaining its own Git index and refs.
   Evidence: the first hook test run failed only because `.githooks/pre-commit` and
   `.githooks/pre-push` did not exist; after adding them, the staged-snapshot assertion passed.
+
+- Observation: Claude Code installed version `2.1.220`, one patch release newer than the `2.1.219`
+  version named in the original plan, and still delivered the required PostToolUse feedback.
+  Evidence: `claude --version` printed `2.1.220`; a disposable Write probe returned
+  `DOC-UNSCOPED-DOCUMENT probe.md` as a blocking hook error.
+
+- Observation: Codex PostToolUse passes its apply-patch event after prior provider writes remain in
+  the disposable repository, so a full documentation check can report both old and new violations.
+  Evidence: the Codex probe returned findings for `codex-probe.md` and the earlier `probe.md`.
 
 ## Decision Log
 
@@ -1130,6 +1146,12 @@ external sources.
   composition remains the only location that evaluates repository policy.
   Date/Author: 2026-07-27 / Codex implementation worker
 
+- Decision: Parse provider event formats in private infrastructure adapters and run the same public
+  authoring use case for every normalized path event.
+  Rationale: The adapters only translate provider input. They do not classify documentation or
+  source policy, so a future provider can add one parser without duplicating conformance rules.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1143,6 +1165,11 @@ preserving a prior common hook path in sibling worktrees. Milestone 6 remains.
 
 Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
 exact plan revision. No dependency remains before implementation.
+
+Milestone 6 is complete. The shared `authoring:check` command checks one path without editing it;
+Claude and Codex configurations call thin PostToolUse adapters that normalize provider events and
+invoke that shared policy. Focused tests and disposable live-provider probes verify feedback and
+failure boundaries. Milestone 7 remains.
 
 Milestones 1–3 now provide pure deterministic policies and repository adapters. The focused policy,
 snapshot, CLI, and existing architecture suite passes 31 tests. The next implementation worker can
@@ -1199,3 +1226,9 @@ Implementation note (2026-07-27): Completed Milestones 1–3 without adding READ
 Git hooks, provider adapters, workflow configuration, or ruleset configuration. Recorded the
 post-plan shared operating contract and generated provider metadata scope decision above. The next
 approved milestones remain 4–6.
+
+Milestone 6 implementation note (2026-07-27): Added the shared post-write command, private Claude
+and Codex event parsers, exact project configurations, focused event fixtures, a provider-hook
+maintenance guide, and recorded disposable probe evidence. The Claude probe used installed
+version `2.1.220`; the plan's required `2.1.219` behavior remains compatible. No Milestone 7
+workflow, CODEOWNERS, ruleset, or canonical-gate integration was added.

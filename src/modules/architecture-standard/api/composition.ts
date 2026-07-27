@@ -8,6 +8,11 @@ import { FileSystemTree } from "../infrastructure/repositories/file-system-tree"
 import { FileSystemSnapshot } from "../infrastructure/repositories/file-system-snapshot";
 import { GitRepositorySnapshot } from "../infrastructure/repositories/git-repository-snapshot";
 import { BunCommandRunner } from "../infrastructure/services/bun-command-runner";
+import { parseClaudePostToolUse, type ProviderPathEvent } from "../infrastructure/provider-events/claude-post-tool-use";
+import { parseCodexPostToolUse } from "../infrastructure/provider-events/codex-post-tool-use";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { isAbsolute, relative, resolve } from "node:path";
 import type { AnalysisResult, RepositoryFile } from "../domain/types";
 import type { GitChange } from "../application/repositories/repository-snapshot";
 
@@ -29,3 +34,47 @@ export async function analyzeDocumentationRevision(root: string, revision: strin
 export async function analyzeAuthoredSourceRevision(root: string, revision: string, changes?: readonly GitChange[]): Promise<AnalysisResult> { return analyzeAuthoredSources(new GitRepositorySnapshot(), { root, mode: "revision", revision, changes }); }
 export async function changedGitEntries(root: string, base: string, head: string): Promise<readonly GitChange[]> { return new GitRepositorySnapshot().changedEntries(root, base, head); }
 export async function checkAuthoredPath(root: string, path: string) { return checkPath(root, path, new FileSystemSnapshot(), new BunCommandRunner()); }
+
+export interface ProviderPostWriteResult {
+  readonly event: ProviderPathEvent;
+  readonly result: Awaited<ReturnType<typeof checkPath>>;
+}
+
+function eventCwd(input: unknown): string {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) throw new Error("expected an event object");
+  const cwd = (input as Record<string, unknown>).cwd;
+  if (typeof cwd !== "string" || cwd === "") throw new Error("expected event cwd");
+  return cwd;
+}
+
+const execute = promisify(execFile);
+
+async function gitRoot(cwd: string): Promise<string> {
+  try {
+    const result = await execute("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
+    return resolve(result.stdout.trim());
+  } catch {
+    throw new Error("could not resolve the Git repository root");
+  }
+}
+
+function repositoryPath(root: string, cwd: string, path: string): string {
+  const resolved = isAbsolute(path) ? resolve(path) : resolve(cwd, path);
+  const value = relative(root, resolved).replaceAll("\\", "/");
+  if (value === "" || value === ".." || value.startsWith("../") || isAbsolute(value)) throw new Error("event path is outside the Git repository");
+  return value;
+}
+
+export async function checkProviderPostWrite(provider: "claude" | "codex", input: unknown): Promise<readonly ProviderPostWriteResult[]> {
+  const cwd = resolve(eventCwd(input));
+  const root = await gitRoot(cwd);
+  const parsed = provider === "claude" ? parseClaudePostToolUse(input) : parseCodexPostToolUse(input);
+  const events = [...new Map(parsed.map((event) => {
+    const normalized = { ...event, path: repositoryPath(root, cwd, event.path) };
+    return [`${normalized.operation}:${normalized.path}`, normalized] as const;
+  })).values()].sort((left, right) => left.path.localeCompare(right.path) || left.operation.localeCompare(right.operation));
+  if (events.length === 0) throw new Error("event contains no valid paths");
+  const snapshots = new FileSystemSnapshot();
+  const runner = new BunCommandRunner();
+  return Promise.all(events.map(async (event) => ({ event, result: await checkPath(root, event.path, snapshots, runner, event.operation) })));
+}

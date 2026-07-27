@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$(git rev-parse --show-toplevel)/scripts/hooks/provider-post-write.ts\" claude",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -13,3 +13,27 @@ Fresh-session recovery passed: a new Claude process at fixture `bb5ac2de547f99d5
 Interruption passed at fixture `2d40ecf5b7aaf905ea95129eee0f2784a8843c03`: full-access print sessions were sent `SIGINT` three seconds after a requested `sleep 30`. Neither returned `MANDEM_PROVIDER_LATE`; Claude completed its interrupted wrapper with exit 0 and digest `556db53504c7fa1a7489a001db64986fee1df89460e9047b69c68cb4cdf54b61`, while Codex exited 1 with digest `67702c2a8f822bd71a8dc4de77826c4ed7f0dd3e2b54d807cd7272fb5ae57dfd`. Both stopped within the ten-second post-signal bound and left the fixture clean.
 
 Conclusion: every required U2 protocol capability has direct, non-mutating versioned evidence. U2 must still map these provider-specific flags and outcomes into its provider-neutral protocol; this baseline is no longer a missing-capability blocker.
+
+## Post-write hook probe
+
+Recorded 2026-07-27 in a disposable Git repository. Claude Code was `2.1.220`; Codex CLI was
+`0.145.0`. The repository contained the exact U1A project hook configurations and a symlink to the
+working U1A hook script. The probe asked each provider to create one unindexed Markdown file. That
+intentional policy failure made hook feedback observable. No authentication material was recorded.
+
+Claude command:
+
+    claude -p --dangerously-skip-permissions 'Use the Write tool to create probe.md containing exactly "# Probe". After the write, report the PostToolUse feedback verbatim.'
+
+Claude completed in 9.6 seconds, exited `0`, and returned `DOC-UNSCOPED-DOCUMENT probe.md` as a
+blocking PostToolUse error. Its project hook timeout is 120 seconds.
+
+Codex command:
+
+    codex exec -C <fixture> --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust --ephemeral 'Use apply_patch to add codex-probe.md containing exactly # Codex probe. Then report any PostToolUse feedback verbatim.'
+
+Codex completed in 9.3 seconds, exited `0`, and returned `DOC-UNSCOPED-DOCUMENT codex-probe.md`
+through its PostToolUse hook. Its project hook timeout is 120 seconds. The probe also replayed the
+existing Claude-created `probe.md`, so Codex reported both expected findings. The temporary
+repository was removed after recording this result. The bypass-trust flag was limited to this
+disposable probe; operators trust project-local Codex hooks through `/hooks`.
