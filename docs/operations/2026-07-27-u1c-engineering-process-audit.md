@@ -1,12 +1,10 @@
 # U1C engineering process audit
 
-This document records how the Codex harness handled the operator's `Approved` message on
-2026-07-27. It covers authorization and implementation of U1C, closure of git-native issue
-`5717221`, and revalidation of U1A through planning PR
-[#14](https://github.com/BrandonJF/mandem/pull/14).
-
-The purpose is to compare the observed AI engineering process with Mandem's intended process and to
-identify practices that can transfer to other repositories.
+The root agent completed the authorized U1C correction, closed git-native issue `5717221`, and
+stopped before unauthorized U1A implementation. This audit records the process that led to that
+outcome, including U1A revalidation through planning PR
+[#14](https://github.com/BrandonJF/mandem/pull/14). It compares the observed process with Mandem's
+intended process and identifies practices that can transfer to other repositories.
 
 ## Scope and evidence
 
@@ -19,15 +17,14 @@ This is a retrospective of one harness session. It draws from:
 - the U1C and U1A child ExecPlans;
 - commits and test evidence recorded in those plans and issues.
 
-The command lists below include every consequential command family and the exact commands preserved
-in the session record. Repeated status polls and repeated reads of the same file are summarized
-unless they changed a decision. The harness did not preserve a separate machine-readable transcript
-in the repository, so this document does not claim to be a byte-for-byte shell history.
+The command lists identify each consequential command family and show representative commands
+preserved in the session trace. They omit repeated status polls and repeated reads unless those
+calls changed a decision. The repository contains no machine-readable transcript, so these lists
+are not a complete shell history.
 
 ## Outcome
 
-The harness completed the authorized U1C correction and stopped before unauthorized U1A
-implementation.
+The following table provides the completion evidence.
 
 | Result | Evidence |
 | --- | --- |
@@ -40,53 +37,52 @@ implementation.
 
 ## Where the process came from
 
-The harness combined repository rules, an approved plan, installed skills, and its own
-orchestration judgment. These sources had different authority.
+The root agent applied repository rules, the approved plan, installed skills, and its own judgment.
+Each source constrained a different part of the work.
 
-| Source | What it required or contributed |
+| Source | How the root agent used it |
 | --- | --- |
 | Harness system and developer instructions | Use commentary updates, preserve user changes, prefer `rg`, use `apply_patch`, avoid destructive actions, verify work, and use available skills when their descriptions match the task. |
 | Repository `AGENTS.md` | Read `CLAUDE.md`; use a repository-root `PLANS.md` ExecPlan for significant work; execute only a self-contained child plan with `execution_authorized: true`. |
 | Repository `CLAUDE.md` | Read the writing skill before prose; use Bun; avoid `any`; use behavior-first tests; keep ExecPlan living sections current; use isolated worktrees; have workers commit, push, and open PRs without merging. |
 | Repository `PLANS.md` | Bind implementation to the complete approved child ExecPlan, record exact approval, maintain living records, use clean-room review, and treat the program plan as context rather than implementation authority. |
-| Approved U1C child ExecPlan | Defined the permitted correction, milestones, red-green tests, validation, review, Learn step, PR handoff, and completion evidence. |
-| Compound Engineering skills | Supplied detailed operating procedures for worktrees, execution, simplification, code review, PR work, and the optional Learn artifact decision. |
-| GitHub plugin skill | Supplied GitHub orientation and connector guidance. Most mutations in this session ultimately used `gh` because the required operations were available locally. |
+| Approved U1C child ExecPlan | Specified the permitted correction, milestones, red-green tests, validation, review, Learn step, PR handoff, and completion evidence. |
+| Compound Engineering skills | Provided detailed operating procedures for worktrees, execution, simplification, code review, PR work, and the optional Learn artifact decision. |
+| GitHub plugin skill | Provided GitHub orientation and connector guidance. The root agent used `gh` for most mutations because the required operations were available locally. |
 | Codex orchestration judgment | Chose which matching skills to load, divided work among agents, ordered review and repair loops, selected focused validation commands, and decided when evidence was sufficient to merge. |
-| Operator approval | Authorized only the exact U1C planning PR head and plan hash. It did not authorize U1A. |
+| Operator approval | The operator authorized only the exact U1C planning PR head and plan hash; they did not authorize U1A. |
 
-The installed skill catalog influenced the process even though Mandem did not explicitly name
-Compound Engineering. The harness instructions require Codex to use a skill when the task clearly
-matches its description. As a result, the presence and wording of installed skills changed the
-default execution process.
+Codex selected matching installed skills because its system instructions required it to do so.
+Therefore, the installed skills' availability and descriptions affected the session's default
+process even though Mandem did not explicitly name Compound Engineering.
 
 ## Skills used
 
 ### Skills executed
 
-| Skill | Why the harness selected it | Effect on the work |
+| Skill | Why the root agent selected it | Effect on the work |
 | --- | --- | --- |
 | `write-clearly` | `CLAUDE.md` requires it for all repository prose. | Controlled chat updates, plan edits, issue comments, commit messages, and PR descriptions. |
 | `compound-engineering:ce-work` | The operator approved execution of a concrete, self-contained child ExecPlan. | Supplied the end-to-end implementation workflow and shipping tail. |
 | `compound-engineering:ce-worktree` | Both repository rules and the skill require isolated implementation work. | Led to separate U1C implementation and U1A revalidation worktrees. |
-| `compound-engineering:ce-simplify-code` | The implementation reached a green state and needed a behavior-preserving cleanup pass. | Produced three small simplifications before final review. |
-| `compound-engineering:ce-code-review` | The approved plan required independent correctness and maintainability review. | Produced two structured review rounds and test-first repairs. |
+| `compound-engineering:ce-simplify-code` | The full tests had passed, and the worker needed a behavior-preserving cleanup pass. | The worker made three small simplifications before final review. |
+| `compound-engineering:ce-code-review` | The approved plan required independent correctness and maintainability review. | The reviewers completed two structured review rounds, and the worker made test-first repairs. |
 | GitHub general orientation skill | The task involved issue and PR state. | Supplied repository and PR handling guidance. |
 
 ### Skills inspected but not executed
 
 | Skill | Decision |
 | --- | --- |
-| `compound-engineering:ce-compound` | The harness evaluated whether to add a `docs/solutions/` learning. It decided that regression tests and the published architecture standard captured the reusable lesson more directly, so it did not create another document. |
+| `compound-engineering:ce-compound` | The root agent evaluated whether to add a `docs/solutions/` learning. It decided that regression tests and the published architecture standard captured the reusable lesson more directly, so it did not create another document. |
 
 ### Skills not used
 
-The harness did not invoke the full autonomous `lfg` pipeline. The operator approved a bounded
+The root agent did not invoke the full autonomous `lfg` pipeline. The operator approved a bounded
 ExecPlan, and Mandem's rules required exact authorization, living-plan maintenance, independent
-review, and controlled merge decisions. The harness therefore orchestrated those steps directly.
+review, and controlled merge decisions. The root agent therefore orchestrated those steps directly.
 
 It also did not use `ce-babysit-pr`. PR monitoring was short-lived and synchronous in this session,
-and the harness completed the review and merge sequence without a continuing watch loop.
+and the root agent completed the review and merge sequence without a continuing watch loop.
 
 ## Agents used
 
@@ -97,13 +93,13 @@ post-merge verification, issue state, and U1A revalidation.
 | --- | --- | --- | --- |
 | Root orchestrator | `/root` | Bind approval, authorize the plan, dispatch work, manage reviews, merge exact heads, validate `main`, update issues, and revalidate U1A. | Completed the workflow and preserved the U1A authorization boundary. |
 | U1C implementation worker | `/root/implement_u1c` (`Helmholtz`) | Execute the complete authorized U1C child ExecPlan in the implementation worktree using TDD; commit, push, and open PR #13 without merging. | Implemented U1C and returned final head `686d4e2`. |
-| U1C review worker | `/root/review_u1c_final` (`Boyle`) | Review the implementation independently. | Contributed to the review and repair cycle recorded in the U1C plan. |
+| U1C review worker | `/root/review_u1c_final` (`Boyle`) | Review the implementation independently. | Performed an independent U1C review; the U1C plan records its findings and the subsequent repairs. |
 | U1C exact-head verifier | `/root/verify_u1c_clean` (`Dalton`) | Verify the exact final PR head, including the living-record-only final commit. | Reported CLEAN at `686d4e2`; confirmed code, tests, package metadata, and instructions had not changed since the reviewed code head. |
 | U1A revalidation reviewer | `/root/review_u1a_revalidation` | Perform read-only clean-room review of the revised U1A plan against corrected U1C. | Found four specification defects across successive rounds; reported CLEAN after repair. |
 
-The root agent supplied the implementation worker with the complete authorized child ExecPlan as
-its sole implementation authority. The review agents received read-only, bounded assignments.
-No agent received permission to merge.
+The root agent gave the implementation worker the complete authorized child ExecPlan as its only
+implementation instructions. The review agents received read-only, bounded assignments. No agent
+received permission to merge.
 
 ## Orchestration timeline
 
@@ -137,10 +133,8 @@ The root agent then dispatched the U1C implementation worker. This followed `CLA
 
 ### 3. Ran red-green implementation
 
-The worker first produced seven intended failures:
-
-- six architecture-checker behavior groups; and
-- the missing package binaries.
+The worker first ran seven intended failing cases: six architecture-checker behavior groups and one
+package-binary contract.
 
 It then implemented:
 
@@ -154,17 +148,17 @@ The worker opened draft PR #13. The root did not merge at this point.
 
 ### 4. Simplified the green implementation
 
-The `ce-simplify-code` pass made three behavior-preserving changes:
+During the `ce-simplify-code` pass, the worker made three behavior-preserving changes:
 
 - reused `isExcludedAuthoredPath`;
 - precomputed directory prefixes;
 - tokenized each source file once.
 
-The full test gate remained green.
+The full test suite still passed.
 
 ### 5. Ran independent review and repair loops
 
-The first structured code review found four important gaps:
+The first structured reviewer found four important gaps:
 
 1. a regular-expression literal could hide direct I/O;
 2. lexical cases were incomplete;
@@ -173,7 +167,7 @@ The first structured code review found four important gaps:
 
 The worker repaired each finding test-first.
 
-The next review found three more gaps:
+The next reviewer found three more gaps:
 
 1. `/[//]/` could still hide direct I/O;
 2. module test paths incorrectly received production I/O rules;
@@ -190,8 +184,8 @@ not change code, tests, package metadata, or implementation instructions.
 
 ### 6. Chose the Learn artifact
 
-The workflow required one Learn step. The root agent inspected `ce-compound` and considered a new
-`docs/solutions/` document. It decided against one because:
+The approved U1C plan required one Learn step. The root agent inspected `ce-compound` and considered
+a new `docs/solutions/` document. It decided against one because:
 
 - the regression tests directly encoded every silent-pass case; and
 - `docs/architecture/architecture-standard-v1.md` published the durable rule.
@@ -204,7 +198,8 @@ plugin action.
 The root agent updated PR #13 with the final evidence and a post-deploy validation section, marked
 it ready, and recorded the review checkpoint in issue `5717221`.
 
-It merged exact head `686d4e2` as `27d4abe`, updated local `main`, and ran:
+After the root agent selected exact head `686d4e2`, GitHub merged it as `27d4abe`. The root agent
+then updated local `main` and ran:
 
 ```bash
 bun run check
@@ -307,10 +302,10 @@ bun run build
 bunx vitest run <focused-test>
 ```
 
-One fresh worktree initially lacked installed dependencies. `bun run check` caused `bunx` to resolve
-an ambient TypeScript version and fail. The root agent recognized the known condition, ran
-`bun install --frozen-lockfile`, confirmed `bun.lock` was unchanged, and reran the gate
-successfully.
+One fresh worktree initially lacked installed dependencies. When the root agent ran
+`bun run check`, Bun used `bunx` to resolve an ambient TypeScript version and the command failed.
+The root agent identified missing dependencies as the cause, ran `bun install --frozen-lockfile`,
+confirmed `bun.lock` was unchanged, reran the full test suite, and confirmed that it passed.
 
 ### Git-native issue operations
 
@@ -336,7 +331,7 @@ gh pr view <number> --json ...
 gh pr create --base main --head <branch> --title <title> --body <body>
 ```
 
-It verified exact PR heads before merge and recorded the resulting merge SHAs. The session used
+It verified exact PR heads before merge and recorded the resulting merge SHAs. The root agent used
 GitHub's merge operation only after independent review and exact-head validation.
 
 ### Harness orchestration tools
@@ -374,28 +369,29 @@ matching skill procedures
 root-agent judgment for choices not fixed above
 ```
 
-Installed skills supplied procedures, but they did not expand authorization. For example,
-`ce-work` described an end-to-end workflow, but the U1C plan defined what could be implemented.
-Likewise, the presence of `lfg` did not permit the harness to ship unrelated work.
+The root agent treated installed skills as procedures. It did not use them to expand the approved
+scope. For example, `ce-work` described an end-to-end workflow, but the U1C plan defined what the
+worker could implement. Likewise, the root agent did not use `lfg` to ship unrelated work.
 
 ## Alignment with Mandem's goals
 
 ### Strong alignment
 
-- The harness bound approval to an exact commit and plan hash.
+- The root agent bound approval to an exact commit and plan hash.
 - The worker received one complete, authorized child plan.
-- Work happened in isolated worktrees.
-- Implementation followed red-green testing.
+- The root agent and worker used isolated worktrees.
+- The worker implemented through red-green testing.
 - Independent reviewers found defects that ordinary green tests had missed.
 - The worker repaired review findings test-first.
-- The harness verified the final PR head after living-record updates.
-- Durable plans and issues recorded decisions, surprises, evidence, and outcomes.
+- The root agent verified the final PR head after living-record updates.
+- The plans and issues contain decisions, surprises, evidence, and outcomes.
 - The root agent verified the merge on `main`.
-- The harness stopped at the U1A authorization boundary.
+- The root agent stopped at the U1A authorization boundary.
 
 ### Process supplied by plugins rather than Mandem
 
-Mandem requires isolation, TDD, review, and Learn, but it does not currently prescribe:
+Mandem's repository rules require isolation, TDD, review, and a Learn step, but they do not
+currently prescribe:
 
 - a named simplification pass after green tests;
 - the exact `ce-code-review` review structure;
@@ -439,8 +435,8 @@ The following practices do not depend on the Compound Engineering plugin:
 
 ## Recommended repository changes
 
-If Mandem wants this process regardless of installed plugins, it should document the following in
-repository-owned instructions:
+If Mandem's maintainers want this process regardless of installed plugins, they should document the
+following in repository-owned instructions:
 
 - the required review roles and severity scale;
 - whether every implementation gets a post-green simplification pass;
@@ -473,5 +469,5 @@ session:
     merge: "<sha>"
 ```
 
-This would let Mandem compare intended and observed process without reconstructing a chat session.
-
+This would let maintainers compare intended and observed process without reconstructing a chat
+session.
