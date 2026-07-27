@@ -62,10 +62,11 @@ implementation changes and pass only after the checker detects the intended viol
   `git archive` before and after full verification.
 - [x] (2026-07-27 19:00Z) Ran the complete local verification contract. `bun run check` passed
   20 tests, the build passed, and all four executable probes returned the required output.
-- [ ] (2026-07-27 19:35Z) Applied three behavior-preserving simplification findings from PR
+- [x] (2026-07-27 19:40Z) Applied three behavior-preserving simplification findings from PR
   review: shared authored-path exclusions, precomputed required-directory presence, and one lexical
-  tokenization per included file. Typecheck, lint, and 15 focused tests pass; full exact-head
-  verification, archive proof, commit, and push remain.
+  tokenization per included file. At repair commit
+  `013c7999a4ec62e7de5251a2c1d2a2d4a876790e`, typecheck, lint, 15 focused tests, 20 full tests,
+  the exact-SHA archive/install proof, build, and four binary probes passed with Bun 1.3.14.
 
 ## Surprises & Discoveries
 
@@ -210,6 +211,12 @@ built from the candidate's `git archive`, found executable `package/dist/mandem`
 `package/dist/mandem-server`, and invoked both installed binaries in an empty Bun consumer. The
 implementation PR URL, final head, independent review, merge, and post-merge result remain for
 the PR and landing workers.
+
+Simplification outcome (2026-07-27): PR review produced one reuse, one quality, and one efficiency
+repair, all applied without changing rule output or package behavior. The executor skipped two
+broader suggestions: restructuring the lexical scanner and adding concurrent filesystem traversal.
+Those changes exceeded the three requested findings and would increase the proof surface. Full
+verification and clean archive installation passed on the repair commit.
 
 ## Context and Orientation
 
@@ -562,6 +569,10 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Operator-approved PR head: 75817d04b68cc29323ab1eaa6d9fdcec00d47fa0
     Operator-approved plan SHA-256: 1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231
     Operator approval recorded in issue: 2026-07-27
+
+    Simplification repair: 013c7999a4ec62e7de5251a2c1d2a2d4a876790e
+    Simplification verification: Bun 1.3.14; 15 focused and 20 full tests passed
+    Simplification archive proof: both executable entries installed and invoked successfully
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
