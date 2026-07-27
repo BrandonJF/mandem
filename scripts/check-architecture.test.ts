@@ -32,6 +32,10 @@ describe("architecture analyzer", () => {
     ]));
   });
 
+  it("does not treat the module index README as a module", () => {
+    expect(analyzeRepositoryFiles([{ path: "src/modules/README.md", text: "# Modules" }]).violations).toEqual([]);
+  });
+
   it("returns exit 1 and stable findings for the malformed fixture", () => {
     try {
       execFileSync("bun", ["scripts/check-architecture.ts", "tests/fixtures/architecture/malformed"], { encoding: "utf8" });

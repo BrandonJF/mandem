@@ -991,7 +991,20 @@ external sources.
 - [x] (2026-07-27) The operator approved exact plan revision
   `148819ea580606ed2be81a5bec58072471da9dba`; set `execution_authorized: true` without changing
   implementation scope.
-- [ ] Dispatch U1A from an isolated implementation worktree.
+- [x] (2026-07-27) Created isolated worktree
+  `/home/brandonjf/dev/work/mandem-worktrees/u1a-implementation` on
+  `feat/u1a-quality-gates` from authorized plan merge
+  `94d53d8f7c0be165f9b2d8f2fc5cdf4ec5b5a787`. Dispatched Milestones 1–3 to a bounded
+  implementation worker with the complete approved plan.
+- [x] (2026-07-27 21:10Z) Implemented and verified Milestones 1–3. Added the pure v1
+  documentation and authored-source policy, stable `DOC-*` catalog, in-memory policy tests,
+  filesystem and Git snapshot adapters, changed-path application ports, and full/revision/staged
+  CLI entrypoints. The initial documentation-catalog test failed with all five missing `DOC-*`
+  identifiers; the focused suite now passes 31 tests. `bunx tsc --noEmit`, focused ESLint, `bun run
+  architecture:check`, `bun scripts/check-documentation.ts --mode full`, and `bun
+  scripts/check-authored-files.ts --mode full` also pass.
+- [ ] Implement and verify Milestones 4–6.
+- [ ] Integrate Milestone 7, complete review and Learn, and open the implementation PR.
 
 ## Surprises & Discoveries
 
@@ -1031,6 +1044,17 @@ external sources.
   Evidence: merge `27d4abe1a2815bfef1bec56c71bc6d90880ef035` added the three public
   repository-policy helpers, `ARCH-UNSCOPED-TYPESCRIPT`, package entrypoint contracts, and focused
   architecture regression tests. U1A must extend these interfaces instead of recreating them.
+
+- Observation: Vitest's Node-compatible worker does not provide the Bun global even though Bun runs
+  the test command.
+  Evidence: the first filesystem and Git adapter tests failed with `ReferenceError: Bun is not
+  defined` from `Bun.file` and `Bun.spawn`. The adapters now use Node filesystem and child-process
+  APIs inside the infrastructure layer; the same tests pass under Bun's Vitest runner.
+
+- Observation: PR #16 added `.agents/OPERATING.md` after the reviewed U1A plan was authored, and
+  each skill now contains generated `agents/openai.yaml` metadata.
+  Evidence: the root README must link `.agents/OPERATING.md` for the repository navigation chain;
+  `openai.yaml` is provider metadata rather than maintained Markdown documentation.
 
 ## Decision Log
 
@@ -1075,6 +1099,19 @@ external sources.
   living-record update does not change its implementation instructions.
   Date/Author: 2026-07-27 / Brandon and Codex orchestrator
 
+- Decision: Add `.agents/OPERATING.md` to `documentationPolicyV1.rootIndexEntries` and exclude
+  `.agents/skills/*/agents/openai.yaml` from documentation scope.
+  Rationale: The shared operating contract is a maintained root document and must be discoverable.
+  Generated provider metadata is not Markdown authoring guidance and D2 limits the skill index
+  requirement to maintained Markdown files.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Keep the existing `architectureRules` export architecture-only and publish the expanded
+  catalog through `repositoryRules` and `documentationRules`.
+  Rationale: U1C contract tests treat `architectureRules` as the exact `ARCH-*` catalog. Separate
+  exported views add `DOC-*` rules without changing that compatibility surface.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1084,6 +1121,12 @@ on 2026-07-27.
 
 Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
 exact plan revision. No dependency remains before implementation.
+
+Milestones 1–3 now provide pure deterministic policies and repository adapters. The focused policy,
+snapshot, CLI, and existing architecture suite passes 31 tests. The next implementation worker can
+build the README navigation baseline in Milestone 4; the full documentation audit already passes
+against the current checked-out baseline, but `bun run check` will include the new checks only in the
+later package-gate integration milestone.
 
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
@@ -1129,3 +1172,8 @@ Clean-room refresh note (2026-07-25): A fresh Terra reviewer approved the plan v
 `2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339`. The reviewer found no
 P0/P1 blockers. The durable verdict is
 `docs/plans/reviews/2026-07-25-u1a-clean-room-refresh.md`; implementation remains unauthorized.
+
+Implementation note (2026-07-27): Completed Milestones 1–3 without adding README baseline files,
+Git hooks, provider adapters, workflow configuration, or ruleset configuration. Recorded the
+post-plan shared operating contract and generated provider metadata scope decision above. The next
+approved milestones remain 4–6.

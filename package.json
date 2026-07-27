@@ -10,6 +10,11 @@
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "architecture:check": "bun scripts/check-architecture.ts",
+    "docs:audit": "bun scripts/check-documentation.ts --mode full",
+    "docs:check": "bun scripts/check-documentation.ts --mode changed",
+    "docs:revision": "bun scripts/check-documentation.ts --mode revision",
+    "authored-files:check": "bun scripts/check-authored-files.ts --mode full",
+    "authored-files:revision": "bun scripts/check-authored-files.ts --mode revision",
     "preflight:bun": "bun scripts/preflight-bun.ts",
     "typecheck": "bunx tsc --noEmit",
     "lint": "bunx eslint .",
