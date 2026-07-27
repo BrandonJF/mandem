@@ -73,6 +73,11 @@ implementation changes and pass only after the checker detects the intended viol
   scanner repair. At review-repair commit
   `0afb33726e7b369f03cea7213f81df068c1c7ed2`, the exact-SHA archive/install proof, full check,
   build, and four binary probes passed.
+- [ ] (2026-07-27 20:10Z) Applied all three validated findings from final review run
+  `20260727-145419-d8f830ce`. The exact `/[//]/` regression false-passed red, then 21 focused
+  tests passed after regex-literal parsing, production-test exclusion, and allowed-location fixture
+  coverage. The full 26-test check, build, and four binary probes pass. Commit, exact-head archive
+  proof, and push remain.
 
 ## Surprises & Discoveries
 
@@ -121,6 +126,12 @@ implementation changes and pass only after the checker detects the intended viol
   Response: Comment recognition now requires the opening slash to be unescaped; isolated tests
   retain line-comment, block-comment, string, template-text, and template-expression behavior for
   each declared direct I/O API.
+
+- Observation: Escape-aware comment detection still cannot distinguish `//` inside a regex
+  character class from a line comment.
+  Evidence: `const slash = /[//]/; const socket = Bun.connect({});` produced no I/O finding.
+  Response: The lexical scanner now consumes JavaScript regex literals, including escapes,
+  character classes, and flags, before it considers comment delimiters.
 
 ## Decision Log
 
@@ -193,6 +204,12 @@ implementation changes and pass only after the checker detects the intended viol
   matcher or the reported regex.
   Rationale: An escaped slash cannot begin a JavaScript comment. Checking that invariant preserves
   all existing literal masking and keeps later executable code visible for every direct I/O API.
+  Date/Author: 2026-07-27 / Codex
+
+- Decision: Treat any `tests` path segment under `src/` as authored test code, not production code.
+  Rationale: Test files still require file overviews and reject explicit `any`, but their process,
+  filesystem, and network calls exercise production boundaries and must not receive production-only
+  dependency or I/O findings.
   Date/Author: 2026-07-27 / Codex
 
 - Decision: Promote U1C to `clean-room-approved` without authorizing implementation.

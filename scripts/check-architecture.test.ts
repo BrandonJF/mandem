@@ -170,6 +170,15 @@ describe("architecture analyzer", () => {
     ]));
   });
 
+  it("retains prohibited IO after a regex character class containing slashes", () => {
+    const result = analyzeRepositoryFiles([
+      { path: "src/regex-class-then-io.ts", text: `${overview}const slash = /[//]/; const socket = Bun.connect({});\nexport { slash, socket };` }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path: "src/regex-class-then-io.ts" })
+    ]));
+  });
+
   it("isolates literal and executable coverage for every direct IO API", () => {
     const cases = [
       { name: "bun-connect", token: "Bun.connect", expression: "Bun.connect({})" },
@@ -196,6 +205,40 @@ describe("architecture analyzer", () => {
         expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
       ]));
     }
+  });
+
+  it("allows every direct IO API in infrastructure, composition, and entrypoints", () => {
+    const cases = [
+      { name: "bun-connect", expression: "Bun.connect({})" },
+      { name: "process-stdin", expression: "process.stdin" },
+      { name: "process-stdout-write", expression: 'process.stdout.write("x")' }
+    ] as const;
+    for (const fixture of cases) {
+      const paths = [
+        `src/modules/runtime/infrastructure/${fixture.name}.ts`,
+        "src/modules/runtime/api/composition.ts",
+        "src/cli/main.ts"
+      ];
+      for (const path of paths) {
+        const findings = analyzeRepositoryFiles([{ path, text: `${overview}${fixture.expression};` }]).violations;
+        expect(findings, `${fixture.name} at ${path}`).not.toEqual(expect.arrayContaining([
+          expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
+        ]));
+      }
+    }
+  });
+
+  it("keeps authored checks but excludes module test paths from production IO rules", () => {
+    const path = "src/modules/runtime/tests/io.test.ts";
+    const result = analyzeRepositoryFiles([
+      { path, text: `${overview}const socket: any = Bun.connect({});\nexport { socket };` }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-NO-EXPLICIT-ANY", path })
+    ]));
+    expect(result.violations).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-IO-PLACEMENT", path })
+    ]));
   });
 
   it("rejects vendor IO imports from application files", () => {

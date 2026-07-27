@@ -11,5 +11,5 @@ export function isIncludedAuthoredTypeScriptPath(path: string): boolean {
 }
 
 export function isProductionTypeScriptPath(path: string): boolean {
-  return typeScriptPath.test(path) && path.startsWith("src/");
+  return typeScriptPath.test(path) && path.startsWith("src/") && !/(?:^|\/)tests(?:\/|$)/.test(path);
 }

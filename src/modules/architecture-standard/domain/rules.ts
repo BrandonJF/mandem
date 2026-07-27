@@ -19,10 +19,13 @@ function specifiers(text: string): string[] { return [...text.matchAll(importExp
 function resolveSpecifier(filePath: string, specifier: string): string | undefined { if (specifier.startsWith("@/")) return `src/${specifier.slice(2)}`; if (!specifier.startsWith(".")) return undefined; return normalize(`${dirname(filePath)}/${specifier}`).replaceAll("\\", "/").replace(/\.(?:ts|tsx|js|jsx)$/, ""); }
 function physicalLines(text: string): number { const normalized = text.replaceAll("\r\n", "\n"); return normalized === "" ? 0 : normalized.replace(/\n$/, "").split("\n").length; }
 function isEscaped(text: string, index: number): boolean { let backslashes = 0; for (let cursor = index - 1; cursor >= 0 && text[cursor] === "\\"; cursor -= 1) backslashes += 1; return backslashes % 2 === 1; }
+function canStartRegex(tokens: string): boolean { const trimmed = tokens.trimEnd(); if (trimmed === "") return true; if (/[=(:,[!&|?{};+\-*%^~<>]$/.test(trimmed)) return true; return /\b(?:return|throw|case|delete|void|typeof|instanceof|in|of|yield|await)$/.test(trimmed); }
+function regexEnd(text: string, start: number): number { let index = start + 1; let inCharacterClass = false; while (index < text.length) { const current = text[index] ?? ""; if (current === "\\") { index += 2; continue; } if (current === "[") inCharacterClass = true; else if (current === "]") inCharacterClass = false; else if (current === "/" && !inCharacterClass) { index += 1; while (/[a-z]/i.test(text[index] ?? "")) index += 1; return index; } if (current === "\n" || current === "\r") return start + 1; index += 1; } return start + 1; }
 function codeTokens(text: string): string {
   let result = ""; let index = 0;
   while (index < text.length) {
     const current = text[index] ?? ""; const next = text[index + 1] ?? "";
+    if (current === "/" && next !== "/" && next !== "*" && canStartRegex(result)) { const end = regexEnd(text, index); if (end > index + 1) { index = end; result += " "; continue; } }
     if (current === "/" && next === "/" && !isEscaped(text, index)) { index = text.indexOf("\n", index + 2); if (index < 0) break; result += "\n"; index += 1; continue; }
     if (current === "/" && next === "*" && !isEscaped(text, index)) { const end = text.indexOf("*/", index + 2); index = end < 0 ? text.length : end + 2; result += " "; continue; }
     if (current === "\"" || current === "'") { const quote = current; index += 1; while (index < text.length && text[index] !== quote) index += text[index] === "\\" ? 2 : 1; index += 1; result += " "; continue; }
