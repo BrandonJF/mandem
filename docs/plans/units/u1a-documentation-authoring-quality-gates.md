@@ -72,9 +72,10 @@ around the hook. Mandem must strengthen this pattern: non-interactive enforcemen
 to a warning. Provider hooks must call shared policy; they may not contain policy of their own.
 Hooks may not create commits, and every hook must be testable in a disposable repository.
 
-A “documentation directory” is an in-scope directory containing a maintained Markdown file or an
-in-scope child documentation directory. An “index” is that directory's `README.md`. A “navigation
-chain” means each child index is linked from its parent index until the root README is reached. A
+A “documentation directory” is an in-scope directory containing a maintained `.md`, `.yaml`, or
+`.yml` file or an in-scope child documentation directory. An “index” is that directory's
+`README.md`. A “navigation chain” means each child index is linked from its parent index until the
+root README is reached. A
 “provider hook” is an optional Claude Code, Codex, or future-agent integration that invokes a shared
 Mandem command after a file write. A “Git hook” is a repository-controlled program Git invokes
 before commit or push. Provider hooks improve feedback speed. Git hooks and `bun run check` enforce
@@ -125,9 +126,10 @@ covered by a test; scripts and hooks may not carry private exclusion lists.
 
 Define `documentationPolicyV1` in
 `src/modules/architecture-standard/domain/repository-policy.ts`. Its recursively indexed root is
-`docs/`: every directory at or below `docs/` that contains Markdown or an indexed child directory
-requires a local README, every non-README Markdown file must be linked from that README, and every
-child directory README must be linked from its parent's README.
+`docs/`: every directory at or below `docs/` that contains a maintained `.md`, `.yaml`, or `.yml`
+file or an indexed child directory requires a local README; every maintained non-README file must
+be linked from that README; and every child directory README must be linked from its parent's
+README. A YAML-only directory is therefore in scope and requires its own README.
 
 The manifest also declares special indexes without requiring READMEs throughout their parent
 paths. Root `README.md` must link `AGENTS.md`, `CLAUDE.md`, `PLANS.md`, `docs/README.md`,
@@ -175,7 +177,14 @@ tables overwriting useful context and keeps hooks free of hidden mutations. A la
 
 ### D4. `@fileoverview` is enforced from one exact authored-source manifest
 
-Define `authoredSourcePolicyV1` beside the documentation policy. Include `src/**/*.ts`,
+Extend the corrected authored-source policy in
+`src/modules/architecture-standard/domain/repository-policy.ts` without removing its existing
+`isExcludedAuthoredPath`, `isIncludedAuthoredTypeScriptPath`, or
+`isProductionTypeScriptPath` exports. Define `authoredSourcePolicyV1` beside those helpers and the
+documentation policy. Preserve their decisions for every path currently covered by U1C, and
+intentionally broaden `isExcludedAuthoredPath` to return true for the ignored complete segments
+listed below. The helpers, traversal, and evaluators must consume one shared manifest rather than
+duplicate path lists. Include `src/**/*.ts`,
 `src/**/*.tsx`, `scripts/**/*.ts`, `scripts/**/*.tsx`, `tests/**/*.ts`, `tests/**/*.tsx`, and root
 `*.config.ts`/`*.config.tsx`. This includes current CLI/server files, both modules, checker and hook
 scripts, contract tests, `eslint.config.ts`, and `vitest.config.ts`. Exclude any complete segment
@@ -189,8 +198,10 @@ at least one non-placeholder word before `*/`. Case-insensitive placeholder-only
 ordinary comment, or in a string does not pass. Test code is authored code; only disposable fixture
 and declaration files receive the explicit exceptions above.
 
-The existing architecture checker and tests consume this manifest. The U1 corrective plan must land
-first so U1A adds coverage to a corrected kernel rather than creating conflicting repairs.
+The existing architecture checker and tests consume this manifest. U1 correction landed in merge
+`27d4abe1a2815bfef1bec56c71bc6d90880ef035`; U1A must preserve its package lifecycle, authored-path
+scope, production-path scope, direct-I/O lexical cases, and allowed CLI/server composition
+locations.
 
 ### D5. Git hook inputs and classifications are normative
 
@@ -233,9 +244,17 @@ cannot be resolved, run the full gate; never skip.
 
 A change is documentation-only only when every changed path is `README.md`, `AGENTS.md`,
 `CLAUDE.md`, `PLANS.md`, ends in `.md`, or begins `docs/`. Documentation-only invokes
-`bun run docs:audit` and `bun run authored-files:check`. Any package, lockfile, source, test,
-script, hook, provider configuration, workflow, or other path invokes `bun run check`. Hooks never
-format, stage, commit, amend, push, or delete files.
+`bun run docs:revision -- --revision <local-sha>` and
+`bun run authored-files:revision -- --revision <local-sha>` for every distinct
+nonzero outgoing local SHA. Any package, lockfile, source, test, script, hook, provider
+configuration, workflow, or other path invokes `bun run check:revision -- <local-sha>` for every
+distinct nonzero outgoing local SHA. `check:revision` adds a detached worktree for that exact commit
+under a fresh temporary directory, runs `bun install --frozen-lockfile` and `bun run check` there,
+and removes the worktree in a `finally` path. The detached worktree retains access to the common Git
+objects required by the package-entrypoint contract. The command verifies removal and runs
+`git worktree prune` before returning; setup, validation, or cleanup failure exits `2`. It never
+evaluates or installs into the operator's checkout and never creates or changes a branch or ref.
+Hooks never format, stage, commit, amend, push, or delete repository files or refs.
 
 Hook integration tests create temporary Git repositories and mock only external boundaries. They
 exercise the actual checked-in entrypoints, paths with spaces, initial branches without upstreams,
@@ -429,12 +448,14 @@ Extend `src/modules/architecture-standard/domain/types.ts` with:
       readonly authoredSourceExcludes: readonly string[];
     }
 
-Create `src/modules/architecture-standard/domain/repository-policy.ts` exporting
-`documentationPolicyV1`, `authoredSourcePolicyV1`,
+Extend the existing `src/modules/architecture-standard/domain/repository-policy.ts`, preserving its
+public `isExcludedAuthoredPath`, `isIncludedAuthoredTypeScriptPath`, and
+`isProductionTypeScriptPath` exports, and add `documentationPolicyV1`, `authoredSourcePolicyV1`,
 `evaluateDocumentation(snapshot, policy): AnalysisResult`, and
 `evaluateAuthoredSources(snapshot, policy): AnalysisResult`. Extend `domain/rules.ts` with
 `DOC-LOCAL-README`, `DOC-LOCAL-INDEX`, `DOC-PARENT-INDEX`, `DOC-BROKEN-LOCAL-LINK`,
-`DOC-UNSCOPED-DOCUMENT`, and `ARCH-UNSCOPED-TYPESCRIPT`. The existing `RepositoryFile`,
+and `DOC-UNSCOPED-DOCUMENT`; preserve the existing `ARCH-UNSCOPED-TYPESCRIPT` catalog entry and
+evaluation behavior. The existing `RepositoryFile`,
 `RuleViolation`, and `AnalysisResult` remain the common value types.
 
 Create `src/modules/architecture-standard/application/repositories/repository-snapshot.ts` with:
@@ -519,7 +540,10 @@ The package script names and targets are fixed:
 
     "docs:audit": "bun scripts/check-documentation.ts --mode full"
     "docs:check": "bun scripts/check-documentation.ts --mode changed"
-    "authored-files:check": "bun scripts/check-authored-files.ts"
+    "docs:revision": "bun scripts/check-documentation.ts --mode revision"
+    "authored-files:check": "bun scripts/check-authored-files.ts --mode full"
+    "authored-files:revision": "bun scripts/check-authored-files.ts --mode revision"
+    "check:revision": "bun scripts/check-revision.ts"
     "hooks:install": "bun scripts/hooks/install.ts"
     "hooks:check": "bun scripts/hooks/install.ts --check"
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
@@ -535,11 +559,19 @@ typecheck, lint, and tests.
     --mode full
     --mode changed --base-ref <git-ref> [--head-ref <git-ref>]
     --mode staged
+    --mode revision --revision <git-ref>
 
 Full mode reads the working tree. Changed mode requires `--base-ref`, defaults head to `HEAD`, reads
 name-status entries including old and new rename paths, and analyzes the head revision snapshot
 rather than the current checkout. Staged mode reads the virtual staged snapshot from D5. Missing
 values, unknown flags, or unresolvable refs exit `2`.
+
+`scripts/check-authored-files.ts` accepts exactly `--mode full`, `--mode staged`, or
+`--mode revision --revision <git-ref>`. Full mode reads the working tree, staged mode reads the
+virtual staged snapshot, and revision mode reads only the selected Git tree. Missing values,
+unknown flags, or unresolvable refs exit `2`. `scripts/check-revision.ts` accepts exactly one
+nonzero revision, verifies it resolves to a commit, and implements the disposable detached-worktree
+flow specified in D5; worktree setup, install, gate, or cleanup failures exit `2`.
 
 Pre-push analyzes every distinct nonzero outgoing `local-sha` against its calculated base. It never
 uses the working tree for an outgoing commit. Tests must include a dirty checkout whose outgoing SHA
@@ -634,8 +666,9 @@ before implementation.
 
 Create pure in-memory tests before implementation. The first failing matrix covers a nested
 document without a local README, a local README that omits its sibling document, a child README not
-linked by its parent, a broken relative link, anchor/query normalization, excluded paths, and a
-valid root-to-leaf chain. Add authored-file cases for `src/`, `scripts/`, root TypeScript config,
+linked by its parent, a YAML-only documentation directory, a broken relative link, anchor/query
+normalization, excluded paths, and a valid root-to-leaf chain. Add authored-file cases for `src/`,
+`scripts/`, root TypeScript config,
 tests, optional shebangs, misplaced comments, placeholder comments, fixtures, declarations, and
 generated paths. The meaningful red state is an expected stable `DOC-*` or `ARCH-FILEOVERVIEW`
 finding that the current implementation does not produce.
@@ -667,7 +700,11 @@ configuration, Git, or unexpected failures.
 
 Add integration fixtures that exercise the real filesystem and a disposable Git history. Include
 added, modified, renamed, and deleted README/doc paths, a dirty checkout whose selected revision is
-clean, and a non-current local ref. Confirm failure output names the repair in plain language,
+clean, a non-current local ref, and the actual pre-push entrypoint selecting both documentation-only
+revision commands and the disposable full-revision gate. The full-revision integration test uses a
+real disposable Git repository and proves the package-entrypoint contract can read the selected
+commit's Git objects, the operator checkout remains dirty and untouched, and no temporary worktree
+registration remains after success or failure. Confirm failure output names the repair in plain language,
 remains bounded, and follows the selected revision rather than the checkout.
 
 This milestone is complete when the implementer can run both modes against the Mandem repository
@@ -803,6 +840,8 @@ Before handoff, run:
     bun install --frozen-lockfile
     bun run check
     bun run build
+    bunx vitest run tests/contract/package-entrypoints.test.ts
+    bunx vitest run src/modules/architecture-standard/tests/rules.test.ts
     git issue fsck
     bun run repository-ruleset:check
     git status --short
@@ -933,8 +972,24 @@ external sources.
 - [x] (2026-07-25 20:50Z) A fresh Terra reviewer approved commit `b73e960` and plan SHA-256
   `2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339` with no P0/P1
   blockers.
+- [x] (2026-07-27) Completed work item `5717221` in merge
+  `27d4abe1a2815bfef1bec56c71bc6d90880ef035` and revalidated U1A against the corrected kernel.
+  Updated the plan to extend, rather than recreate, the authored-source policy and added focused
+  regression gates for the corrected architecture and package contracts. This edit supersedes the
+  prior clean-room approval; implementation remains unauthorized pending a fresh review.
+- [x] (2026-07-27) The first post-U1C clean-room review found two P1 contract gaps and one P2
+  ambiguity: pre-push commands were not revision-aware, YAML-only directories were inconsistently
+  scoped, and new ignored segments conflicted with preserving the U1C helper verbatim. Repaired the
+  plan with exact revision commands, a disposable revision gate, YAML-only coverage, and an explicit
+  compatible broadening of the shared authored-source manifest.
+- [x] (2026-07-27) The second post-U1C clean-room review found one P1: an exported archive lacks
+  the Git objects required by U1C's package contract. Replaced the archive design with an exact-SHA
+  detached worktree, mandatory cleanup, and a real end-to-end regression proof.
+- [x] (2026-07-27) The final post-U1C clean-room review found no P0, P1, or P2 blockers after one
+  remaining terminology mismatch was repaired. Promoted the plan to `clean-room-approved`;
+  implementation remains unauthorized.
 - [ ] Obtain exact operator approval and set `execution_authorized: true`.
-- [ ] Complete work item `5717221`, then dispatch U1A from an isolated implementation worktree.
+- [ ] Dispatch U1A from an isolated implementation worktree.
 
 ## Surprises & Discoveries
 
@@ -970,6 +1025,11 @@ external sources.
   PostToolUse events; Claude `2.1.219` supplies Write/Edit PostToolUse input used by the pinned
   Nucleus adapter. Both can invoke the same Bun command.
 
+- Observation: U1C introduced the authored-source scope and unscoped-TypeScript rule before U1A.
+  Evidence: merge `27d4abe1a2815bfef1bec56c71bc6d90880ef035` added the three public
+  repository-policy helpers, `ARCH-UNSCOPED-TYPESCRIPT`, package entrypoint contracts, and focused
+  architecture regression tests. U1A must extend these interfaces instead of recreating them.
+
 ## Decision Log
 
 - Decision: Track the U1 correctness defects and U1A quality-gate work as separate git-native issues.
@@ -1002,6 +1062,11 @@ external sources.
   preserve one shared policy while giving either operator surface immediate feedback.
   Date/Author: 2026-07-25 / Codex orchestrator
 
+- Decision: Treat the corrected U1C repository-policy helpers as compatibility surfaces for U1A.
+  Rationale: They are already consumed by traversal and architecture evaluation. Deriving them and
+  the new policy objects from one manifest prevents scope drift while preserving verified behavior.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1009,8 +1074,15 @@ It centralizes policy, fails closed in non-interactive execution, avoids hook mu
 supports both agent vendors. Implementation remains unauthorized.
 
 After a new clean-room review approves the edited plan, obtain operator approval for the exact plan
-revision at the authority PR head. U1A still depends on the merged resolution of work item
-`5717221`.
+revision at the authority PR head. Work item `5717221` is resolved; no dependency remains before
+review, but implementation remains unauthorized.
+
+Post-U1C revalidation note (2026-07-27): Rebased the plan's assumptions on merge
+`27d4abe1a2815bfef1bec56c71bc6d90880ef035`. The corrected kernel already owns authored-source
+scope helpers and `ARCH-UNSCOPED-TYPESCRIPT`, so this revision requires U1A to preserve and derive
+those surfaces from the new manifest. Added explicit focused regression commands for the corrected
+architecture rules and package entrypoints. This instruction change supersedes the 2026-07-25
+clean-room approval; `execution_authorized` remains false.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
