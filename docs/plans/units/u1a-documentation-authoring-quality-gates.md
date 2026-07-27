@@ -5,7 +5,7 @@ program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
 promotion: clean-room-approved
-execution_authorized: true
+execution_authorized: false
 date: 2026-07-25
 ---
 
@@ -13,9 +13,11 @@ date: 2026-07-25
 
 The repository-root `PLANS.md` defines how to maintain and execute this ExecPlan. Keep
 `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current while
-work proceeds. A clean-room reviewer approved exact revision
-`148819ea580606ed2be81a5bec58072471da9dba`, the operator approved that revision, and this metadata
-update records `execution_authorized: true` without changing its implementation scope.
+work proceeds. The operator approved revision `148819ea580606ed2be81a5bec58072471da9dba`, but the
+first complete-gate run exposed a recursive revision-check design that exhausted the host's
+RAM-backed temporary filesystem and killed the agent pane. This revision supersedes that approval.
+Do not resume implementation until a clean-room reviewer approves the exact revised plan and the
+operator explicitly authorizes that reviewed revision.
 
 ## Purpose / Big Picture
 
@@ -248,13 +250,142 @@ A change is documentation-only only when every changed path is `README.md`, `AGE
 `bun run authored-files:revision -- --revision <local-sha>` for every distinct
 nonzero outgoing local SHA. Any package, lockfile, source, test, script, hook, provider
 configuration, workflow, or other path invokes `bun run check:revision -- <local-sha>` for every
-distinct nonzero outgoing local SHA. `check:revision` adds a detached worktree for that exact commit
-under a fresh temporary directory, runs `bun install --frozen-lockfile` and `bun run check` there,
-and removes the worktree in a `finally` path. The detached worktree retains access to the common Git
-objects required by the package-entrypoint contract. The command verifies removal and runs
-`git worktree prune` before returning; setup, validation, or cleanup failure exits `2`. It never
-evaluates or installs into the operator's checkout and never creates or changes a branch or ref.
-Hooks never format, stage, commit, amend, push, or delete repository files or refs.
+distinct nonzero outgoing local SHA.
+
+`check:revision` is an orchestrator, not a member of the gate it launches. It resolves the common
+Git directory, derives the canonical checkout as that directory's parent, and owns only
+`<canonical-checkout-parent>/<canonical-checkout-name>-worktrees/.verification/`. This sibling
+namespace must be ordinary persistent storage, not an assumed-safe path. Resolve the namespace
+parent's actual Linux mount through `/proc/self/mountinfo`. Accept `ext2`, `ext3`, `ext4`, `xfs`,
+`btrfs`, or `zfs`. For `overlay`, recursively resolve its `upperdir` mount and accept only when that
+backing mount is one of those persistent types; reject an absent or unreadable `upperdir`. Reject
+`tmpfs`, `ramfs`, any overlay backed by them, and every unknown filesystem with exit `2`. The
+orchestrator adds one detached worktree for the exact commit, runs
+`bun install --frozen-lockfile --cache-dir <run-directory>/bun-cache`, then runs
+`bun run check:revision-target`. It sets `TMPDIR`, `TMP`,
+and `TEMP` to a checker-owned directory inside that run so subprocess fixtures, including the
+package-entrypoint archive test, cannot return to RAM-backed `/tmp`.
+
+`bun run check:core` is the one non-test repository gate. `bun run check` composes that core with
+the full `test:run` suite. `bun run check:revision-target` composes the same core with
+`test:revision-target`, which excludes only `scripts/check-revision.test.ts`, the orchestration
+integration test. A package-script contract test walks the declared script dependency graph and
+proves neither `check:core` nor `check:revision-target` can reach `check:revision` or `bun run
+check`. `bun run check` remains the complete developer and CI gate and includes the orchestration
+test.
+
+The public `scripts/check-revision.ts` entrypoint first resolves the common Git directory and its
+real parent without creating verification state. The existing Git-owned directory supplies the
+bootstrap lock path `<git-common-dir>/mandem-revision-check.lock`; reject a missing, non-directory,
+or symlinked common Git directory. Invoke the util-linux `flock` executable with nonblocking mode,
+that lock path, and the private
+`scripts/check-revision-worker.ts` command plus the validated public arguments. This makes
+`flock` the parent of the worker and keeps the advisory lock for the worker's complete lifetime.
+Linux releases it after normal exit, `SIGKILL`, or reboot. A missing `flock` executable or lock
+acquisition failure exits `2` before the worker reads or changes verification state. No PID
+determines lock ownership. The worker has no package-script entrypoint; direct invocation is an
+unsupported internal interface. After locking, the worker validates the verification parent
+through mount information, then uses `lstat` and realpath containment on every existing
+`.verification` and `runs` component before inspecting or creating it. An absent namespace may be
+created only under the held Git-directory lock. Create `.verification/`, `fsync` its existing
+parent, create `.verification/runs/`, then `fsync` `.verification/`. The valid idle layout is the
+real `.verification/` directory containing only an empty real `runs/` directory, with no
+`active-run.json`; retain and reuse that layout after successful cleanup. Reconciliation also
+accepts the bootstrap power-loss states in order: no `.verification/`, an empty real
+`.verification/`, or `.verification/` containing only an empty real `runs/`. It completes the
+missing creation and directory `fsync` operations before proceeding. A symlinked or malformed
+component, or any other idle entry, exits `2` unchanged.
+
+Each run ID is `run-<full-40-lowercase-hex-commit>-<32-lowercase-hex-characters>`, where the final
+segment encodes exactly 16 cryptographically random bytes. Reject every other form. Its owned directory is
+`.verification/runs/<run-id>/`, its detached checkout is the nonexistent child `checkout/`, and its
+ownership marker is `.verification/runs/<run-id>/owner.json`. Before creating the run directory,
+publish `.verification/active-run.json` durably. The sole temporary name is
+`.verification/active-run.json.tmp-<run-id>`: write that same-directory regular file, `fsync` it,
+rename it to the final name, then `fsync` `.verification/`. The
+manifest and marker use the same closed JSON object with exactly these required properties and no
+others:
+
+    {
+      "schemaVersion": 1,
+      "runId": "run-<40 lowercase hex commit>-<32 lowercase hex characters>",
+      "canonicalCheckout": "<absolute canonical-checkout realpath>",
+      "commonGitDirectory": "<absolute common-Git-directory realpath>",
+      "commit": "<40 lowercase hex commit>",
+      "runDirectory": "<absolute canonical expected run-directory path>",
+      "checkoutPath": "<absolute canonical expected checkout path>",
+      "createdAt": "<UTC RFC 3339 timestamp with exactly three fractional-second digits and Z>"
+    }
+
+Every string is nonempty and matches the stated format. `runId` begins with the exact `commit`.
+`runDirectory` equals the real `runs/` parent joined with `runId`; `checkoutPath` equals
+`runDirectory` joined with the fixed `checkout` segment. The expected paths are lexical canonical
+paths, not realpaths of nonexistent entries. A marker matches its manifest only when the parsed
+objects have the same eight keys and every value is equal. Unknown, missing, duplicate, or
+wrong-typed properties fail validation. After each entry exists, validate it with `lstat`, resolve
+its realpath, and require equality with the recorded expected path before using or deleting it. After
+the manifest is durable, create and `fsync` the run directory, then publish
+`owner.json` through the sole temporary name `owner.json.tmp-<run-id>` with the same
+write-temporary, file-`fsync`, rename, and parent-directory-`fsync` protocol. Only then register the
+checkout. Never reuse a run ID or path.
+
+While holding the advisory lock, reconciliation accepts every power-loss boundary of the one
+manifested run: the exact manifest temporary file before publication; a durable manifest with
+no run directory; an empty run directory; the exact marker temporary file inside that
+directory; a durable matching marker before Git registration; a marked partial checkout with no
+registration; or a registered checkout whose marker matches and whose
+`git worktree list --porcelain` entry has the exact canonical path, `detached` state, and requested
+commit. A temporary file is removable only when its exact name, run-ID grammar, complete schema,
+canonical paths, commit, and common Git directory validate; a partial, lookalike, extra, or
+symlinked temporary fails closed unchanged with an exact manual-inspection path. Reconciliation
+removes each accepted state from newest artifact to oldest and durably removes the manifest last.
+For an exact validated Git registration,
+it runs only `git worktree remove --force <exact-checkout-path>` and verifies that exact
+registration is gone. It never runs generic `git worktree prune`. If exact removal fails, it exits
+`2` with the manifest intact and tells the operator which checker-owned path needs manual
+inspection. Any other state, including
+a malformed or mismatched file, symbolic link, nonempty unmarked directory, unexpected namespace
+entry, generated-looking unmanifested directory, branch-attached checkout, wrong commit, path
+outside `.verification/runs/`, or multiple registered verification worktrees, exits `2` without
+deleting anything. It never scans, removes, or prunes sibling agent worktrees outside
+`.verification/` and never alters any other worktree registration, including a stale one.
+
+For a marked partial checkout without Git registration, cleanup walks only the recorded expected
+checkout path. It uses `lstat` at every node, never follows a symbolic link, unlinks a symbolic link
+itself, and removes regular entries and real directories bottom-up before removing the checkout
+directory. After exact checkout removal and verification, unlink the marker and `fsync` the run
+directory; remove the run directory and `fsync` the real `runs/` parent; unlink the active manifest
+and `fsync` `.verification/`. Deleting either exact transaction temporary is followed by `fsync` of
+its parent. Simulated interruption after any deletion or directory-`fsync` must leave a state the
+next reconciliation returns to the valid idle layout.
+
+At most one revision check, one detached verification worktree, and one dependency installation
+may exist per common Git repository. The run may consume at most 8 GiB inside its owned directory.
+One watchdog samples both owned-directory usage and filesystem available space at least every 250
+milliseconds throughout worktree creation, installation, and the target gate. It terminates the
+active child process group when the run reaches 8 GiB or available space reaches the 2 GiB reserve,
+then exits `2`. It checks the same limits immediately before bootstrap, immediately before and
+after each phase, and immediately after child exit. Every child temporary and cache location,
+including Bun's install cache, is inside the owned run directory. Dependency installation has a 10-minute
+timeout and the target gate has a 20-minute timeout; timeout terminates the child process group and
+exits `2`.
+Success, quality-failure, and setup-failure paths still attempt exact cleanup in `finally`, but
+correctness does not depend on `finally`:
+`bun run revision-worktrees:reconcile` performs the same lock-protected startup reconciliation
+without launching a gate. A quality finding exits `1`; invalid input, live concurrency, unsafe
+state, resource exhaustion, setup, install, orchestration, or cleanup failure exits `2`. The
+command never evaluates or installs into the operator's checkout and never creates or changes a
+branch or ref. Hooks never format, stage, commit, amend, push, or delete repository files or refs.
+
+Revision-check integration tests prove that one invocation creates at most one detached checkout
+and launches the target gate once; the target gate cannot re-enter revision orchestration; a live
+lock rejects a concurrent invocation before checkout; an interrupted manifest and worktree are
+removed by the next invocation and by the explicit reconciler; malformed or out-of-namespace state
+fails closed; `tmpfs` and `ramfs` are rejected; the 8 GiB cap, 2 GiB reserve, and both timeouts are
+enforced; and a neighboring agent worktree remains registered and unchanged. Crash-window fixtures
+cover every accepted partial state plus a killed lock holder and a simulated reboot/PID reuse. A
+registered agent worktree, a generated-looking unmanifested directory, and every mismatched state
+remain untouched and produce exit `2`.
 
 Hook integration tests create temporary Git repositories and mock only external boundaries. They
 exercise the actual checked-in entrypoints, paths with spaces, initial branches without upstreams,
@@ -544,6 +675,11 @@ The package script names and targets are fixed:
     "authored-files:check": "bun scripts/check-authored-files.ts --mode full"
     "authored-files:revision": "bun scripts/check-authored-files.ts --mode revision"
     "check:revision": "bun scripts/check-revision.ts"
+    "check:core": "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint"
+    "check": "bun run check:core && bun run test:run"
+    "check:revision-target": "bun run check:core && bun run test:revision-target"
+    "test:revision-target": "MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD) bunx vitest run --exclude scripts/check-revision.test.ts"
+    "revision-worktrees:reconcile": "bun scripts/check-revision.ts --reconcile-only"
     "hooks:install": "bun scripts/hooks/install.ts"
     "hooks:check": "bun scripts/hooks/install.ts --check"
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
@@ -569,9 +705,19 @@ values, unknown flags, or unresolvable refs exit `2`.
 `scripts/check-authored-files.ts` accepts exactly `--mode full`, `--mode staged`, or
 `--mode revision --revision <git-ref>`. Full mode reads the working tree, staged mode reads the
 virtual staged snapshot, and revision mode reads only the selected Git tree. Missing values,
-unknown flags, or unresolvable refs exit `2`. `scripts/check-revision.ts` accepts exactly one
-nonzero revision, verifies it resolves to a commit, and implements the disposable detached-worktree
-flow specified in D5; worktree setup, install, gate, or cleanup failures exit `2`.
+unknown flags, or unresolvable refs exit `2`. `scripts/check-revision.ts` accepts either exactly one
+nonzero revision or the sole flag `--reconcile-only`. Revision mode verifies the argument resolves
+to a commit and implements the bounded detached-worktree flow specified in D5. Reconcile-only mode
+repairs or validates the owned namespace without installing dependencies or running the target
+gate. Unsafe state, live concurrency, insufficient space, setup, install, target-gate, or cleanup
+failures exit `2`.
+
+`scripts/check-revision-worker.ts` is a private orchestration adapter reached only through the
+locked public entrypoint. It owns manifest validation, reconciliation, resource observation,
+detached-worktree lifecycle, dependency installation, and target-gate execution. Filesystem-type
+validation parses `/proc/self/mountinfo` with the allowlist and overlay-backing rules in D5 before
+`.verification` is created. Child processes use argument arrays and isolated process groups so
+timeout or storage-cap termination reaches the complete descendant tree.
 
 Pre-push analyzes every distinct nonzero outgoing `local-sha` against its calculated base. It never
 uses the working tree for an outgoing commit. Tests must include a dirty checkout whose outgoing SHA
@@ -702,10 +848,13 @@ Add integration fixtures that exercise the real filesystem and a disposable Git 
 added, modified, renamed, and deleted README/doc paths, a dirty checkout whose selected revision is
 clean, a non-current local ref, and the actual pre-push entrypoint selecting both documentation-only
 revision commands and the disposable full-revision gate. The full-revision integration test uses a
-real disposable Git repository and proves the package-entrypoint contract can read the selected
-commit's Git objects, the operator checkout remains dirty and untouched, and no temporary worktree
-registration remains after success or failure. Confirm failure output names the repair in plain language,
-remains bounded, and follows the selected revision rather than the checkout.
+real disposable Git repository on ordinary project storage and proves the package-entrypoint
+contract can read the selected commit's Git objects, the operator checkout remains dirty and
+untouched, and no verification worktree registration remains after success or failure. Add focused
+orchestration tests for the nonrecursive target gate, single-run lock, stale-run reconciliation,
+path-containment rejection, 2 GiB free-space floor, checker-owned temporary environment, and
+neighboring agent-worktree preservation. Confirm failure output names the repair in plain
+language, remains bounded, and follows the selected revision rather than the checkout.
 
 This milestone is complete when the implementer can run both modes against the Mandem repository
 and malformed fixtures demonstrate each failure class through the public command.
@@ -765,8 +914,9 @@ policy or change repository content.
 Add the new checks and hook integration suite to package scripts and add the GitHub Actions workflow
 from D7. Make `bun run check` return a nonzero exit status when any check fails, and run the checks
 in this deterministic order: Bun preflight, documentation/authored-source architecture,
-TypeScript, lint, and tests. Run focused tests first,
-then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
+TypeScript, lint, and tests. Run focused tests first. Run `bun run check:revision` against the
+current commit and observe exactly one target-gate launch and no remaining verification worktree.
+Then run the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
 Configure and read back the required `main` ruleset, including required code-owner review for every
@@ -801,6 +951,7 @@ Use these focused commands in milestone order:
     bunx vitest run src/modules/architecture-standard/tests/documentation-policy.test.ts
     bunx vitest run src/modules/architecture-standard/tests/authored-source-policy.test.ts
     bunx vitest run scripts/check-documentation.test.ts
+    bunx vitest run scripts/check-revision.test.ts
     bunx vitest run scripts/configure-repository-ruleset.test.ts
     bunx vitest run scripts/hooks/hooks.integration.test.ts
     bunx vitest run scripts/hooks/provider-post-write.test.ts
@@ -819,6 +970,31 @@ implementation, the fifth must fail `pre-commit evaluates the staged snapshot` a
 the named behavior, not missing module/configuration failure. Record the failing assertion and later
 passing test in `Progress`.
 
+Before repairing revision verification, `scripts/check-revision.test.ts` must fail named cases that
+prove the target gate is nonrecursive, a live lock prevents a second checkout, an interrupted run
+is reconciled, and unsafe state fails closed without touching a neighboring worktree. Cover a
+killed lock holder, simulated reboot and PID reuse, every manifest/marker/registration creation
+window, `tmpfs` rejection, generated-looking unowned content, a registered neighboring agent
+worktree, the 8 GiB cap, the 2 GiB reserve, and both child timeouts. Do not run `bun run check` or
+`bun run check:revision` while the recursive implementation remains reachable.
+
+The required red/green test names are `keeps revision target dependencies nonrecursive`,
+`launches one checkout and one target gate for the selected revision`, `releases the advisory lock
+after kill and reboot`, `serializes concurrent first-run namespace creation`, `reconciles every
+bootstrap directory and durable manifest and marker power-loss boundary`, `removes only the exact
+detached requested revision registration`, `never prunes and preserves a stale neighboring registration`, `rejects
+symlinked verification components and malformed transaction state`, `rejects unmanifested
+generated names and registered agent worktrees`, `rejects lookalike and invalid transaction
+temporaries`, `removes nested partial checkout content without following symlinks`, `durably
+reconciles every cleanup deletion boundary`, `keeps Bun cache and child temporary writes inside the
+owned run`, `accepts supported persistent storage and rejects
+ephemeral or unknown mounts`, `stops at the run cap and preserves the reserve during checkout`,
+`stops install before it consumes the reserve`, `stops the target gate before it consumes the reserve`,
+`terminates install and target process groups at their deadlines`, and `checks the selected
+revision without changing a dirty checkout`. Each case must have a nearby passing control and
+assert its exit status, bounded diagnostic, worktree registrations, transaction files, and
+operator-checkout status as applicable.
+
 After the policy and adapters exist, exercise:
 
     bun run docs:audit
@@ -829,6 +1005,8 @@ After the policy and adapters exist, exercise:
     bun run test:hooks
     bun run authoring:check -- src/modules/runtime/domain/types.ts
     bun run repository-ruleset:check
+    bun run revision-worktrees:reconcile
+    bun run check:revision -- "$(git rev-parse HEAD)"
 
 Successful commands must print concise output that names the checked scope. Commands that evaluate
 malformed fixtures must exit `1` and print stable IDs with repository-relative paths. Commands that
@@ -873,6 +1051,12 @@ Acceptance requires all of the following observable behaviors:
   check.
 - Pre-push evaluates every outgoing commit snapshot, including a non-current local ref, without
   allowing unrelated dirty checkout content to change the result.
+- Exact-revision verification launches one detached disk-backed checkout and one nonrecursive
+  target gate. A simultaneous invocation exits `2` before creating another checkout.
+- After a simulated hard interruption, the next invocation and the explicit reconciler remove only
+  the checker-owned stale worktree and state. A malformed record, out-of-namespace path, unexpected
+  namespace entry, RAM-backed filesystem, 8 GiB run, less than 2 GiB reserve, or child timeout exits
+  `2` without touching an agent worktree.
 - Failed hooks do not alter working files, staged content, commits, branches, or remotes.
 - The shared post-write command typechecks a TypeScript write and checks a Markdown write without
   editing either file.
@@ -897,6 +1081,15 @@ uninstall/recovery command restores that value or unsets the worktree-local key 
 Do not reconstruct a common hook value or disable `extensions.worktreeConfig` during uninstall
 because sibling worktrees may rely on their worktree-local values. Never edit global Git
 configuration.
+
+Revision verification is restart-safe as well as idempotent. Normal completion attempts exact
+cleanup, and every later invocation reconciles the durable manifest before creating new work. If a
+pane, process, or host dies after worktree creation, run `bun run revision-worktrees:reconcile`.
+The command may delete only the manifest-named immediate child of `.verification/` after validating
+its marker, canonical path, and Git registration. Preserve malformed state for diagnosis and exit
+`2`; never broaden cleanup to the parent worktree namespace. If the lock owner is still alive,
+wait for that process or stop it deliberately before retrying. Free disk space before retrying a
+2 GiB floor failure.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
 Repair the README chain directory by directory, rerunning the full audit after each group. If the
@@ -1036,6 +1229,22 @@ external sources.
   physically, unioned duplicate pre-push SHA paths, and separated quality-gate exit `1` from setup
   and cleanup exit `2`. The focused suite now passes 24 tests; `bun run docs:audit`, `bun run
   authored-files:check`, and `bunx tsc --noEmit` pass.
+- [x] (2026-07-27) Diagnosed GitHub issue #17 after the complete gate killed the agent pane. The
+  revision-check integration test recursively launched `bun run check`, which launched the same
+  integration test again. Each level created a RAM-backed `/tmp` worktree and installed
+  dependencies until the host reached about 29.5 GiB and killed the pane.
+- [x] (2026-07-27) Removed 136 abandoned checker and package directories after confirming no live
+  process owned them, pruned stale Git worktree metadata, and verified that the U1A branch, seven
+  commits, and three uncommitted policy-repair files remained intact.
+- [ ] Obtain clean-room approval and exact operator authorization for this recovery revision before
+  resuming implementation.
+- [x] (2026-07-27) A fresh clean-room reviewer approved recovery plan content SHA-256
+  `f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or
+  P2 findings. Recorded the durable verdict and promoted the plan to `clean-room-approved`;
+  implementation remains unauthorized pending exact operator approval.
+- [ ] Repair and verify revision orchestration (completed: incident diagnosis and revised contract;
+  remaining: nonrecursive target gate, disk-backed owned namespace, lock, reconciliation, resource
+  bounds, and focused regression tests).
 
 ## Surprises & Discoveries
 
@@ -1123,6 +1332,12 @@ external sources.
   Evidence: replacing the SHA's first path set with its last set would classify a combined source
   and documentation history as documentation-only. The pre-push adapter now unions the path sets
   and invokes `check:revision`.
+
+- Observation: An integration test entered the same complete gate that included the integration
+  test, so each child process created another detached worktree and dependency installation.
+  Evidence: GitHub issue #17 records the chain
+  `check-revision.test.ts` to `check-revision.ts` to `bun run check` and back to
+  `check-revision.test.ts`; the killed run left 136 directories consuming 21 GiB in `/tmp`.
 
 ## Decision Log
 
@@ -1216,6 +1431,19 @@ external sources.
   existing parent for deleted and new paths, rejects every out-of-repository event consistently.
   Date/Author: 2026-07-27 / Codex implementation worker
 
+- Decision: Supersede the prior authorization and separate exact-revision orchestration from its
+  nonrecursive target gate.
+  Rationale: A gate cannot safely include an integration test that launches that same gate.
+  Explicit command layering preserves full local and CI coverage while making one pushed-revision
+  check finite and testable.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
+- Decision: Own one bounded, disk-backed verification namespace with durable reconciliation.
+  Rationale: Process-finally cleanup cannot run after SIGKILL or reboot, and RAM-backed `/tmp`
+  multiplies the impact of a runaway checkout. A lock, manifest, path validation, one-worktree
+  bound, and explicit reconciler make interruption recoverable without risking agent worktrees.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1253,6 +1481,13 @@ global-index failures. Provider adapters reject physical symlink escapes, pre-pu
 for duplicate outgoing commits, and the detached revision checker returns `1` for a failing quality
 gate and `2` for setup or cleanup failures. A disposable integration test proves that exact-revision
 behavior, a dirty caller checkout, and successful cleanup on both passing and failing gates.
+
+The revision checker is not complete. Its first complete-gate execution recursively re-entered its
+own integration test, exhausted RAM-backed temporary storage, and killed the agent pane. The
+implementation branch remains recoverable, but work is paused at the planning boundary. The
+revised design separates orchestration from the target gate, moves all verification temporary
+state to one bounded disk-backed namespace, and adds restart reconciliation. Clean-room review and
+new exact-revision operator approval are required before implementation resumes.
 
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
@@ -1315,3 +1550,18 @@ gate, the `repository-quality` workflow, code-owner entries for all D7 gate path
 repository-ruleset apply/check command with process-boundary tests. This update records completed
 local work and explicitly leaves the authorized external ruleset mutation, hosted workflow proof,
 review, Learn, and PR work to the orchestrator.
+
+P0 recovery revision note (2026-07-27): Superseded the prior authorization after GitHub issue #17
+proved that the approved revision-check design was recursive and depended on `finally` cleanup in
+RAM-backed `/tmp`. Replaced that contract with a nonrecursive target gate, one disk-backed
+checker-owned namespace, an operating-system advisory lock, transactional manifest and ownership
+marker, explicit crash reconciliation, filesystem-type rejection, an 8 GiB run cap, a 2 GiB
+free-space reserve, child timeouts, checker-owned subprocess temporary variables, and adversarial
+no-collateral cleanup tests. Implementation remains unauthorized until this exact revision passes
+clean-room review and receives operator approval.
+
+P0 recovery clean-room note (2026-07-27): A fresh reviewer approved plan-content SHA-256
+`f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or P2
+findings. The durable verdict is
+`docs/plans/reviews/2026-07-27-u1a-p0-recovery-clean-room.md`. This metadata and living-record
+update does not alter the reviewed implementation contract; `execution_authorized` remains false.
