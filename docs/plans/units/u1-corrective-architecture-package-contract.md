@@ -67,11 +67,12 @@ implementation changes and pass only after the checker detects the intended viol
   tokenization per included file. At repair commit
   `013c7999a4ec62e7de5251a2c1d2a2d4a876790e`, typecheck, lint, 15 focused tests, 20 full tests,
   the exact-SHA archive/install proof, build, and four binary probes passed with Bun 1.3.14.
-- [ ] (2026-07-27 19:55Z) Applied all four actionable findings from independent review run
+- [x] (2026-07-27 20:00Z) Applied all four actionable findings from independent review run
   `20260727-144030-8af9a917`. The regex-literal regression failed red with no
   `ARCH-IO-PLACEMENT`, then all 18 focused architecture tests and 23 full tests passed after the
-  scanner repair. Build and four binary probes pass. Exact-head archive proof, commit, and push
-  remain.
+  scanner repair. At review-repair commit
+  `0afb33726e7b369f03cea7213f81df068c1c7ed2`, the exact-SHA archive/install proof, full check,
+  build, and four binary probes passed.
 
 ## Surprises & Discoveries
 
@@ -235,6 +236,13 @@ repair, all applied without changing rule output or package behavior. The execut
 broader suggestions: restructuring the lexical scanner and adding concurrent filesystem traversal.
 Those changes exceeded the three requested findings and would increase the proof surface. Full
 verification and clean archive installation passed on the repair commit.
+
+Review-repair outcome (2026-07-27): All four actionable findings from review run
+`20260727-144030-8af9a917` were fixed. The scanner no longer mistakes an escaped regex slash plus
+closing delimiter for a line comment. Each direct I/O API now has isolated comment, string,
+template-text, and executable-template-expression coverage. Authored scripts and application
+vendor imports have exact rule-and-path assertions. No findings were skipped. The repair increased
+the focused architecture suite from 15 to 18 tests and the full suite from 20 to 23 tests.
 
 ## Context and Orientation
 
@@ -591,6 +599,11 @@ The executor must add concise evidence here as work proceeds. The initial durabl
     Simplification repair: 013c7999a4ec62e7de5251a2c1d2a2d4a876790e
     Simplification verification: Bun 1.3.14; 15 focused and 20 full tests passed
     Simplification archive proof: both executable entries installed and invoked successfully
+
+    Review repair: 0afb33726e7b369f03cea7213f81df068c1c7ed2
+    Review repair red proof: regex followed by Bun.connect produced no ARCH-IO-PLACEMENT
+    Review repair verification: 18 focused and 23 full tests passed
+    Review repair archive proof: both executable entries installed and invoked successfully
 
 The final evidence must include the PR URL, tested commit SHA, merge SHA, exact test count,
 `bun --version`, tarball file-list proof, installed-binary transcript, independent review result,
