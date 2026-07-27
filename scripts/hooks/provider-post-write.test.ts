@@ -1,6 +1,6 @@
 /** @fileoverview Provider post-write adapter integration tests. */
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -107,6 +107,19 @@ describe("provider post-write adapters", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("rejects write, delete, and move paths through symlinks outside the repository", async () => {
+    const root = await fixture();
+    const outside = await mkdtemp(join(tmpdir(), "mandem-provider-outside-"));
+    try {
+      await symlink(outside, join(root, "escape"));
+      for (const command of ["*** Add File: escape/write.md", "*** Delete File: escape/delete.md", "*** Update File: escape/from.md\n*** Move to: escape/to.md"]) {
+        const result = invoke(root, "codex", { hook_event_name: "PostToolUse", cwd: root, tool_name: "apply_patch", tool_input: { command } });
+        expect(result.status).toBe(2);
+        expect(result.stderr).toContain("outside the Git repository");
+      }
+    } finally { await rm(root, { recursive: true, force: true }); await rm(outside, { recursive: true, force: true }); }
   });
 
   it("parses Claude Write, Edit, and MultiEdit events", () => {

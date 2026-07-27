@@ -25,6 +25,21 @@ describe("documentation policy", () => {
     expect(evaluateDocumentation(snapshot(validDocumentation)).violations).toEqual([]);
   });
 
+  it("requires the root index and every dynamic special-index link", () => {
+    expect(evaluateDocumentation(snapshot({})).violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "DOC-LOCAL-README", path: "README.md" })
+    ]));
+    const files = {
+      "README.md": "[agents](AGENTS.md)\n[claude](CLAUDE.md)\n[plans](PLANS.md)\n[docs](docs/README.md)\n[scripts](scripts/README.md)\n[hooks](.githooks/README.md)\n[modules](src/modules/README.md)\n[skill](.agents/skills/example/SKILL.md)",
+      "AGENTS.md": "", "CLAUDE.md": "", "PLANS.md": "", "docs/README.md": "", "scripts/README.md": "[guide](guide.md)\n[hooks](hooks/README.md)", "scripts/guide.md": "", "scripts/hooks/README.md": "", ".githooks/README.md": "[guide](guide.md)", ".githooks/guide.md": "", "src/modules/README.md": "[example](example/README.md)", "src/modules/example/README.md": "", ".agents/skills/example/SKILL.md": "[guide](references/guide.md)", ".agents/skills/example/references/guide.md": ""
+    };
+    expect(evaluateDocumentation(snapshot(files)).violations).toEqual([]);
+    for (const [path, expected] of [["README.md", ".agents/skills/example/SKILL.md"], [".agents/skills/example/SKILL.md", "references/guide.md"], ["scripts/README.md", "guide.md"], [".githooks/README.md", "guide.md"], ["src/modules/README.md", "example/README.md"]] as const) {
+      const changed = { ...files, [path]: files[path].replace(expected, "missing") };
+      expect(evaluateDocumentation(snapshot(changed)).violations).toEqual(expect.arrayContaining([expect.objectContaining({ ruleId: "DOC-LOCAL-INDEX" })]));
+    }
+  });
+
   it("reports each malformed documentation condition with a stable rule and path", () => {
     const cases = [
       { files: { "README.md": "", "docs/page.md": "# page" }, ruleId: "DOC-LOCAL-README", path: "docs" },
@@ -59,6 +74,8 @@ describe("documentation policy", () => {
       "eslint.config.ts": "/** @fileoverview config. */\nexport {};",
       "src/misplaced.ts": "// text\n/** @fileoverview later. */",
       "scripts/placeholder.ts": "/** @fileoverview todo */",
+      "scripts/todo-punctuation.ts": "/** @fileoverview TODO! */",
+      "scripts/tags-only.ts": "/**\n * @fileoverview\n * @param value ignored\n */",
       "tests/fixtures/example.ts": "export {};",
       "generated/file.ts": "export {};",
       "types.d.ts": "declare const value: string;",
@@ -67,6 +84,8 @@ describe("documentation policy", () => {
     expect(result.violations).toEqual(expect.arrayContaining([
       expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "src/misplaced.ts" }),
       expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "scripts/placeholder.ts" }),
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "scripts/todo-punctuation.ts" }),
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "scripts/tags-only.ts" }),
       expect.objectContaining({ ruleId: "ARCH-UNSCOPED-TYPESCRIPT", path: "tools/unscoped.ts" })
     ]));
     expect(result.violations.map(({ path }) => path)).not.toEqual(expect.arrayContaining(["tests/fixtures/example.ts", "generated/file.ts", "types.d.ts"]));

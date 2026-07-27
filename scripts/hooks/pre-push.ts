@@ -62,25 +62,30 @@ try {
     }
   }
   if (process.exitCode !== 1) {
-    const revisions = new Map<string, readonly string[]>();
+    const revisions = new Map<string, Set<string>>();
+    const record = (revision: string, paths: readonly string[]): void => {
+      const combined = revisions.get(revision) ?? new Set<string>();
+      for (const path of paths) combined.add(path);
+      revisions.set(revision, combined);
+    };
     if (updates.length === 0) {
       const head = await git(root, ["rev-parse", "HEAD"]);
       let base: string;
       try { base = await git(root, ["merge-base", "@{upstream}", "HEAD"]); }
       catch { base = await fallbackBase(root, head); }
-      revisions.set(head, await changedPaths(root, base, head));
+      record(head, await changedPaths(root, base, head));
     } else {
       for (const update of updates) {
         if (update.localSha === zeroSha) continue;
         try {
           const base = update.remoteSha === zeroSha ? await fallbackBase(root, update.localSha) : update.remoteSha;
-          revisions.set(update.localSha, await changedPaths(root, base, update.localSha));
+          record(update.localSha, await changedPaths(root, base, update.localSha));
         } catch {
-          revisions.set(update.localSha, ["__indeterminate__"]);
+          record(update.localSha, ["__indeterminate__"]);
         }
       }
     }
-    for (const [revision, paths] of revisions) await runQualityGate(root, revision, paths);
+    for (const [revision, paths] of revisions) await runQualityGate(root, revision, [...paths]);
   }
 } catch (error: unknown) {
   console.error(`pre-push hook failed: ${error instanceof Error ? error.message : "unexpected error"}`);

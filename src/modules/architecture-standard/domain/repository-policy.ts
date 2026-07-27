@@ -116,12 +116,36 @@ function readmeLinks(path: string, text: string): Array<{ target: string; resolv
   return targets.map((value) => ({ target: value, resolved: (() => { const decoded = decodeTarget(value); return decoded === undefined || decoded === "" ? decoded : resolveLink(path, decoded); })() }));
 }
 
+function hasIndexLink(index: { readonly path: string; readonly text: string }, target: string): boolean {
+  return readmeLinks(index.path, index.text).some((link) => link.resolved === target || `${link.resolved}/README.md` === target);
+}
+
+function specialIndexTargets(files: readonly { readonly path: string }[]): ReadonlyMap<string, readonly string[]> {
+  const targets = new Map<string, string[]>();
+  const add = (index: string, target: string): void => {
+    if (target === index) return;
+    const values = targets.get(index) ?? [];
+    values.push(target);
+    targets.set(index, values);
+  };
+  for (const file of files) {
+    const path = file.path;
+    const skill = path.match(/^\.agents\/skills\/[^/]+\//)?.[0]?.slice(0, -1);
+    if (skill && path.endsWith(".md") && path !== `${skill}/SKILL.md`) add(`${skill}/SKILL.md`, path);
+    if (path.startsWith("scripts/") && path.endsWith(".md") && path !== "scripts/README.md" && (!path.slice("scripts/".length).includes("/") || path.endsWith("/README.md"))) add("scripts/README.md", path);
+    if (path.startsWith(".githooks/") && path.endsWith(".md") && path !== ".githooks/README.md") add(".githooks/README.md", path);
+    if (/^src\/modules\/[^/]+\/README\.md$/.test(path)) add("src/modules/README.md", path);
+    if (/^\.agents\/skills\/[^/]+\/SKILL\.md$/.test(path)) add("README.md", path);
+  }
+  return new Map([...targets].map(([index, values]) => [index, [...new Set(values)].sort()]));
+}
+
 export function hasUsefulFileoverview(text: string): boolean {
   const content = text.replace(/^#![^\n]*(?:\n|$)/, "");
   const match = content.match(/^\/\*\*([\s\S]*?)\*\//);
   if (!match || !/@fileoverview\b/i.test(match[1] ?? "")) return false;
-  const value = (match[1] ?? "").replace(/^\s*\*?\s*@fileoverview\b/i, "").replace(/\*\s*/g, " ").trim();
-  return value.split(/\s+/).some((word) => word !== "" && !placeholderOverview.test(word));
+  const value = (match[1] ?? "").match(/@fileoverview\b([^@]*)/i)?.[1] ?? "";
+  return value.replace(/\*\s*/g, " ").split(/\s+/).map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").toLowerCase()).some((word) => word !== "" && !placeholderOverview.test(word));
 }
 
 export function evaluateDocumentation(snapshot: RepositorySnapshot, policy: RepositoryPolicy = documentationPolicyV1): AnalysisResult {
@@ -129,6 +153,7 @@ export function evaluateDocumentation(snapshot: RepositorySnapshot, policy: Repo
   const paths = new Set(files.map((file) => file.path));
   const documents = files.filter((file) => isDocumentationPath(file.path, policy));
   const violations: RuleViolation[] = [];
+  if (!paths.has("README.md")) violations.push(finding("DOC-LOCAL-README", "README.md", "add the repository root README.md"));
   const directories = new Set<string>();
   for (const file of documents) {
     let current = directory(file.path);
@@ -151,9 +176,17 @@ export function evaluateDocumentation(snapshot: RepositorySnapshot, policy: Repo
   }
   const rootReadme = files.find((file) => file.path === "README.md");
   if (rootReadme) for (const entry of policy.rootIndexEntries.filter((candidate) => paths.has(candidate))) {
-    if (!readmeLinks(rootReadme.path, rootReadme.text).some((link) => link.resolved === entry || `${link.resolved}/README.md` === entry)) violations.push(finding("DOC-LOCAL-INDEX", entry, "link this required document from the root README.md"));
+    if (!hasIndexLink(rootReadme, entry)) violations.push(finding("DOC-LOCAL-INDEX", entry, "link this required document from the root README.md"));
   }
-  for (const readme of files.filter((file) => file.path.endsWith("README.md") && (isDocumentationPath(file.path, policy) || isSpecialDocument(file.path, policy)))) {
+  for (const [indexPath, targets] of specialIndexTargets(files)) {
+    const index = files.find((file) => file.path === indexPath);
+    if (!index) {
+      violations.push(finding("DOC-LOCAL-README", indexPath, "add the required documentation index"));
+      continue;
+    }
+    for (const target of targets) if (!hasIndexLink(index, target)) violations.push(finding("DOC-LOCAL-INDEX", target, `link this document from ${indexPath}`));
+  }
+  for (const readme of files.filter((file) => (file.path.endsWith("README.md") || file.path.endsWith("/SKILL.md")) && (isDocumentationPath(file.path, policy) || isSpecialDocument(file.path, policy)))) {
     for (const link of readmeLinks(readme.path, readme.text)) {
       if (link.resolved === "") continue;
       if (link.resolved === undefined || (!paths.has(link.resolved) && !paths.has(`${link.resolved}/README.md`))) violations.push(finding("DOC-BROKEN-LOCAL-LINK", readme.path, "repair or remove the broken local link"));

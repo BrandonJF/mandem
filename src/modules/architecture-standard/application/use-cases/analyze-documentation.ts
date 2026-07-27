@@ -22,5 +22,6 @@ export async function analyzeDocumentation(reader: RepositorySnapshotReader, req
     while (current === "docs" || current.startsWith("docs/")) { affected.add(current); current = current.includes("/") ? current.slice(0, current.lastIndexOf("/")) : ""; }
     affected.add(candidate);
   }
-  return { violations: result.violations.filter((violation) => [...affected].some((path) => violation.path === path || violation.path.startsWith(`${path}/`))) };
+  const rootOrSpecialIndex = (path: string): boolean => path === "README.md" || documentationPolicyV1.rootIndexEntries.includes(path) || path.startsWith(".agents/skills/") || path.startsWith("scripts/") || path.startsWith(".githooks/") || path === "src/modules/README.md" || /^src\/modules\/[^/]+\/README\.md$/.test(path);
+  return { violations: result.violations.filter((violation) => rootOrSpecialIndex(violation.path) || [...affected].some((path) => violation.path === path || violation.path.startsWith(`${path}/`))) };
 }

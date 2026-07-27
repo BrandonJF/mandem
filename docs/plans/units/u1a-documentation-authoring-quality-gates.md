@@ -1029,6 +1029,13 @@ external sources.
   GitHub ruleset create, update, conformance, drift, duplicate, authentication, and authorization
   tests. The initial focused test failed because `configure-repository-ruleset.ts` did not exist;
   after implementation, the focused suite passed 3 tests and `bun run check` passed 50 tests.
+- [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
+  failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
+  changed root-link regressions, and provider symlink escape handling. Added root and dynamic
+  special-index checks, retained root/special findings in changed analysis, resolved provider paths
+  physically, unioned duplicate pre-push SHA paths, and separated quality-gate exit `1` from setup
+  and cleanup exit `2`. The focused suite now passes 24 tests; `bun run docs:audit`, `bun run
+  authored-files:check`, and `bunx tsc --noEmit` pass.
 
 ## Surprises & Discoveries
 
@@ -1104,6 +1111,18 @@ external sources.
   Evidence: ruleset `19852337` matched every required value but the first read-back comparison
   failed until the comparator normalized this empty server default. The focused regression test
   failed before the repair and now passes.
+
+- Observation: Lexical path containment accepts a repository symlink whose target is outside the
+  repository, including a deleted target beneath that symlink.
+  Evidence: a Codex event for `escape/write.md` exited `0` before the adapter resolved the nearest
+  existing path component; write, delete, and move tests now exit `2` with an outside-repository
+  error.
+
+- Observation: A duplicate outgoing SHA can have different changed-path classifications when each
+  remote ref supplies a different comparison base.
+  Evidence: replacing the SHA's first path set with its last set would classify a combined source
+  and documentation history as documentation-only. The pre-push adapter now unions the path sets
+  and invokes `check:revision`.
 
 ## Decision Log
 
@@ -1185,6 +1204,18 @@ external sources.
   administration state. The implementation worker's bounded scope excludes that external mutation.
   Date/Author: 2026-07-27 / Codex implementation worker
 
+- Decision: Treat root and declared special indexes as global documentation invariants during
+  changed-file analysis.
+  Rationale: A changed root index can disconnect an unchanged target, so filtering those findings
+  by the changed file path hides a real regression.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Validate provider event paths through their physical filesystem location before using
+  their lexical repository-relative form.
+  Rationale: `..` checks do not identify symlink escapes. Resolving the target, or its nearest
+  existing parent for deleted and new paths, rejects every out-of-repository event consistently.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1215,6 +1246,13 @@ authored-source checks before the existing architecture, TypeScript, lint, and t
 repository includes the required workflow, code-owner map, and tested GitHub ruleset command. The
 remaining Milestone 7 work requires repository-administration access and hosted workflow evidence;
 the orchestrator owns those actions.
+
+Validated review repairs are complete locally. Documentation evaluation now requires the root
+README and checks dynamic skill, script, hook, and module indexes. Changed-revision analysis retains
+global-index failures. Provider adapters reject physical symlink escapes, pre-push combines paths
+for duplicate outgoing commits, and the detached revision checker returns `1` for a failing quality
+gate and `2` for setup or cleanup failures. A disposable integration test proves that exact-revision
+behavior, a dirty caller checkout, and successful cleanup on both passing and failing gates.
 
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and

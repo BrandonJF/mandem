@@ -1,6 +1,6 @@
 /** @fileoverview Filesystem and Git snapshot adapter integration tests. */
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -44,5 +44,31 @@ describe("repository snapshot adapters", () => {
       expect(await changedGitEntries(root, base, head)).toEqual(expect.arrayContaining([expect.objectContaining({ status: "R", oldPath: "docs/guide.md", path: "docs/renamed.md" })]));
       expect((await analyzeDocumentationRevision(root, head)).violations).toEqual([]);
     } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
+  it("keeps root-index regressions in changed documentation analysis", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mandem-root-index-"));
+    try {
+      command(root, "init"); command(root, "config", "user.email", "test@example.com"); command(root, "config", "user.name", "Test");
+      await writeFile(join(root, "README.md"), "[agents](AGENTS.md)\n");
+      await writeFile(join(root, "AGENTS.md"), "");
+      command(root, "add", "."); command(root, "commit", "-m", "valid");
+      const base = command(root, "rev-parse", "HEAD");
+      await writeFile(join(root, "README.md"), "");
+      command(root, "add", "."); command(root, "commit", "-m", "remove root link");
+      const head = command(root, "rev-parse", "HEAD");
+      const result = await analyzeDocumentationRevision(root, head, await changedGitEntries(root, base, head));
+      expect(result.violations).toEqual(expect.arrayContaining([expect.objectContaining({ ruleId: "DOC-LOCAL-INDEX", path: "AGENTS.md" })]));
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
+  it("does not traverse symlinks that point outside the repository", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mandem-symlink-snapshot-"));
+    const outside = await mkdtemp(join(tmpdir(), "mandem-symlink-outside-"));
+    try {
+      await writeFile(join(outside, "secret.md"), "secret\n");
+      await symlink(outside, join(root, "escape"));
+      expect((await new FileSystemSnapshot().readWorkingTree(root)).files.map(({ path }) => path)).not.toContain("escape/secret.md");
+    } finally { await rm(root, { recursive: true, force: true }); await rm(outside, { recursive: true, force: true }); }
   });
 });

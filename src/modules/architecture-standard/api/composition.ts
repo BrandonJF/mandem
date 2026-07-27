@@ -12,7 +12,8 @@ import { parseClaudePostToolUse, type ProviderPathEvent } from "../infrastructur
 import { parseCodexPostToolUse } from "../infrastructure/provider-events/codex-post-tool-use";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { isAbsolute, relative, resolve } from "node:path";
+import { realpath } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { AnalysisResult, RepositoryFile } from "../domain/types";
 import type { GitChange } from "../application/repositories/repository-snapshot";
 
@@ -58,10 +59,27 @@ async function gitRoot(cwd: string): Promise<string> {
   }
 }
 
-function repositoryPath(root: string, cwd: string, path: string): string {
+async function physicalPath(path: string): Promise<string> {
+  const missing: string[] = [];
+  let current = path;
+  while (true) {
+    try { return join(await realpath(current), ...missing.reverse()); }
+    catch {
+      const parent = dirname(current);
+      if (parent === current) throw new Error("event path could not be resolved");
+      missing.push(current.slice(parent.length + 1));
+      current = parent;
+    }
+  }
+}
+
+async function repositoryPath(root: string, cwd: string, path: string): Promise<string> {
   const resolved = isAbsolute(path) ? resolve(path) : resolve(cwd, path);
   const value = relative(root, resolved).replaceAll("\\", "/");
-  if (value === "" || value === ".." || value.startsWith("../") || isAbsolute(value)) throw new Error("event path is outside the Git repository");
+  const physicalRoot = await realpath(root);
+  const physicalTarget = await physicalPath(resolved);
+  const physicalValue = relative(physicalRoot, physicalTarget);
+  if (value === "" || value === ".." || value.startsWith("../") || isAbsolute(value) || physicalValue === ".." || physicalValue.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || isAbsolute(physicalValue)) throw new Error("event path is outside the Git repository");
   return value;
 }
 
@@ -69,10 +87,8 @@ export async function checkProviderPostWrite(provider: "claude" | "codex", input
   const cwd = resolve(eventCwd(input));
   const root = await gitRoot(cwd);
   const parsed = provider === "claude" ? parseClaudePostToolUse(input) : parseCodexPostToolUse(input);
-  const events = [...new Map(parsed.map((event) => {
-    const normalized = { ...event, path: repositoryPath(root, cwd, event.path) };
-    return [`${normalized.operation}:${normalized.path}`, normalized] as const;
-  })).values()].sort((left, right) => left.path.localeCompare(right.path) || left.operation.localeCompare(right.operation));
+  const normalizedEvents = await Promise.all(parsed.map(async (event) => ({ ...event, path: await repositoryPath(root, cwd, event.path) })));
+  const events = [...new Map(normalizedEvents.map((event) => [`${event.operation}:${event.path}`, event] as const)).values()].sort((left, right) => left.path.localeCompare(right.path) || left.operation.localeCompare(right.operation));
   if (events.length === 0) throw new Error("event contains no valid paths");
   const snapshots = new FileSystemSnapshot();
   const runner = new BunCommandRunner();

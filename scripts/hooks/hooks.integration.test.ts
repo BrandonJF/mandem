@@ -108,6 +108,20 @@ describe("versioned Git hooks", () => {
 
       expect(runHook(root, "pre-push", `refs/heads/unknown ${codeHead} refs/heads/unknown deadbeef\n`, fake.path).status).toBe(0);
       expect((await readFile(fake.log, "utf8")).match(/run check:revision/g)?.length).toBeGreaterThanOrEqual(2);
+
+      await writeFile(join(root, "docs", "follow-up.md"), "# Follow up\n");
+      git(root, "add", "docs/follow-up.md");
+      git(root, "commit", "-m", "follow up docs");
+      const combinedHead = git(root, "rev-parse", "HEAD");
+      await writeFile(fake.log, "");
+      const duplicate = runHook(root, "pre-push", `refs/heads/combined-a ${combinedHead} refs/heads/combined-a ${docsHead}\nrefs/heads/combined-b ${combinedHead} refs/heads/combined-b ${codeHead}\n`, fake.path);
+      expect(duplicate.status).toBe(0);
+      expect(await readFile(fake.log, "utf8")).toContain(`run check:revision -- ${combinedHead}`);
+
+      await writeFile(fake.log, "");
+      const indeterminateDuplicate = runHook(root, "pre-push", `refs/heads/docs-a ${docsHead} refs/heads/docs-a ${head}\nrefs/heads/docs-b ${docsHead} refs/heads/docs-b deadbeef\n`, fake.path);
+      expect(indeterminateDuplicate.status).toBe(0);
+      expect(await readFile(fake.log, "utf8")).toContain(`run check:revision -- ${docsHead}`);
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 

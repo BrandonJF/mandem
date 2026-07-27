@@ -19,11 +19,13 @@ try {
   const temporary = await mkdtemp(join(tmpdir(), "mandem-check-revision-"));
   let worktreeAdded = false;
   let cleanupFailure: Error | undefined;
+  let qualityGateFailed = false;
   try {
     await command(root, ["worktree", "add", "--detach", temporary, revision]);
     worktreeAdded = true;
     await execute("bun", ["install", "--frozen-lockfile"], { cwd: temporary, encoding: "utf8" });
-    await execute("bun", ["run", "check"], { cwd: temporary, encoding: "utf8" });
+    try { await execute("bun", ["run", "check"], { cwd: temporary, encoding: "utf8" }); }
+    catch { qualityGateFailed = true; }
   } finally {
     try {
       if (worktreeAdded) await command(root, ["worktree", "remove", "--force", temporary]);
@@ -37,6 +39,10 @@ try {
     }
   }
   if (cleanupFailure) throw cleanupFailure;
+  if (qualityGateFailed) {
+    console.error("revision quality gate failed");
+    process.exitCode = 1;
+  }
 } catch (error: unknown) {
   console.error(`revision checker failed: ${error instanceof Error ? error.message : "unexpected error"}`);
   process.exitCode = 2;
