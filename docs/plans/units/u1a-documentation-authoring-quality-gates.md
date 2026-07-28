@@ -4,8 +4,8 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: clean-room-approved
-execution_authorized: true
+promotion: planned
+execution_authorized: false
 date: 2026-07-25
 ---
 
@@ -483,16 +483,31 @@ Add `.github/CODEOWNERS` assigning every gate-defining path to `@BrandonJF`: `/.
 `/scripts/check-*`, `/scripts/configure-repository-ruleset.ts`,
 `/scripts/configure-repository-ruleset.test.ts`, `/scripts/hooks/`,
 `/src/modules/architecture-standard/`, `/eslint.config.ts`, `/tsconfig.json`, and
-`/vitest.config.ts`. The ruleset requires code-owner approval when an owned path changes, dismisses
-stale approvals when new commits arrive, requires approval of the most recent push, and does not
-grant agents bypass permission. Routine application implementation PRs do not require operator
-approval. A PR that changes a gate or its transitive implementation requires the operator to
-approve its current head. These controls protect against accidental bypass and autonomous agents;
-they do not protect against a repository administrator who disables the controls. The
-implementation worker records the ruleset identifier and read-back output in this plan. If its
-credential lacks ruleset-administration permission, the implementation worker records that exact
-external dependency under `Needs you`, and U1A remains incomplete. Local hooks alone do not satisfy
-acceptance.
+`/vitest.config.ts`. CODEOWNERS identifies responsibility and does not create a GitHub review
+requirement. Mandem has one operator account, so the ruleset sets code-owner review, approval of the
+latest push, and required GitHub approval count to false or zero. It does not grant agents bypass
+permission. These controls require the automated check without requiring a second GitHub account.
+
+Operator consent occurs in the active Mandem conversation. Before an external mutation or merge,
+the orchestrating agent states one exact action and immutable target, then waits for a user message
+whose complete content is `APPROVED` or `DENIED`. For a pull request, the immutable target is the
+full head commit SHA. For the ruleset correction, it is this reviewed plan revision and the exact
+ruleset payload below. A later commit invalidates approval for the earlier commit.
+
+Immediately after an exact response, the orchestrating agent appends a native issue comment that
+starts with `Mandem-Approval: v1` and records `decision`, `action`, `issue_id`, `target`, `actor`,
+and the available conversation evidence. The actor is `operator`; `target` is the full commit SHA
+or ruleset payload identifier stated in the request. When the orchestration environment exposes a
+conversation ID, message ID, timestamp, or actor identity, the record includes those values. The
+agent pushes the exact native issue ref before performing the approved action. Until WI1 adds
+machine validation, the orchestrating agent verifies this record directly and fails closed on a
+missing field, a later `DENIED`, a changed target, or an ambiguous latest decision. GitHub comments
+and reviews are projections or optional discussion; they do not grant consent.
+
+Update `.agents/OPERATING.md` with this conversation-native approval contract. The implementation
+worker records the ruleset identifier and read-back output in this plan. If its credential lacks
+ruleset-administration permission, the implementation worker records that exact external dependency
+under `Needs you`, and U1A remains incomplete. Local hooks alone do not satisfy acceptance.
 
 Own this external configuration through `scripts/configure-repository-ruleset.ts`, not an
 undocumented UI step. The script requires an authenticated `gh` session whose token has repository
@@ -518,8 +533,8 @@ version `2026-03-10` and this exact semantic payload:
           "parameters": {
             "allowed_merge_methods": ["merge"],
             "dismiss_stale_reviews_on_push": true,
-            "require_code_owner_review": true,
-            "require_last_push_approval": true,
+            "require_code_owner_review": false,
+            "require_last_push_approval": false,
             "required_approving_review_count": 0,
             "required_review_thread_resolution": true
           }
@@ -919,8 +934,9 @@ current commit and observe exactly one target-gate launch and no remaining verif
 Then run the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
-Configure and read back the required `main` ruleset, including required code-owner review for every
-gate-defining path listed in D7, stale-approval dismissal, and approval of the most recent push.
+After the operator approves the exact reviewed revision in the active conversation, record and push
+the structured native approval comment before changing GitHub. Configure and read back the required
+`main` ruleset, including no GitHub review requirement and no account bypass.
 Use `bun run repository-ruleset:apply` followed by `bun run repository-ruleset:check`; do not
 configure it manually. Trigger the workflow with the PR and record a successful
 `repository-quality` check; a skipped, pending, or billing-disabled check is not completion
@@ -1066,8 +1082,9 @@ Acceptance requires all of the following observable behaviors:
 - The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
   `main` ruleset requires both a pull request and that successful check before merge. Changes to the
   workflow, canonical commands, hook/check implementations, architecture gate, test/lint/type
-  configuration, lockfile, or CODEOWNERS protection require `@BrandonJF` code-owner approval of the
-  current head; a subsequent push dismisses the approval.
+  configuration, lockfile, or CODEOWNERS map require an exact operator `APPROVED` response for the
+  current head in the active Mandem conversation. The orchestrating agent records and pushes that
+  approval in the native issue before merging; a subsequent push invalidates it.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
@@ -1212,9 +1229,11 @@ external sources.
   configurations. Disposable live probes verified Claude Code `2.1.220` Write and Codex CLI
   `0.145.0` apply_patch PostToolUse feedback through the shared adapter; the recorded evidence is
   `docs/operations/provider-capability-baseline.md`.
-- [ ] Complete Milestone 7 review, Learn, and implementation PR (completed: local canonical-gate
+- [ ] Complete Milestone 7 review, Learn, and implementation PR (completed: local repository-gate
   integration, workflow, CODEOWNERS, ruleset command, and active GitHub ruleset `19852337`;
-  remaining: verify the hosted workflow, reviews, Learn, and PR handoff).
+  remaining: correct the single-operator approval design, obtain exact conversation approval,
+  update and verify the live ruleset, verify the hosted workflow, complete reviews and Learn, and
+  open the PR).
 - [x] (2026-07-27 21:32Z) Integrated the local Milestone 7 quality-gate work. Added the
   `repository-ruleset:apply` and `repository-ruleset:check` package commands, ordered the canonical
   gate as Bun preflight, documentation, authored-source, architecture, TypeScript, lint, and tests,
@@ -1222,6 +1241,10 @@ external sources.
   GitHub ruleset create, update, conformance, drift, duplicate, authentication, and authorization
   tests. The initial focused test failed because `configure-repository-ruleset.ts` did not exist;
   after implementation, the focused suite passed 3 tests and `bun run check` passed 50 tests.
+- [x] (2026-07-28 22:18Z) Revised the plan after the live merge attempt proved that GitHub
+  code-owner and latest-push approval require a second account. Defined exact conversation approval
+  recorded in the native issue, retained the required automated check, and reset execution
+  authorization pending fresh review and exact operator approval.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
@@ -1459,6 +1482,14 @@ external sources.
   bound, and explicit reconciler make interruption recoverable without risking agent worktrees.
   Date/Author: 2026-07-27 / Codex orchestrator
 
+- Decision: Use exact operator responses in the active Mandem conversation instead of GitHub review
+  approvals.
+  Rationale: The repository has one GitHub account, so GitHub code-owner or latest-push approval
+  requirements cannot be satisfied. An exact `APPROVED` or `DENIED` response can authorize one
+  stated immutable target, while the orchestrating agent records the decision in the native issue
+  before acting.
+  Date/Author: 2026-07-28 / Brandon and Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1502,6 +1533,12 @@ The P0 revision-check recovery is implemented and verified. `bun run check` pass
 nonrecursive 60-test target suite, removes the transaction, and exits successfully. Remaining U1A
 work is the hosted workflow and review handoff described in Milestone 7.
 
+The first live ruleset design assumed a second GitHub account could approve the last push and
+code-owner changes. Mandem has one operator account. This revision removes GitHub approval
+requirements, keeps pull requests and `repository-quality` mandatory, and defines exact
+conversation responses recorded in native issues as the operator consent mechanism. The material
+change supersedes prior execution authorization and requires fresh review and exact approval.
+
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
 records the approval without changing the reviewed implementation scope.
@@ -1512,6 +1549,12 @@ scope helpers and `ARCH-UNSCOPED-TYPESCRIPT`, so this revision requires U1A to p
 those surfaces from the new manifest. Added explicit focused regression commands for the corrected
 architecture rules and package entrypoints. This instruction change supersedes the 2026-07-25
 clean-room approval; `execution_authorized` remains false.
+
+Single-operator approval revision note (2026-07-28): Replaced the unsatisfiable GitHub code-owner
+and latest-push approval requirements with an exact `APPROVED` or `DENIED` response in the active
+Mandem conversation. The orchestrating agent records that decision against one immutable target in
+the native issue before acting. GitHub continues to require a pull request and the
+`repository-quality` check.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
