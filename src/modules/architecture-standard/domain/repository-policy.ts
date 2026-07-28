@@ -79,14 +79,12 @@ function isSpecialDocument(path: string, policy: RepositoryPolicy): boolean {
   if (hasExcludedSegment(normalized, policy) || !normalized.endsWith(".md")) return false;
   if (normalized === "README.md") return true;
   if (policy.rootIndexEntries.includes(normalized)) return true;
-  if (normalized.startsWith(".agents/skills/") && normalized.endsWith("/SKILL.md")) return true;
-  if (normalized.startsWith(".agents/skills/") && normalized.includes("/references/")) return true;
-  if (normalized.startsWith("scripts/") || normalized.startsWith(".githooks/") || normalized === "src/modules/README.md") return true;
-  return /^src\/modules\/[^/]+\/README\.md$/.test(normalized);
+  return Object.keys(policy.specialIndexes).some((root) => normalized.startsWith(`${root}/`));
 }
 
-function isExcludedDocumentationFile(path: string): boolean {
-  return /^\.agents\/skills\/[^/]+\/agents\/openai\.yaml$/.test(path);
+function isWithinSpecialRoot(path: string, policy: RepositoryPolicy): boolean {
+  const normalized = normalizePath(path);
+  return Object.keys(policy.specialIndexes).some((root) => normalized === root || normalized.startsWith(`${root}/`));
 }
 
 function decodeTarget(value: string): string | undefined {
@@ -120,7 +118,7 @@ function hasIndexLink(index: { readonly path: string; readonly text: string }, t
   return readmeLinks(index.path, index.text).some((link) => link.resolved === target || `${link.resolved}/README.md` === target);
 }
 
-function specialIndexTargets(files: readonly { readonly path: string }[]): ReadonlyMap<string, readonly string[]> {
+function specialIndexTargets(files: readonly { readonly path: string }[], policy: RepositoryPolicy): ReadonlyMap<string, readonly string[]> {
   const targets = new Map<string, string[]>();
   const add = (index: string, target: string): void => {
     if (target === index) return;
@@ -128,14 +126,21 @@ function specialIndexTargets(files: readonly { readonly path: string }[]): Reado
     values.push(target);
     targets.set(index, values);
   };
-  for (const file of files) {
-    const path = file.path;
-    const skill = path.match(/^\.agents\/skills\/[^/]+\//)?.[0]?.slice(0, -1);
-    if (skill && path.endsWith(".md") && path !== `${skill}/SKILL.md`) add(`${skill}/SKILL.md`, path);
-    if (path.startsWith("scripts/") && path.endsWith(".md") && path !== "scripts/README.md" && (!path.slice("scripts/".length).includes("/") || path.endsWith("/README.md"))) add("scripts/README.md", path);
-    if (path.startsWith(".githooks/") && path.endsWith(".md") && path !== ".githooks/README.md") add(".githooks/README.md", path);
-    if (/^src\/modules\/[^/]+\/README\.md$/.test(path)) add("src/modules/README.md", path);
-    if (/^\.agents\/skills\/[^/]+\/SKILL\.md$/.test(path)) add("README.md", path);
+  for (const [root, names] of Object.entries(policy.specialIndexes)) {
+    const indexPaths = files.map((file) => file.path).filter((path) => {
+      if (!path.startsWith(`${root}/`)) return false;
+      const segments = path.slice(root.length + 1).split("/");
+      return segments.length <= 2 && names.includes(segments.at(-1) ?? "");
+    });
+    for (const indexPath of indexPaths) {
+      const parentIndex = indexPaths.filter((candidate) => candidate !== indexPath && indexPath.startsWith(`${directory(candidate)}/`)).sort((left, right) => right.length - left.length)[0];
+      add(parentIndex ?? "README.md", indexPath);
+    }
+    for (const file of files) {
+      if (!file.path.endsWith(".md") || !file.path.startsWith(`${root}/`) || indexPaths.includes(file.path)) continue;
+      const index = indexPaths.filter((candidate) => file.path.startsWith(`${directory(candidate)}/`)).sort((left, right) => right.length - left.length)[0];
+      if (index) add(index, file.path);
+    }
   }
   return new Map([...targets].map(([index, values]) => [index, [...new Set(values)].sort()]));
 }
@@ -178,7 +183,7 @@ export function evaluateDocumentation(snapshot: RepositorySnapshot, policy: Repo
   if (rootReadme) for (const entry of policy.rootIndexEntries.filter((candidate) => paths.has(candidate))) {
     if (!hasIndexLink(rootReadme, entry)) violations.push(finding("DOC-LOCAL-INDEX", entry, "link this required document from the root README.md"));
   }
-  for (const [indexPath, targets] of specialIndexTargets(files)) {
+  for (const [indexPath, targets] of specialIndexTargets(files, policy)) {
     const index = files.find((file) => file.path === indexPath);
     if (!index) {
       violations.push(finding("DOC-LOCAL-README", indexPath, "add the required documentation index"));
@@ -192,7 +197,7 @@ export function evaluateDocumentation(snapshot: RepositorySnapshot, policy: Repo
       if (link.resolved === undefined || (!paths.has(link.resolved) && !paths.has(`${link.resolved}/README.md`))) violations.push(finding("DOC-BROKEN-LOCAL-LINK", readme.path, "repair or remove the broken local link"));
     }
   }
-  for (const file of files.filter((candidate) => maintainedDocumentPath.test(candidate.path) && !isExcludedDocumentationFile(candidate.path) && !hasExcludedSegment(candidate.path, policy) && !policy.excludedPrefixes.some((prefix) => candidate.path.startsWith(prefix)))) {
+  for (const file of files.filter((candidate) => maintainedDocumentPath.test(candidate.path) && !isWithinSpecialRoot(candidate.path, policy) && !hasExcludedSegment(candidate.path, policy) && !policy.excludedPrefixes.some((prefix) => candidate.path.startsWith(prefix)))) {
     if (!isDocumentationPath(file.path, policy) && !isSpecialDocument(file.path, policy)) violations.push(finding("DOC-UNSCOPED-DOCUMENT", file.path, "add this document to the versioned documentation policy"));
   }
   return sorted(violations);

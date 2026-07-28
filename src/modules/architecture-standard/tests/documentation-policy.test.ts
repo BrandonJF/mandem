@@ -40,6 +40,26 @@ describe("documentation policy", () => {
     }
   });
 
+  it("derives special documents and index targets from the supplied policy", () => {
+    const policy = {
+      ...authoredSourcePolicyV1,
+      rootIndexEntries: ["handbook/INDEX.md"],
+      specialIndexes: { handbook: ["INDEX.md"] }
+    };
+    const files = {
+      "README.md": "[handbook](handbook/INDEX.md)",
+      "handbook/INDEX.md": "[guide](guide.md)",
+      "handbook/guide.md": "# Guide",
+      ".agents/skills/example/SKILL.md": "# No longer special"
+    };
+    expect(evaluateDocumentation(snapshot(files), policy).violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "DOC-UNSCOPED-DOCUMENT", path: ".agents/skills/example/SKILL.md" })
+    ]));
+    expect(evaluateDocumentation(snapshot({ ...files, "handbook/INDEX.md": "" }), policy).violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "DOC-LOCAL-INDEX", path: "handbook/guide.md" })
+    ]));
+  });
+
   it("reports each malformed documentation condition with a stable rule and path", () => {
     const cases = [
       { files: { "README.md": "", "docs/page.md": "# page" }, ruleId: "DOC-LOCAL-README", path: "docs" },

@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { changedGitEntries, analyzeDocumentationRevision } from "@/modules/architecture-standard/api/composition";
 import { FileSystemSnapshot } from "../infrastructure/repositories/file-system-snapshot";
 import { GitRepositorySnapshot } from "../infrastructure/repositories/git-repository-snapshot";
+import { analyzeDocumentation } from "../application/use-cases/analyze-documentation";
+import { documentationPolicyV1 } from "../domain/repository-policy";
 
 function command(root: string, ...arguments_: string[]): string { return execFileSync("git", arguments_, { cwd: root, encoding: "utf8" }).trim(); }
 
@@ -59,6 +61,25 @@ describe("repository snapshot adapters", () => {
       const head = command(root, "rev-parse", "HEAD");
       const result = await analyzeDocumentationRevision(root, head, await changedGitEntries(root, base, head));
       expect(result.violations).toEqual(expect.arrayContaining([expect.objectContaining({ ruleId: "DOC-LOCAL-INDEX", path: "AGENTS.md" })]));
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
+  it("keeps supplied special-index regressions in changed documentation analysis", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mandem-custom-special-index-"));
+    try {
+      command(root, "init"); command(root, "config", "user.email", "test@example.com"); command(root, "config", "user.name", "Test");
+      await mkdir(join(root, "handbook"));
+      await writeFile(join(root, "README.md"), "[handbook](handbook/INDEX.md)\n");
+      await writeFile(join(root, "handbook", "INDEX.md"), "[guide](guide.md)\n");
+      await writeFile(join(root, "handbook", "guide.md"), "# Guide\n");
+      command(root, "add", "."); command(root, "commit", "-m", "valid");
+      const base = command(root, "rev-parse", "HEAD");
+      await writeFile(join(root, "handbook", "INDEX.md"), "");
+      command(root, "add", "."); command(root, "commit", "-m", "remove handbook link");
+      const head = command(root, "rev-parse", "HEAD");
+      const policy = { ...documentationPolicyV1, rootIndexEntries: ["handbook/INDEX.md"], specialIndexes: { handbook: ["INDEX.md"] } };
+      const result = await analyzeDocumentation(new GitRepositorySnapshot(), { root, mode: "revision", revision: head, changes: await changedGitEntries(root, base, head) }, policy);
+      expect(result.violations).toEqual(expect.arrayContaining([expect.objectContaining({ ruleId: "DOC-LOCAL-INDEX", path: "handbook/guide.md" })]));
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 
