@@ -488,8 +488,9 @@ requirement. Mandem has one operator account, so the ruleset sets code-owner rev
 latest push, and required GitHub approval count to false or zero. It does not grant agents bypass
 permission. These controls require the automated check without requiring a second GitHub account.
 
-Operator consent occurs in the active Mandem conversation for two consent-boundary actions:
-`apply-ruleset` changes live repository administration policy, and `merge-pr` changes `main`.
+Operator consent occurs in the active Mandem conversation for three consent-boundary actions:
+`execute-plan` authorizes implementation of one reviewed plan, `apply-ruleset` changes live
+repository administration policy, and `merge-pr` changes `main`.
 Ordinary issue-ref publication, branch publication, pull-request creation, comments, and read-only
 checks remain authorized workflow steps and do not require a separate response. Before either
 consent-boundary action, the orchestrating agent states one exact action and immutable target, then
@@ -505,6 +506,7 @@ shape:
     target:
       plan_sha256: "<64 lowercase hexadecimal characters>"
       ruleset_sha256: "<64 lowercase hexadecimal characters>"
+      implementation_sha: "<full lowercase Git SHA>"
     actor: "operator"
     response: "APPROVED"
     evidence:
@@ -518,12 +520,15 @@ action value is valid. `conversation_id` and `message_id` are strings when the o
 environment exposes them and explicit null otherwise. All other fields are required. Unknown keys
 are rejected.
 
-An `apply-ruleset` target contains only `plan_sha256` and `ruleset_sha256`. The plan digest is the
+An `execute-plan` target contains only `plan_commit` and `plan_sha256`. An `apply-ruleset` target
+contains only `plan_sha256`, `ruleset_sha256`, and `implementation_sha`. The plan digest is the
 SHA-256 of the exact reviewed plan file. The ruleset digest is the SHA-256 of UTF-8 JSON produced by
 recursively sorting object keys lexicographically, preserving array order, and emitting no
-insignificant whitespace. A `merge-pr` target contains only `repository`, `pull_request`, and
-`head_sha`; the repository is `"BrandonJF/mandem"`, the pull request is a positive integer, and the
-head is a full lowercase Git SHA. Changing the action or any target field requires a new response.
+insignificant whitespace. The implementation SHA is the checked-out commit whose tracked files the
+ruleset command will execute; apply rejects another HEAD or tracked worktree changes. A `merge-pr`
+target contains only `repository`, `pull_request`, and `head_sha`; the repository is
+`"BrandonJF/mandem"`, the pull request is a positive integer, and the head is a full lowercase Git
+SHA. Changing the action or any target field requires a new response.
 
 Canonical approval comments use the marker on the first line, LF endings, two-space YAML
 indentation, double-quoted strings, explicit null, the key order shown above, and one final newline.
@@ -542,9 +547,19 @@ and reviews are projections or optional discussion; they do not grant consent.
 Add a pure approval parser, canonical serializer, target builder, and ancestry selector under
 `src/modules/architecture-standard/domain/approval-contract.ts`, with focused tests beside it.
 Add `scripts/check-approval.ts` to read raw commits from one exact native issue ref and validate an
-`apply-ruleset` or `merge-pr` request. `scripts/configure-repository-ruleset.ts --apply` must call
+`execute-plan`, `apply-ruleset`, or `merge-pr` request. The authoritative ruleset definition is the
+named export `repositoryRuleset` from `scripts/configure-repository-ruleset.ts`; approval target
+construction imports that exact value. `scripts/configure-repository-ruleset.ts --apply` must call
 the same approval use case before its first `gh` write and perform zero GitHub writes when approval
-is absent, denied, malformed, ambiguous, or stale. WI1 will reuse and extend this contract rather
+is absent, denied, malformed, ambiguous, stale, bound to another HEAD, or run from a tracked dirty
+worktree.
+
+Add `scripts/merge-approved-pr.ts`. It validates the exact native approval, requires the local and
+remote native issue refs to have the same head, reads the current PR head through `gh`, compares it
+with the approved full SHA, and only then issues the merge request. It performs zero GitHub writes
+for absent, denied, malformed, ambiguous, changed-target, remote-ref mismatch, or stale-head
+approval. The implementation worker stops after the verified PR handoff. The orchestrating agent
+or operator alone runs this approved merge command. WI1 will reuse and extend this contract rather
 than define a competing approval format.
 
 Update `.agents/OPERATING.md` with this conversation-native approval contract. The implementation
@@ -610,8 +625,9 @@ ambiguous duplicate-name failures. Apply creates or updates a ruleset only when 
 zero or one matching ruleset. On more than one match, it exits `2` without mutation. Tests mock only
 the `gh` and raw-Git process boundaries and cover create, update, already-conformant, drifted,
 duplicate-with-no-mutation, unauthenticated, unauthorized, no-approval, approved, denied, malformed,
-wrong-action, changed-plan, changed-ruleset, changed-PR-head, later-denied, and incomparable
-approval responses. Every non-approved case asserts zero GitHub writes.
+wrong-action, changed-plan, changed-ruleset, changed-implementation, tracked-dirty,
+changed-PR-head, remote-ref mismatch, later-denied, and incomparable approval responses. Every
+non-approved case asserts zero GitHub writes.
 Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
 insufficient permission, the worker records the command, exit status, and secret-free API response
 in `Progress`, comments the same concise blocker
@@ -744,6 +760,7 @@ The package script names and targets are fixed:
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
     "authoring:check": "bun scripts/hooks/post-write.ts"
     "approval:check": "bun scripts/check-approval.ts"
+    "pr:merge:approved": "bun scripts/merge-approved-pr.ts"
     "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply"
     "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check"
 
@@ -752,6 +769,7 @@ typecheck, lint, and tests.
 
 The approval checker accepts exactly one of:
 
+    bun run approval:check -- --issue <uuid> --action execute-plan --plan <path> --plan-commit <full-sha>
     bun run approval:check -- --issue <uuid> --action apply-ruleset --plan <path>
     bun run approval:check -- --issue <uuid> --action merge-pr --repository <owner/name> --pull-request <positive-integer> --head <full-sha>
 
@@ -759,6 +777,14 @@ For `apply-ruleset`, the command reads the reviewed plan and imports the exact e
 `repositoryRuleset` value to compute both target digests. It exits `0` only for current approval,
 `1` for absent, denied, malformed, stale, or ambiguous approval, and `2` for Git or filesystem
 failure. It never writes refs or contacts GitHub.
+
+The approved merge command accepts:
+
+    bun run pr:merge:approved -- --issue <uuid> --repository <owner/name> --pull-request <positive-integer> --head <full-sha>
+
+It performs the same approval check, verifies the remote native issue ref and current provider PR
+head, and then requests a merge commit. It exits `1` without a merge request for approval or target
+failure and `2` for Git, network, authentication, or provider failure.
 
 `scripts/check-documentation.ts` accepts exactly:
 
@@ -997,18 +1023,29 @@ configure it manually. Trigger the workflow with the PR and record a successful
 `repository-quality` check; a skipped, pending, or billing-disabled check is not completion
 evidence.
 
-The bootstrap order is exact. First commit the reviewed plan and compute its file SHA-256 plus the
-canonical ruleset JSON SHA-256. Request `APPROVED` for `apply-ruleset` with both digests. Append and
-push the matching native approval record, run the approval check, then run the ruleset apply and
-read-only check. After local implementation and review, commit the final branch and push it, open
-the PR, and wait for `repository-quality`. Then request `APPROVED` for `merge-pr` with the PR number
-and full head SHA. Append and push that matching approval record, run the approval check, and merge
-only while GitHub still reports the same head SHA.
+The bootstrap order is exact. First commit and review the revised plan. Request `APPROVED` for
+`execute-plan` with its commit and file SHA-256, append and push the matching native approval record,
+then verify the canonical comment and exact pushed ref with `git cat-file commit`, `git
+merge-base --is-ancestor`, and `git ls-remote`. The approval checker is itself a U1A deliverable, so
+this one `execute-plan` bootstrap uses the same schema and ancestry rule through explicit Git
+commands rather than a command that does not exist yet. This exception permits no GitHub write and
+does not apply after the checker exists. Set execution authorization without changing the reviewed
+instructions. Implement the approval and ruleset changes test-first and commit the resulting clean tracked tree.
+Compute the plan, canonical ruleset JSON, and implementation commit targets. Request `APPROVED` for
+`apply-ruleset` with all three, append and push the matching native approval record, run the
+approval check, then run the ruleset apply and read-only check.
+
+The implementation worker then pushes the final branch, opens the PR, waits for
+`repository-quality`, completes review, and returns the verified head to the orchestrator without
+merging. The orchestrator requests `APPROVED` for `merge-pr` with the PR number and full head SHA,
+appends and pushes the matching native approval record, and runs `pr:merge:approved`. That command
+re-reads the provider head immediately before the merge request and refuses any changed head.
 
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
 step, focusing on documentation or hook surprises that future work can avoid. Commit, push, and open
-a PR. The worker must not merge.
+a PR. The worker must not merge; only the orchestrator or operator may run the approved merge
+command after the worker returns the verified PR head.
 
 This milestone is complete when the PR contains the implementation, tests, living-plan updates,
 provider evidence, and Learn artifact; every local gate is green; and the issue records the branch,
@@ -1033,6 +1070,7 @@ Use these focused commands in milestone order:
     bunx vitest run scripts/check-revision.test.ts
     bunx vitest run src/modules/architecture-standard/domain/approval-contract.test.ts
     bunx vitest run scripts/check-approval.test.ts
+    bunx vitest run scripts/merge-approved-pr.test.ts
     bunx vitest run scripts/configure-repository-ruleset.test.ts
     bunx vitest run scripts/hooks/hooks.integration.test.ts
     bunx vitest run scripts/hooks/provider-post-write.test.ts
@@ -1081,9 +1119,11 @@ serialization and fail-closed enforcement: `serializes one canonical approval re
 malformed and unknown approval fields`, `binds ruleset approval to plan and payload digests`,
 `binds merge approval to pull request and head`, `rejects a wrong action or changed target`,
 `selects the unique ancestry-maximal decision`, `rejects incomparable approval decisions`, `a later
-denial supersedes approval`, and `performs no GitHub write without current approval`. Each case must
+denial supersedes approval`, `rejects a changed implementation or tracked dirty tree`, `re-reads
+the PR head before merging`, and `performs no GitHub write without current approval`. Each case must
 have a passing control. The script tests use disposable Git repositories with real issue refs and
-mock only the GitHub process boundary.
+mock only the GitHub process boundary. Merge tests assert zero merge calls for absent, denied,
+malformed, stale-head, changed-target, and remote-ref-mismatch approval.
 
 After the policy and adapters exist, exercise:
 
@@ -1157,9 +1197,11 @@ Acceptance requires all of the following observable behaviors:
 - The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
   `main` ruleset requires both a pull request and that successful check before merge. Changes to the
   workflow, canonical commands, hook/check implementations, architecture gate, test/lint/type
-  configuration, lockfile, or CODEOWNERS map require an exact operator `APPROVED` response for the
-  current head in the active Mandem conversation. The orchestrating agent records and pushes that
-  approval in the native issue before merging; a subsequent push invalidates it.
+  configuration, lockfile, or CODEOWNERS map make the approval scope especially important for this
+  U1A PR. Every PR merge requires an exact operator `APPROVED` response for its repository, PR
+  number, and current head in the active Mandem conversation. The orchestrating agent records and
+  pushes that approval in the native issue and uses the approved merge command; a subsequent push
+  invalidates it.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
@@ -1320,6 +1362,9 @@ external sources.
   code-owner and latest-push approval require a second account. Defined exact conversation approval
   recorded in the native issue, retained the required automated check, and reset execution
   authorization pending fresh review and exact operator approval.
+- [x] (2026-07-28 22:42Z) Resolved fresh review findings by defining canonical action targets and
+  ancestry selection, binding ruleset approval to the executing commit, adding fail-closed ruleset
+  and merge commands, and assigning merge execution only to the orchestrator or operator.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
@@ -1631,6 +1676,11 @@ and latest-push approval requirements with an exact `APPROVED` or `DENIED` respo
 Mandem conversation. The orchestrating agent records that decision against one immutable target in
 the native issue before acting. GitHub continues to require a pull request and the
 `repository-quality` check.
+
+Approval-verification repair note (2026-07-28): Defined exact `execute-plan`, `apply-ruleset`, and
+`merge-pr` target schemas; canonical serialization and ancestry selection; approval-record audit
+publication; ruleset implementation binding; and commands that perform zero GitHub writes unless
+the current native approval matches the exact live action target.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
