@@ -5,7 +5,7 @@ program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
 promotion: clean-room-approved
-execution_authorized: false
+execution_authorized: true
 date: 2026-07-25
 ---
 
@@ -1236,8 +1236,8 @@ external sources.
 - [x] (2026-07-27) Removed 136 abandoned checker and package directories after confirming no live
   process owned them, pruned stale Git worktree metadata, and verified that the U1A branch, seven
   commits, and three uncommitted policy-repair files remained intact.
-- [ ] Obtain clean-room approval and exact operator authorization for this recovery revision before
-  resuming implementation.
+- [x] (2026-07-28 15:20Z) The operator instructed Codex to read the U1A reset handoff and continue,
+  authorizing exact recovery-plan commit `cecfc0c8ede4c9493b50193bf76edbd321d49a8f`.
 - [x] (2026-07-27) A fresh clean-room reviewer approved recovery plan content SHA-256
   `f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or
   P2 findings. Recorded the durable verdict and promoted the plan to `clean-room-approved`;
@@ -1438,6 +1438,12 @@ external sources.
   check finite and testable.
   Date/Author: 2026-07-27 / Codex orchestrator
 
+- Decision: Authorize implementation of exact recovery-plan revision
+  `cecfc0c8ede4c9493b50193bf76edbd321d49a8f`.
+  Rationale: The operator instructed Codex to read the reset handoff and continue after the
+  clean-room review approved that exact commit with no P0, P1, or P2 findings.
+  Date/Author: 2026-07-28 / Brandon and Codex orchestrator
+
 - Decision: Own one bounded, disk-backed verification namespace with durable reconciliation.
   Rationale: Process-finally cleanup cannot run after SIGKILL or reboot, and RAM-backed `/tmp`
   multiplies the impact of a runaway checkout. A lock, manifest, path validation, one-worktree
@@ -1565,3 +1571,9 @@ P0 recovery clean-room note (2026-07-27): A fresh reviewer approved plan-content
 findings. The durable verdict is
 `docs/plans/reviews/2026-07-27-u1a-p0-recovery-clean-room.md`. This metadata and living-record
 update does not alter the reviewed implementation contract; `execution_authorized` remains false.
+
+P0 recovery authorization note (2026-07-28): Brandon instructed Codex to read the U1A reset
+handoff and continue, authorizing exact reviewed commit
+`cecfc0c8ede4c9493b50193bf76edbd321d49a8f`. This update sets
+`execution_authorized: true` and records the authorization without changing the reviewed
+implementation contract.
