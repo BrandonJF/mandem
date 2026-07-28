@@ -488,21 +488,64 @@ requirement. Mandem has one operator account, so the ruleset sets code-owner rev
 latest push, and required GitHub approval count to false or zero. It does not grant agents bypass
 permission. These controls require the automated check without requiring a second GitHub account.
 
-Operator consent occurs in the active Mandem conversation. Before an external mutation or merge,
-the orchestrating agent states one exact action and immutable target, then waits for a user message
-whose complete content is `APPROVED` or `DENIED`. For a pull request, the immutable target is the
-full head commit SHA. For the ruleset correction, it is this reviewed plan revision and the exact
-ruleset payload below. A later commit invalidates approval for the earlier commit.
+Operator consent occurs in the active Mandem conversation for two consent-boundary actions:
+`apply-ruleset` changes live repository administration policy, and `merge-pr` changes `main`.
+Ordinary issue-ref publication, branch publication, pull-request creation, comments, and read-only
+checks remain authorized workflow steps and do not require a separate response. Before either
+consent-boundary action, the orchestrating agent states one exact action and immutable target, then
+waits for a user message whose complete content is `APPROVED` or `DENIED`.
 
-Immediately after an exact response, the orchestrating agent appends a native issue comment that
-starts with `Mandem-Approval: v1` and records `decision`, `action`, `issue_id`, `target`, `actor`,
-and the available conversation evidence. The actor is `operator`; `target` is the full commit SHA
-or ruleset payload identifier stated in the request. When the orchestration environment exposes a
-conversation ID, message ID, timestamp, or actor identity, the record includes those values. The
-agent pushes the exact native issue ref before performing the approved action. Until WI1 adds
-machine validation, the orchestrating agent verifies this record directly and fails closed on a
-missing field, a later `DENIED`, a changed target, or an ambiguous latest decision. GitHub comments
+The orchestrating agent records the exact response in a native issue comment with this canonical
+shape:
+
+    Mandem-Approval: v1
+    decision: "approved"
+    action: "apply-ruleset"
+    issue_id: "745eda80-1e74-4866-bc95-2f2983b31025"
+    target:
+      plan_sha256: "<64 lowercase hexadecimal characters>"
+      ruleset_sha256: "<64 lowercase hexadecimal characters>"
+    actor: "operator"
+    response: "APPROVED"
+    evidence:
+      channel: "mandem-conversation"
+      conversation_id: null
+      message_id: null
+      recorded_at: "<RFC 3339 UTC timestamp>"
+
+For `decision: "denied"`, `response` is exactly `"DENIED"`. No other decision, actor, response, or
+action value is valid. `conversation_id` and `message_id` are strings when the orchestration
+environment exposes them and explicit null otherwise. All other fields are required. Unknown keys
+are rejected.
+
+An `apply-ruleset` target contains only `plan_sha256` and `ruleset_sha256`. The plan digest is the
+SHA-256 of the exact reviewed plan file. The ruleset digest is the SHA-256 of UTF-8 JSON produced by
+recursively sorting object keys lexicographically, preserving array order, and emitting no
+insignificant whitespace. A `merge-pr` target contains only `repository`, `pull_request`, and
+`head_sha`; the repository is `"BrandonJF/mandem"`, the pull request is a positive integer, and the
+head is a full lowercase Git SHA. Changing the action or any target field requires a new response.
+
+Canonical approval comments use the marker on the first line, LF endings, two-space YAML
+indentation, double-quoted strings, explicit null, the key order shown above, and one final newline.
+For each exact `issue_id`, `action`, and target, the validator selects the one approval commit that
+descends from every other matching approval commit. It never selects by timestamp. No matching
+comment, malformed matching content, or incomparable maximal matching commits deny authorization.
+The selected decision authorizes only when it is `approved` and its response is `APPROVED`; a
+selected later `denied` decision denies authorization.
+
+The agent may append and push the approval comment solely to preserve the operator's response; that
+audit write does not require another approval. The agent verifies the exact remote issue-ref head
+after the push, then performs only the action and target recorded in the comment. A later plan
+revision, ruleset payload, or pull-request head invalidates the earlier approval. GitHub comments
 and reviews are projections or optional discussion; they do not grant consent.
+
+Add a pure approval parser, canonical serializer, target builder, and ancestry selector under
+`src/modules/architecture-standard/domain/approval-contract.ts`, with focused tests beside it.
+Add `scripts/check-approval.ts` to read raw commits from one exact native issue ref and validate an
+`apply-ruleset` or `merge-pr` request. `scripts/configure-repository-ruleset.ts --apply` must call
+the same approval use case before its first `gh` write and perform zero GitHub writes when approval
+is absent, denied, malformed, ambiguous, or stale. WI1 will reuse and extend this contract rather
+than define a competing approval format.
 
 Update `.agents/OPERATING.md` with this conversation-native approval contract. The implementation
 worker records the ruleset identifier and read-back output in this plan. If its credential lacks
@@ -565,9 +608,10 @@ ruleset back. `bun run repository-ruleset:check` is read-only and exits `1` when
 differs, including a nonempty bypass list; it exits `2` for authentication, authorization, API, or
 ambiguous duplicate-name failures. Apply creates or updates a ruleset only when discovery finds
 zero or one matching ruleset. On more than one match, it exits `2` without mutation. Tests mock only
-the `gh` process boundary and cover create,
-update, already-conformant, drifted, duplicate-with-no-mutation, unauthenticated, and unauthorized
-responses.
+the `gh` and raw-Git process boundaries and cover create, update, already-conformant, drifted,
+duplicate-with-no-mutation, unauthenticated, unauthorized, no-approval, approved, denied, malformed,
+wrong-action, changed-plan, changed-ruleset, changed-PR-head, later-denied, and incomparable
+approval responses. Every non-approved case asserts zero GitHub writes.
 Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
 insufficient permission, the worker records the command, exit status, and secret-free API response
 in `Progress`, comments the same concise blocker
@@ -699,11 +743,22 @@ The package script names and targets are fixed:
     "hooks:check": "bun scripts/hooks/install.ts --check"
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
     "authoring:check": "bun scripts/hooks/post-write.ts"
+    "approval:check": "bun scripts/check-approval.ts"
     "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply"
     "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check"
 
 `bun run check` invokes `docs:audit` and `authored-files:check` after the Bun preflight and before
 typecheck, lint, and tests.
+
+The approval checker accepts exactly one of:
+
+    bun run approval:check -- --issue <uuid> --action apply-ruleset --plan <path>
+    bun run approval:check -- --issue <uuid> --action merge-pr --repository <owner/name> --pull-request <positive-integer> --head <full-sha>
+
+For `apply-ruleset`, the command reads the reviewed plan and imports the exact exported
+`repositoryRuleset` value to compute both target digests. It exits `0` only for current approval,
+`1` for absent, denied, malformed, stale, or ambiguous approval, and `2` for Git or filesystem
+failure. It never writes refs or contacts GitHub.
 
 `scripts/check-documentation.ts` accepts exactly:
 
@@ -942,6 +997,14 @@ configure it manually. Trigger the workflow with the PR and record a successful
 `repository-quality` check; a skipped, pending, or billing-disabled check is not completion
 evidence.
 
+The bootstrap order is exact. First commit the reviewed plan and compute its file SHA-256 plus the
+canonical ruleset JSON SHA-256. Request `APPROVED` for `apply-ruleset` with both digests. Append and
+push the matching native approval record, run the approval check, then run the ruleset apply and
+read-only check. After local implementation and review, commit the final branch and push it, open
+the PR, and wait for `repository-quality`. Then request `APPROVED` for `merge-pr` with the PR number
+and full head SHA. Append and push that matching approval record, run the approval check, and merge
+only while GitHub still reports the same head SHA.
+
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
 step, focusing on documentation or hook surprises that future work can avoid. Commit, push, and open
@@ -968,6 +1031,8 @@ Use these focused commands in milestone order:
     bunx vitest run src/modules/architecture-standard/tests/authored-source-policy.test.ts
     bunx vitest run scripts/check-documentation.test.ts
     bunx vitest run scripts/check-revision.test.ts
+    bunx vitest run src/modules/architecture-standard/domain/approval-contract.test.ts
+    bunx vitest run scripts/check-approval.test.ts
     bunx vitest run scripts/configure-repository-ruleset.test.ts
     bunx vitest run scripts/hooks/hooks.integration.test.ts
     bunx vitest run scripts/hooks/provider-post-write.test.ts
@@ -1011,6 +1076,15 @@ revision without changing a dirty checkout`. Each case must have a nearby passin
 assert its exit status, bounded diagnostic, worktree registrations, transaction files, and
 operator-checkout status as applicable.
 
+Before changing the live ruleset, the approval tests must fail named cases that prove canonical
+serialization and fail-closed enforcement: `serializes one canonical approval record`, `rejects
+malformed and unknown approval fields`, `binds ruleset approval to plan and payload digests`,
+`binds merge approval to pull request and head`, `rejects a wrong action or changed target`,
+`selects the unique ancestry-maximal decision`, `rejects incomparable approval decisions`, `a later
+denial supersedes approval`, and `performs no GitHub write without current approval`. Each case must
+have a passing control. The script tests use disposable Git repositories with real issue refs and
+mock only the GitHub process boundary.
+
 After the policy and adapters exist, exercise:
 
     bun run docs:audit
@@ -1020,6 +1094,7 @@ After the policy and adapters exist, exercise:
     bun run hooks:check
     bun run test:hooks
     bun run authoring:check -- src/modules/runtime/domain/types.ts
+    bun run approval:check -- --issue 745eda80-1e74-4866-bc95-2f2983b31025 --action apply-ruleset --plan docs/plans/units/u1a-documentation-authoring-quality-gates.md
     bun run repository-ruleset:check
     bun run revision-worktrees:reconcile
     bun run check:revision -- "$(git rev-parse HEAD)"
@@ -1499,10 +1574,11 @@ on 2026-07-27.
 
 Milestone 5 is complete. Versioned hooks evaluate the staged snapshot before commits and selected
 commit snapshots before pushes. The installer confines `.githooks` to the selected worktree while
-preserving a prior common hook path in sibling worktrees. Milestone 6 remains.
+preserving a prior common hook path in sibling worktrees.
 
 Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
-exact plan revision. No dependency remains before implementation.
+earlier plan revision. This material approval-contract revision supersedes that authorization, so
+implementation is paused pending fresh review and exact approval.
 
 Milestone 6 is complete. The shared `authoring:check` command checks one path without editing it;
 Claude and Codex configurations call thin PostToolUse adapters that normalize provider events and
