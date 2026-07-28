@@ -7,6 +7,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -175,9 +176,18 @@ function ensurePersistent(path: string): void {
 }
 
 function directoryBytes(path: string): number {
-  if (!existsSync(path)) return 0;
-  const result = execFileSync("du", ["-sb", path], { encoding: "utf8" }).trim().split(/\s+/)[0];
-  return Number(result ?? maximumBytes);
+  try {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return stat.blocks * 512;
+    if (!stat.isDirectory()) return stat.blocks * 512;
+    return stat.blocks * 512 + readdirSync(path).reduce(
+      (total, entry) => total + directoryBytes(join(path, entry)),
+      0,
+    );
+  } catch (error: unknown) {
+    if ((error as { readonly code?: string }).code === "ENOENT") return 0;
+    throw error;
+  }
 }
 
 async function runBounded(
