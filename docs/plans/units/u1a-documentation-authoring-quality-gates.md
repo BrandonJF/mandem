@@ -1242,9 +1242,12 @@ external sources.
   `f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or
   P2 findings. Recorded the durable verdict and promoted the plan to `clean-room-approved`;
   implementation remains unauthorized pending exact operator approval.
-- [ ] Repair and verify revision orchestration (completed: incident diagnosis and revised contract;
-  remaining: nonrecursive target gate, disk-backed owned namespace, lock, reconciliation, resource
-  bounds, and focused regression tests).
+- [x] (2026-07-28 15:27Z) Repaired revision orchestration with a nonrecursive target gate,
+  Git-directory advisory lock, disk-backed owned namespace, durable manifest and marker,
+  exact-worktree reconciliation, isolated temporary and Bun cache paths, storage reserve and run
+  caps, child timeouts, and process-group termination. The package graph test failed before the
+  new commands existed. The complete 61-test gate and an exact-revision run both pass without
+  recursion or abandoned state.
 
 ## Surprises & Discoveries
 
@@ -1338,6 +1341,12 @@ external sources.
   Evidence: GitHub issue #17 records the chain
   `check-revision.test.ts` to `check-revision.ts` to `bun run check` and back to
   `check-revision.test.ts`; the killed run left 136 directories consuming 21 GiB in `/tmp`.
+
+- Observation: GNU `du` can fail while a child test removes files from the monitored run
+  directory.
+  Evidence: the first complete recovery gate reported transient `No such file or directory`
+  diagnostics for package-test and ESLint temporary files. The watchdog now sums allocated blocks
+  with a no-follow filesystem walk and tolerates entries removed during sampling.
 
 ## Decision Log
 
@@ -1488,12 +1497,10 @@ for duplicate outgoing commits, and the detached revision checker returns `1` fo
 gate and `2` for setup or cleanup failures. A disposable integration test proves that exact-revision
 behavior, a dirty caller checkout, and successful cleanup on both passing and failing gates.
 
-The revision checker is not complete. Its first complete-gate execution recursively re-entered its
-own integration test, exhausted RAM-backed temporary storage, and killed the agent pane. The
-implementation branch remains recoverable, but work is paused at the planning boundary. The
-revised design separates orchestration from the target gate, moves all verification temporary
-state to one bounded disk-backed namespace, and adds restart reconciliation. Clean-room review and
-new exact-revision operator approval are required before implementation resumes.
+The P0 revision-check recovery is implemented and verified. `bun run check` passes 61 tests, and
+`bun run check:revision -- "$(git rev-parse HEAD)"` launches one detached checkout, runs the
+nonrecursive 60-test target suite, removes the transaction, and exits successfully. Remaining U1A
+work is the hosted workflow and review handoff described in Milestone 7.
 
 Operator approval note (2026-07-27): Brandon approved exact plan revision
 `148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
