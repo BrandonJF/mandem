@@ -492,7 +492,7 @@ Operator consent occurs in the active Mandem conversation for three consent-boun
 `execute-plan` authorizes implementation of one reviewed plan, `apply-ruleset` changes live
 repository administration policy, and `merge-pr` changes `main`.
 Ordinary issue-ref publication, branch publication, pull-request creation, comments, and read-only
-checks remain authorized workflow steps and do not require a separate response. Before either
+checks remain authorized workflow steps and do not require a separate response. Before each
 consent-boundary action, the orchestrating agent states one exact action and immutable target, then
 waits for a user message whose complete content is `APPROVED` or `DENIED`.
 
@@ -556,7 +556,9 @@ worktree.
 
 Add `scripts/merge-approved-pr.ts`. It validates the exact native approval, requires the local and
 remote native issue refs to have the same head, reads the current PR head through `gh`, compares it
-with the approved full SHA, and only then issues the merge request. It performs zero GitHub writes
+with the approved full SHA, and only then runs `gh pr merge <number> --repo <owner/name> --merge
+--match-head-commit <approved-head-sha>`. GitHub must reject the merge atomically if the head changes
+after the read. The wrapper performs zero GitHub writes
 for absent, denied, malformed, ambiguous, changed-target, remote-ref mismatch, or stale-head
 approval. The implementation worker stops after the verified PR handoff. The orchestrating agent
 or operator alone runs this approved merge command. WI1 will reuse and extend this contract rather
@@ -1123,7 +1125,8 @@ denial supersedes approval`, `rejects a changed implementation or tracked dirty 
 the PR head before merging`, and `performs no GitHub write without current approval`. Each case must
 have a passing control. The script tests use disposable Git repositories with real issue refs and
 mock only the GitHub process boundary. Merge tests assert zero merge calls for absent, denied,
-malformed, stale-head, changed-target, and remote-ref-mismatch approval.
+malformed, stale-head, changed-target, and remote-ref-mismatch approval, and assert that a provider
+head change at the merge boundary fails the compare-and-swap request without merging.
 
 After the policy and adapters exist, exercise:
 
@@ -1660,9 +1663,10 @@ requirements, keeps pull requests and `repository-quality` mandatory, and define
 conversation responses recorded in native issues as the operator consent mechanism. The material
 change supersedes prior execution authorization and requires fresh review and exact approval.
 
-Operator approval note (2026-07-27): Brandon approved exact plan revision
-`148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
-records the approval without changing the reviewed implementation scope.
+Superseded operator approval note (2026-07-27): Brandon approved exact earlier plan revision
+`148819ea580606ed2be81a5bec58072471da9dba`, which set `execution_authorized: true` at that time.
+The current material revision supersedes that approval and has `execution_authorized: false`; the
+earlier decision has no current execution effect.
 
 Post-U1C revalidation note (2026-07-27): Rebased the plan's assumptions on merge
 `27d4abe1a2815bfef1bec56c71bc6d90880ef035`. The corrected kernel already owns authored-source
