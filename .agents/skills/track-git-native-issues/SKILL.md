@@ -10,9 +10,9 @@ fresh agent can orient itself before reading plans, pull requests, or chat histo
 
 ## Roles
 
-- The git-native issue records the work item's current phase, blocker, latest verified result, and
+- The git-native issue records the issue's current phase, blocker, latest verified result, and
   next action.
-- A child ExecPlan contains complete implementation instructions, decisions, and detailed evidence.
+- An issue ExecPlan contains complete implementation instructions, decisions, and detailed evidence.
 - Git records code state. GitHub records pull-request and review state.
 - The Mandem event ledger will record transition history after the product implements it.
 
@@ -77,7 +77,8 @@ Create with conventional change vocabulary such as `docs:`, `feat:`, or `fix:`:
       --label <type> \
       --priority <level>
 
-Do not create duplicate parent and child issues for one indivisible change.
+Do not create duplicate parent issues and subissues for one indivisible change. A subissue is any
+issue with a parent; its hierarchy does not imply a bug, correction, or other classification.
 
 ## Record Transitions
 
