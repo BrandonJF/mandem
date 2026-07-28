@@ -9,8 +9,12 @@ import { assertBunVersion, runtimeVersion } from "@/modules/runtime";
 describe("runtime package identity", () => {
   it("runs the repository checks in the documented deterministic order", async () => {
     const manifest = JSON.parse(await readFile("package.json", "utf8")) as { scripts: Record<string, string> };
-    expect(manifest.scripts.check).toBe(
-      "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint && bun run test:run",
+    expect(manifest.scripts["check:core"]).toBe(
+      "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint",
+    );
+    expect(manifest.scripts.check).toBe("bun run check:core && bun run test:run");
+    expect(manifest.scripts["check:revision-target"]).toBe(
+      "bun run check:core && bun run test:revision-target",
     );
     expect(manifest.scripts["repository-ruleset:apply"]).toBe("bun scripts/configure-repository-ruleset.ts --apply");
     expect(manifest.scripts["repository-ruleset:check"]).toBe("bun scripts/configure-repository-ruleset.ts --check");

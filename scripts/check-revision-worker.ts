@@ -56,7 +56,7 @@ function durableJson(path: string, temporary: string, value: RunRecord): void {
 }
 
 function isContained(parent: string, child: string): boolean {
-  return child === parent || child.startsWith(`${parent}${sep}`);
+  return child === parent || child.startsWith(parent.endsWith(sep) ? parent : `${parent}${sep}`);
 }
 
 function parseRecord(path: string): RunRecord {

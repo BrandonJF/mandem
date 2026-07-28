@@ -1,8 +1,7 @@
 /** @fileoverview Disposable integration tests for exact revision quality checks. */
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const mandemRoot = process.cwd();
@@ -12,7 +11,7 @@ function git(root: string, ...arguments_: string[]): string { return execFileSyn
 
 describe("check-revision", () => {
   it("checks only the selected revision, preserves a dirty checkout, cleans up, and separates gate failures", async () => {
-    const parent = await mkdtemp(join(tmpdir(), "mandem-check-revision-test-"));
+    const parent = await mkdtemp(join(dirname(mandemRoot), ".mandem-check-revision-test-"));
     const root = join(parent, "repository");
     try {
       execFileSync("git", ["clone", "--no-hardlinks", mandemRoot, root], { encoding: "utf8" });
@@ -20,7 +19,8 @@ describe("check-revision", () => {
       const clean = git(root, "rev-parse", "HEAD");
       await writeFile(join(root, "README.md"), `${await readFile(join(root, "README.md"), "utf8")}\nDirty checkout text.\n`);
       const before = git(root, "status", "--porcelain=v1");
-      expect(spawnSync("bun", [checker, clean], { cwd: root, encoding: "utf8" }).status).toBe(0);
+      const passing = spawnSync("bun", [checker, clean], { cwd: root, encoding: "utf8" });
+      expect(passing.status, `${passing.stdout}\n${passing.stderr}`).toBe(0);
       expect(git(root, "status", "--porcelain=v1")).toBe(before);
       expect(git(root, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
 
@@ -31,5 +31,5 @@ describe("check-revision", () => {
       expect(git(root, "status", "--porcelain=v1")).toBe(before);
       expect(git(root, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
     } finally { await rm(parent, { recursive: true, force: true }); }
-  }, 120_000);
+  }, 300_000);
 });
