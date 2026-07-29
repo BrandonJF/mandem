@@ -88,10 +88,13 @@ The issue ExecPlans also use inconsistent identity metadata. Some contain no `is
 - R20. `bun run vocabulary:check` checks repository-owned instructions, skills, plans, registries, and operator documentation for the detectable obsolete issue-synonym contexts listed in this plan. It reports stable file-and-line findings, joins `bun run check`, and supports a one-line documented exception for official external names, historical quotations, and established terms such as unit test that do not describe issue hierarchy. The prose rule remains broader than this automated subset and applies during authoring and review.
 - R21. WI1 extends the merged `Mandem-Approval: v1` contract instead of creating another approval
   format. `set-issue-graph` authorizes one complete native graph digest against the digest of the
-  exact remote issue-ref head map and implementation commit. `sync-issue-projection` authorizes one
-  repository, native graph digest, provider operation-plan digest, and implementation commit.
-  Both validators require a clean tracked worktree and equal local/remote approval-issue refs,
-  reject changed targets, and perform zero managed writes without exact approval.
+  exact pre-approval remote issue-ref head map and implementation commit.
+  `sync-issue-projection` authorizes one repository, native graph digest, managed provider-snapshot
+  digest, provider operation-plan digest, and implementation commit.
+  Both validators require a clean tracked worktree and verified local/remote approval history,
+  reject changed targets, and perform zero managed writes without exact approval. The native
+  setter permits only the exact baseline-to-result retry states defined below; the projection
+  validator requires equal local and remote approval-issue refs.
 
 ### Actors
 
@@ -256,16 +259,50 @@ The checker enumerates every authoritative metadata comment and requires exactly
 
 The setter parses YAML to typed values and compares those values, not source formatting. Before it appends, it serializes a canonical comment with `Mandem-Graph-Metadata: v1` on the first line, then YAML with LF endings, two-space indentation, double-quoted strings, explicit `null`, and one final newline. Relationship keys use the order shown above. Provider keys order as `kind`, `owner`, `repository`; milestone keys as `title`, `description`, `state`, `due_on`; dependency UUIDs and managed-label names sort lexicographically. Label keys order as `color`, `description`. The checker normalizes older v1 comments through the same serializer before equality comparison.
 
-Allowed `promotion` values are `scaffolded`, `planned`, `clean-room-approved`, `executable`, and `complete`. `execution_authorized: true` is valid only with `promotion: executable`. A completed issue uses `promotion: complete` and `execution_authorized: false`. Normalize U1A from its current `clean-room-approved` plus `true` combination to `executable` plus `true`; this changes stale metadata, not its already recorded authority.
+The `--file` input is one complete manifest with this exact closed schema:
 
-The reviewed native issue migration set follows. Each line identifies the target ref and its complete relationship values. `state` and `labels` refer to the git-native issue's built-in fields; the relationship comment does not duplicate them. The epic comment additionally contains the nested `provider`, `milestone`, and complete `managed_labels` objects from the canonical epic payload above.
+    version: 1
+    issues:
+      - issue_id: "<full lowercase UUID>"
+        issue_key: "<canonical key>"
+        epic_issue_id: "<full lowercase UUID>"
+        plan: "<repository-relative path or null>"
+        parent_issue_id: "<full lowercase UUID or null>"
+        depends_on_issue_ids: ["<sorted full lowercase UUIDs>"]
+        expected_native_state: "open"
+        expected_native_labels: ["<sorted managed-label intersection>"]
+        provider: "<epic only; exact object above>"
+        milestone: "<epic only; exact object above>"
+        managed_labels: "<epic only; exact object above>"
+
+`issues` sorts by `issue_id`. Every entry requires the first eight keys through
+`expected_native_labels`; only the epic entry requires the final three provider-policy keys, and
+all other entries reject them. `expected_native_labels` is the sorted intersection of the issue's
+built-in labels with the epic's `managed_labels` keys. `issue_id`, `expected_native_state`, and
+`expected_native_labels` select and preflight native refs but are not emitted into
+`Mandem-Graph-Metadata: v1` comments. The canonical `graph_sha256` covers the entire normalized
+manifest, including those read-only expectations and provider policy. Unknown, missing, or
+duplicate values and unsorted issue or dependency arrays are rejected. YAML mapping-key order is
+not significant; the parser emits keys in the schema order above. The compact migration rows below
+list the exact issue values in key order for review. Before use as the manifest, sort them by
+`issue_id`, rename `state` to `expected_native_state`, rename `labels` to
+`expected_native_labels`, attach the exact epic policy objects above to the EPIC row, and serialize
+mapping keys in schema order. No other transformation or inferred value is permitted.
+
+Allowed `promotion` values are `scaffolded`, `planned`, `clean-room-approved`, `executable`, and `complete`. `execution_authorized: true` is valid only with `promotion: executable`. A completed issue uses `promotion: complete` and `execution_authorized: false`. Normalize the merged U1A plan to that completed combination; this records its verified result without reusing its earlier execution authority.
+
+The reviewed native issue migration set follows. Each line identifies the target ref and its
+complete relationship values. `state` is the git-native issue's built-in state. `labels` is its
+managed-label intersection, not its complete built-in label list. The relationship comment
+duplicates neither field. The epic comment additionally contains the nested `provider`,
+`milestone`, and complete `managed_labels` objects from the canonical epic payload above.
 
       - { issue_key: EPIC, issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/2026-07-21-001-feat-mandem-plan.md, parent_issue_id: null, depends_on_issue_ids: [], state: open, labels: [in-progress] }
       - { issue_key: U1, issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1-bootstrap-repository-architecture-contract.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [], state: closed, labels: [] }
       - { issue_key: U1C, issue_id: 5717221b-f9e6-4c8f-abca-77a1ad3811bf, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1-corrective-architecture-package-contract.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4], state: closed, labels: [u1c] }
-      - { issue_key: U1A, issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1a-documentation-authoring-quality-gates.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [5717221b-f9e6-4c8f-abca-77a1ad3811bf], state: open, labels: [in-progress, u1a] }
-      - { issue_key: U1A-INCIDENT-1, issue_id: 38f956c8-0f18-4d85-af1a-d908bcc54248, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: null, parent_issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, depends_on_issue_ids: [], state: open, labels: [incident] }
-      - { issue_key: WI1, issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/wi1-epic-issue-graph-integrity.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [745eda80-1e74-4866-bc95-2f2983b31025], state: open, labels: [planned] }
+      - { issue_key: U1A, issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1a-documentation-authoring-quality-gates.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [5717221b-f9e6-4c8f-abca-77a1ad3811bf], state: closed, labels: [u1a] }
+      - { issue_key: U1A-INCIDENT-1, issue_id: 38f956c8-0f18-4d85-af1a-d908bcc54248, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: null, parent_issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, depends_on_issue_ids: [], state: closed, labels: [incident] }
+      - { issue_key: WI1, issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/wi1-epic-issue-graph-integrity.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [745eda80-1e74-4866-bc95-2f2983b31025], state: open, labels: [blocked] }
       - { issue_key: U2, issue_id: cb67d131-975c-4d97-9a6f-4934be991ac6, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u2-protocol-lifecycle-sqlite.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, 745eda80-1e74-4866-bc95-2f2983b31025, 6a6a8bab-853f-4658-9bc0-38e2386b642d], state: open, labels: [blocked, u2] }
       - { issue_key: U3, issue_id: d946e066-84d5-4651-b3b4-30a18e80008c, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u3-server-docker-resident-reconciliation.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6], state: open, labels: [blocked, u3] }
       - { issue_key: U4, issue_id: 11538b56-bd63-42c2-8242-87ac7a76d35d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u4-work-items-plans-queue-gates-cli.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c], state: open, labels: [blocked, u4] }
@@ -294,7 +331,9 @@ The epic issue's `managed_labels` field defines these exact reviewed values. Col
     u9: { color: ededed, description: "" }
     u10: { color: ededed, description: "" }
 
-The milestone contract is title `Mandem v1`, description `Tracks the planned U1–U10 epic through final v1 publication.`, open state, and no due date. Labels outside the managed set are preserved.
+The milestone contract is title `Mandem v1`, description `Tracks the planned Mandem v1 issues
+through final publication.`, open state, and no due date. Labels outside the managed set are
+preserved.
 
 The provider projection derives desired issue state from each native issue's built-in `State` trailer and desired managed-label assignments from the intersection of its built-in `Labels` trailers with the epic issue's `managed_labels` keys. GitHub fields never flow back into these native values through this reconciler.
 
@@ -337,22 +376,68 @@ these exact target shapes:
     target:
       repository: "BrandonJF/mandem"
       graph_sha256: "<canonical desired NativeIssueGraphV1 digest>"
-      issue_refs_sha256: "<canonical sorted UUID-to-remote-head map digest>"
+      issue_refs: { "<sorted full UUID>": "<pre-approval remote head>", "...": "..." }
+      issue_refs_sha256: "<canonical sorted UUID-to-pre-approval-remote-head map digest>"
       implementation_sha: "<full Git SHA>"
 
     action: "sync-issue-projection"
     target:
       repository: "BrandonJF/mandem"
       graph_sha256: "<same canonical native graph digest>"
+      transaction_sha256: "<canonical Mandem-Projection-Transaction v1 payload digest>"
+      provider_snapshot_sha256: "<canonical managed provider snapshot digest>"
       operations_sha256: "<canonical sorted provider operation list digest>"
       implementation_sha: "<full Git SHA>"
 
 Canonical JSON uses U1A's existing recursive key sort, preserved array order, UTF-8 encoding, and
 no insignificant whitespace. The native graph sorts issue entries and dependency UUIDs before
-hashing. Provider operations sort by their deterministic operation key before hashing. Unknown
-keys, a changed remote head map, changed provider state, another implementation commit, or a dirty
-tracked worktree deny authorization. Reuse the same `Mandem-Approval: v1` evidence and unique
-descendant selection; do not add a WI1-specific decision record.
+hashing. Provider operations sort by their deterministic operation key before hashing.
+
+For `set-issue-graph`, build and record the full head map immediately before requesting consent;
+`issue_refs_sha256` must equal its canonical digest. After the response
+is recorded, reconstruct the approval issue's map value from the selected approval commit's sole
+parent and require every other recorded value to match its then-current remote head. Before the first native write,
+require that selected approval commit to be the current remote approval-ref head; any unrelated
+later comment or concurrent ref change denies authorization. Approval may therefore live on a
+managed target ref without invalidating itself.
+
+Construct every metadata commit deterministically from its approved graph payload, approved
+baseline, and selected approval commit. Fixed author identity and timestamps derive from the
+approval commit, and the approval issue's metadata commit uses the approval commit as its parent.
+For each ref, retry accepts only its approved baseline or that one computed result head. The
+approval ref specifically accepts only the approval commit or its computed metadata child. Local
+state may hold the computed child while remote still holds its approved parent, allowing the exact
+leased retry after a lost push; a remote computed child proves an already completed push. Any
+other descendant or divergence denies authorization. Tests record approval on a managed target
+ref and cover partial batch completion plus lost-response retry in both local-ahead and
+already-published states.
+
+The provider snapshot contains only managed fields read by this plan, sorted canonically.
+`issue-graph:remote:check` remains entirely read-only. The separate preparation mode
+`issue-graph:remote:sync` appends a `Mandem-Projection-Transaction: v1` native issue comment
+containing that complete canonical snapshot and the full sorted operation objects, pushes it, and
+only then presents the approval target. Preparation reuses an exact canonical transaction with
+zero commits and zero pushes only when that transaction is the current remote approval-ref head,
+or when the current head is its direct child containing the exact matching approval. If an
+ordinary or unrelated comment intervenes, preparation appends one new canonical transaction as
+the current child. `transaction_sha256` covers the entire payload; the other two digests cover its
+named sections. A new approval commit must be the transaction commit's direct child, and both must
+remain reachable from the current remote approval-issue ref. This native record, not a local
+completion file, supplies restart evidence. Tests run identical preparation twice and require one
+transaction comment total, then add an intervening ordinary comment and require exactly one new
+transaction at the head.
+
+Initial apply must reproduce all three approved digests. The executor then treats the recorded
+operation list as an immutable transaction: before each write and after any restart, conflict, or
+uncertain response, reload state and prove that a prefix of recorded operations is already
+satisfied and that newly planned operations equal the exact uncompleted suffix. A missing,
+changed, reordered, or additional operation is unexpected provider drift and stops before another
+write; it requires a fresh preview, transaction comment, and approval. Apply never substitutes a
+newly planned set. Unknown keys, another implementation commit, or a dirty tracked worktree deny
+authorization. Reuse the same `Mandem-Approval: v1` evidence and unique descendant selection; do
+not add a WI1-specific decision record. Tests kill and restart after a completed prefix and also
+introduce external managed drift that would add or reorder an operation, proving zero subsequent
+writes.
 
 ---
 
@@ -471,7 +556,7 @@ Expect the local command to print one line in this form and exit zero:
 
     issue graph native v1 valid: 15 managed issues
 
-The managed count is fifteen: the epic and fourteen subissues. Thirteen issues have ExecPlans; the incident subissue does not. If the reviewed native metadata set changes before authorization, revise this plan and repeat review instead of silently changing the expected value.
+The managed count is fifteen: the epic and fourteen subissues. Fourteen issues have ExecPlans; the incident subissue does not. If the reviewed native metadata set changes before authorization, revise this plan and repeat review instead of silently changing the expected value.
 
 After U4 and U5 tests pass, preview the provider comparison:
 
@@ -479,11 +564,12 @@ After U4 and U5 tests pass, preview the provider comparison:
 
 An aligned provider prints `issue graph remote valid: 15 managed issues, 0 operations` and exits zero. Drift prints the sorted operations, performs no writes, and exits one. Operational failures such as missing authentication or an ambiguous provider mapping exit two.
 
-When preview reports only operations permitted by this plan, apply and immediately prove repeatability:
+When read-only preview reports only operations permitted by this plan, publish or reuse the native
+transaction record:
 
     bun run issue-graph:remote:sync
 
-Preview prints the exact `sync-issue-projection` target. After the orchestrator records and pushes
+Preparation prints the exact `sync-issue-projection` target. After the orchestrator records and pushes
 approval for that target, run:
 
     bun run issue-graph:remote:sync -- --approval-issue <full-uuid> --apply
@@ -511,16 +597,33 @@ ancestry without merging. When all metadata already equals the canonical payload
 commits and zero pushes. Otherwise apply validates the approved complete target before appending
 any resolving comments.
 
-Each push uses `--force-with-lease=refs/issues/<uuid>:<approved-remote-head>` as a compare-and-swap
-guard. The new local ref must descend from that approved remote head; the option never authorizes
-discarding history. A concurrent remote change rejects that ref and stops the batch. Retry reloads
-all heads and recomputes a new approval target; already-applied metadata causes no new commit.
+For each incomplete ref, push with
+`--force-with-lease=refs/issues/<uuid>:<accepted-current-head>` as a compare-and-swap guard, where
+the accepted current head is only the recorded baseline (or the approval commit on its own ref).
+The pushed head is only the deterministically computed result. A concurrent remote change rejects
+that ref and stops the batch; the option never authorizes discarding history.
 
-If the first push response is lost, retry fetches the remote ref. When remote still trails local by exactly the expected metadata commit, retry performs zero commits and one push. When remote and local heads are exactly equal, retry succeeds with zero commits and zero pushes. If remote is a descendant of local, the setter treats local as behind and requires merge and review even when the remote history contains the attempted commit. Disposable-repository tests cover equal, remote-descendant, behind, ahead, diverged, lost-response, and final no-op states.
+Retry reloads every ref and classifies it as the exact accepted baseline or exact computed result.
+A result head means that ref is complete and causes zero commits and zero pushes. A baseline with
+the computed result already local means retry performs zero commits and one leased push. A partial
+batch may contain either state independently. Any third state—including an unrelated descendant,
+behind head, or divergence—requires a fresh preview and approval. Disposable-repository tests
+cover the approval ref and another managed ref in baseline, local-ahead, already-published,
+partial-batch, unrelated-descendant, behind, diverged, lost-response, and final no-op states.
 
-Remote preview is also read-only. Apply reloads the complete provider snapshot before planning, then re-reads the resource immediately before each write. If the expected current state changed since planning, it discards the remaining operation list, reloads all state, and either continues with a newly sorted plan when every difference remains managed or exits two when the new state is ambiguous or unmanaged.
+Remote check performs no GitHub or native writes. The separately named sync preparation performs
+no GitHub writes and publishes or reuses the complete native transaction comment described above
+before consent is requested. Repeating it against the same transaction performs no native write.
+Apply reloads the complete provider snapshot before planning, then re-reads the resource
+immediately before each write. It may continue only
+when current state proves a satisfied prefix of the recorded transaction and the newly planned
+operations are the exact uncompleted suffix. Any other difference exits two before another write
+and requires a fresh preview and approval.
 
-After each write, apply reads the resource again. A matching desired value completes the operation even if the write response was lost or returned a duplicate/conflict status. A nonmatching value stops the run. A retry never trusts a local completion marker; it reloads GitHub and plans only the remaining differences.
+After each write, apply reads the resource again. A matching desired value completes the operation
+even if the write response was lost or returned a duplicate/conflict status. A nonmatching value
+stops the run. A retry never trusts a local completion marker; it reloads GitHub and proves the
+completed prefix and exact remaining suffix from the native transaction record.
 
 State changes use a field-specific issue patch. Label reconciliation adds or removes only labels named in the native epic issue's `managed_labels`. Milestone reconciliation selects the one milestone whose exact title matches native epic metadata. Hierarchy reconciliation removes a current parent only after proving both current and desired parents are managed. An unmanaged subissue attached to a managed parent produces `IGRAPH-PROVIDER-UNMANAGED-SUBISSUE` before any write; the operator must decide that external relationship separately. These rules preserve provider state outside the reviewed contract.
 
@@ -573,7 +676,7 @@ The GitHub adapter sends `X-GitHub-Api-Version: 2022-11-28`, requests JSON, foll
 - `GET /repos/{owner}/{repo}/issues/{issue_number}` reads provider issue `id`, number, state, milestone, and labels. `PATCH` on the same path sends only `state` or `milestone` for the corresponding operation.
 - `GET /repos/{owner}/{repo}/labels` lists definitions. `POST /repos/{owner}/{repo}/labels` creates a missing definition. `PATCH /repos/{owner}/{repo}/labels/{name}` updates only the native-epic-policy color and description.
 - `POST /repos/{owner}/{repo}/issues/{issue_number}/labels` adds named managed labels. `DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}` removes one unexpected managed label. Never replace the complete label array.
-- `GET /repos/{owner}/{repo}/milestones?state=all` lists milestones. `POST /repos/{owner}/{repo}/milestones` creates the exact managed title. `PATCH /repos/{owner}/{repo}/milestones/{milestone_number}` updates only managed description and due-date fields.
+- `GET /repos/{owner}/{repo}/milestones?state=all` lists milestones. `POST /repos/{owner}/{repo}/milestones` creates the exact managed title. `PATCH /repos/{owner}/{repo}/milestones/{milestone_number}` updates only managed description, state, and due-date fields. Adapter tests include reopening a closed managed milestone.
 - `GET /repos/{owner}/{repo}/issues/{issue_number}/parent` reads the direct parent; a not-found response means no parent. `GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues` lists direct subissues.
 - `POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues` with `{"sub_issue_id": <provider issue database id>}` adds a direct subissue. `DELETE /repos/{owner}/{repo}/issues/{parent_number}/sub_issue` with the same payload removes it before a permitted managed move. The fake-adapter test asserts this exact singular delete path and payload.
 
