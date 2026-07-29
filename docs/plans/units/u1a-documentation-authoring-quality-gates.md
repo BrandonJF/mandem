@@ -1387,6 +1387,10 @@ external sources.
 - [x] (2026-07-29 19:17Z) Re-review confirmed every P1/P2 finding closed after one final
   subprocess-level test corrected malformed merge-target exit classification. The final reviewer
   verdict is approve, and exact-revision verification passes 76 nonrecursive target tests.
+- [x] (2026-07-29 19:37Z) The operator approved the exact `apply-ruleset` target for plan digest
+  `8a3c1567`, ruleset digest `dbe07787`, and implementation `da1b660`. Recorded and pushed approval
+  commit `4723794`, applied live ruleset `19852337`, reran apply with no change, and confirmed exact
+  read-back conformance.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
