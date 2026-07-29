@@ -4,7 +4,7 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: clean-room-approved
+promotion: executable
 execution_authorized: true
 date: 2026-07-25
 ---
@@ -13,9 +13,11 @@ date: 2026-07-25
 
 The repository-root `PLANS.md` defines how to maintain and execute this ExecPlan. Keep
 `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current while
-work proceeds. A clean-room reviewer approved exact revision
-`148819ea580606ed2be81a5bec58072471da9dba`, the operator approved that revision, and this metadata
-update records `execution_authorized: true` without changing its implementation scope.
+work proceeds. The operator approved revision `148819ea580606ed2be81a5bec58072471da9dba`, but the
+first complete-gate run exposed a recursive revision-check design that exhausted the host's
+RAM-backed temporary filesystem and killed the agent pane. This revision supersedes that approval.
+Do not resume implementation until a clean-room reviewer approves the exact revised plan and the
+operator explicitly authorizes that reviewed revision.
 
 ## Purpose / Big Picture
 
@@ -248,13 +250,142 @@ A change is documentation-only only when every changed path is `README.md`, `AGE
 `bun run authored-files:revision -- --revision <local-sha>` for every distinct
 nonzero outgoing local SHA. Any package, lockfile, source, test, script, hook, provider
 configuration, workflow, or other path invokes `bun run check:revision -- <local-sha>` for every
-distinct nonzero outgoing local SHA. `check:revision` adds a detached worktree for that exact commit
-under a fresh temporary directory, runs `bun install --frozen-lockfile` and `bun run check` there,
-and removes the worktree in a `finally` path. The detached worktree retains access to the common Git
-objects required by the package-entrypoint contract. The command verifies removal and runs
-`git worktree prune` before returning; setup, validation, or cleanup failure exits `2`. It never
-evaluates or installs into the operator's checkout and never creates or changes a branch or ref.
-Hooks never format, stage, commit, amend, push, or delete repository files or refs.
+distinct nonzero outgoing local SHA.
+
+`check:revision` is an orchestrator, not a member of the gate it launches. It resolves the common
+Git directory, derives the canonical checkout as that directory's parent, and owns only
+`<canonical-checkout-parent>/<canonical-checkout-name>-worktrees/.verification/`. This sibling
+namespace must be ordinary persistent storage, not an assumed-safe path. Resolve the namespace
+parent's actual Linux mount through `/proc/self/mountinfo`. Accept `ext2`, `ext3`, `ext4`, `xfs`,
+`btrfs`, or `zfs`. For `overlay`, recursively resolve its `upperdir` mount and accept only when that
+backing mount is one of those persistent types; reject an absent or unreadable `upperdir`. Reject
+`tmpfs`, `ramfs`, any overlay backed by them, and every unknown filesystem with exit `2`. The
+orchestrator adds one detached worktree for the exact commit, runs
+`bun install --frozen-lockfile --cache-dir <run-directory>/bun-cache`, then runs
+`bun run check:revision-target`. It sets `TMPDIR`, `TMP`,
+and `TEMP` to a checker-owned directory inside that run so subprocess fixtures, including the
+package-entrypoint archive test, cannot return to RAM-backed `/tmp`.
+
+`bun run check:core` is the one non-test repository gate. `bun run check` composes that core with
+the full `test:run` suite. `bun run check:revision-target` composes the same core with
+`test:revision-target`, which excludes only `scripts/check-revision.test.ts`, the orchestration
+integration test. A package-script contract test walks the declared script dependency graph and
+proves neither `check:core` nor `check:revision-target` can reach `check:revision` or `bun run
+check`. `bun run check` remains the complete developer and CI gate and includes the orchestration
+test.
+
+The public `scripts/check-revision.ts` entrypoint first resolves the common Git directory and its
+real parent without creating verification state. The existing Git-owned directory supplies the
+bootstrap lock path `<git-common-dir>/mandem-revision-check.lock`; reject a missing, non-directory,
+or symlinked common Git directory. Invoke the util-linux `flock` executable with nonblocking mode,
+that lock path, and the private
+`scripts/check-revision-worker.ts` command plus the validated public arguments. This makes
+`flock` the parent of the worker and keeps the advisory lock for the worker's complete lifetime.
+Linux releases it after normal exit, `SIGKILL`, or reboot. A missing `flock` executable or lock
+acquisition failure exits `2` before the worker reads or changes verification state. No PID
+determines lock ownership. The worker has no package-script entrypoint; direct invocation is an
+unsupported internal interface. After locking, the worker validates the verification parent
+through mount information, then uses `lstat` and realpath containment on every existing
+`.verification` and `runs` component before inspecting or creating it. An absent namespace may be
+created only under the held Git-directory lock. Create `.verification/`, `fsync` its existing
+parent, create `.verification/runs/`, then `fsync` `.verification/`. The valid idle layout is the
+real `.verification/` directory containing only an empty real `runs/` directory, with no
+`active-run.json`; retain and reuse that layout after successful cleanup. Reconciliation also
+accepts the bootstrap power-loss states in order: no `.verification/`, an empty real
+`.verification/`, or `.verification/` containing only an empty real `runs/`. It completes the
+missing creation and directory `fsync` operations before proceeding. A symlinked or malformed
+component, or any other idle entry, exits `2` unchanged.
+
+Each run ID is `run-<full-40-lowercase-hex-commit>-<32-lowercase-hex-characters>`, where the final
+segment encodes exactly 16 cryptographically random bytes. Reject every other form. Its owned directory is
+`.verification/runs/<run-id>/`, its detached checkout is the nonexistent child `checkout/`, and its
+ownership marker is `.verification/runs/<run-id>/owner.json`. Before creating the run directory,
+publish `.verification/active-run.json` durably. The sole temporary name is
+`.verification/active-run.json.tmp-<run-id>`: write that same-directory regular file, `fsync` it,
+rename it to the final name, then `fsync` `.verification/`. The
+manifest and marker use the same closed JSON object with exactly these required properties and no
+others:
+
+    {
+      "schemaVersion": 1,
+      "runId": "run-<40 lowercase hex commit>-<32 lowercase hex characters>",
+      "canonicalCheckout": "<absolute canonical-checkout realpath>",
+      "commonGitDirectory": "<absolute common-Git-directory realpath>",
+      "commit": "<40 lowercase hex commit>",
+      "runDirectory": "<absolute canonical expected run-directory path>",
+      "checkoutPath": "<absolute canonical expected checkout path>",
+      "createdAt": "<UTC RFC 3339 timestamp with exactly three fractional-second digits and Z>"
+    }
+
+Every string is nonempty and matches the stated format. `runId` begins with the exact `commit`.
+`runDirectory` equals the real `runs/` parent joined with `runId`; `checkoutPath` equals
+`runDirectory` joined with the fixed `checkout` segment. The expected paths are lexical canonical
+paths, not realpaths of nonexistent entries. A marker matches its manifest only when the parsed
+objects have the same eight keys and every value is equal. Unknown, missing, duplicate, or
+wrong-typed properties fail validation. After each entry exists, validate it with `lstat`, resolve
+its realpath, and require equality with the recorded expected path before using or deleting it. After
+the manifest is durable, create and `fsync` the run directory, then publish
+`owner.json` through the sole temporary name `owner.json.tmp-<run-id>` with the same
+write-temporary, file-`fsync`, rename, and parent-directory-`fsync` protocol. Only then register the
+checkout. Never reuse a run ID or path.
+
+While holding the advisory lock, reconciliation accepts every power-loss boundary of the one
+manifested run: the exact manifest temporary file before publication; a durable manifest with
+no run directory; an empty run directory; the exact marker temporary file inside that
+directory; a durable matching marker before Git registration; a marked partial checkout with no
+registration; or a registered checkout whose marker matches and whose
+`git worktree list --porcelain` entry has the exact canonical path, `detached` state, and requested
+commit. A temporary file is removable only when its exact name, run-ID grammar, complete schema,
+canonical paths, commit, and common Git directory validate; a partial, lookalike, extra, or
+symlinked temporary fails closed unchanged with an exact manual-inspection path. Reconciliation
+removes each accepted state from newest artifact to oldest and durably removes the manifest last.
+For an exact validated Git registration,
+it runs only `git worktree remove --force <exact-checkout-path>` and verifies that exact
+registration is gone. It never runs generic `git worktree prune`. If exact removal fails, it exits
+`2` with the manifest intact and tells the operator which checker-owned path needs manual
+inspection. Any other state, including
+a malformed or mismatched file, symbolic link, nonempty unmarked directory, unexpected namespace
+entry, generated-looking unmanifested directory, branch-attached checkout, wrong commit, path
+outside `.verification/runs/`, or multiple registered verification worktrees, exits `2` without
+deleting anything. It never scans, removes, or prunes sibling agent worktrees outside
+`.verification/` and never alters any other worktree registration, including a stale one.
+
+For a marked partial checkout without Git registration, cleanup walks only the recorded expected
+checkout path. It uses `lstat` at every node, never follows a symbolic link, unlinks a symbolic link
+itself, and removes regular entries and real directories bottom-up before removing the checkout
+directory. After exact checkout removal and verification, unlink the marker and `fsync` the run
+directory; remove the run directory and `fsync` the real `runs/` parent; unlink the active manifest
+and `fsync` `.verification/`. Deleting either exact transaction temporary is followed by `fsync` of
+its parent. Simulated interruption after any deletion or directory-`fsync` must leave a state the
+next reconciliation returns to the valid idle layout.
+
+At most one revision check, one detached verification worktree, and one dependency installation
+may exist per common Git repository. The run may consume at most 8 GiB inside its owned directory.
+One watchdog samples both owned-directory usage and filesystem available space at least every 250
+milliseconds throughout worktree creation, installation, and the target gate. It terminates the
+active child process group when the run reaches 8 GiB or available space reaches the 2 GiB reserve,
+then exits `2`. It checks the same limits immediately before bootstrap, immediately before and
+after each phase, and immediately after child exit. Every child temporary and cache location,
+including Bun's install cache, is inside the owned run directory. Dependency installation has a 10-minute
+timeout and the target gate has a 20-minute timeout; timeout terminates the child process group and
+exits `2`.
+Success, quality-failure, and setup-failure paths still attempt exact cleanup in `finally`, but
+correctness does not depend on `finally`:
+`bun run revision-worktrees:reconcile` performs the same lock-protected startup reconciliation
+without launching a gate. A quality finding exits `1`; invalid input, live concurrency, unsafe
+state, resource exhaustion, setup, install, orchestration, or cleanup failure exits `2`. The
+command never evaluates or installs into the operator's checkout and never creates or changes a
+branch or ref. Hooks never format, stage, commit, amend, push, or delete repository files or refs.
+
+Revision-check integration tests prove that one invocation creates at most one detached checkout
+and launches the target gate once; the target gate cannot re-enter revision orchestration; a live
+lock rejects a concurrent invocation before checkout; an interrupted manifest and worktree are
+removed by the next invocation and by the explicit reconciler; malformed or out-of-namespace state
+fails closed; `tmpfs` and `ramfs` are rejected; the 8 GiB cap, 2 GiB reserve, and both timeouts are
+enforced; and a neighboring agent worktree remains registered and unchanged. Crash-window fixtures
+cover every accepted partial state plus a killed lock holder and a simulated reboot/PID reuse. A
+registered agent worktree, a generated-looking unmanifested directory, and every mismatched state
+remain untouched and produce exit `2`.
 
 Hook integration tests create temporary Git repositories and mock only external boundaries. They
 exercise the actual checked-in entrypoints, paths with spaces, initial branches without upstreams,
@@ -352,16 +483,91 @@ Add `.github/CODEOWNERS` assigning every gate-defining path to `@BrandonJF`: `/.
 `/scripts/check-*`, `/scripts/configure-repository-ruleset.ts`,
 `/scripts/configure-repository-ruleset.test.ts`, `/scripts/hooks/`,
 `/src/modules/architecture-standard/`, `/eslint.config.ts`, `/tsconfig.json`, and
-`/vitest.config.ts`. The ruleset requires code-owner approval when an owned path changes, dismisses
-stale approvals when new commits arrive, requires approval of the most recent push, and does not
-grant agents bypass permission. Routine application implementation PRs do not require operator
-approval. A PR that changes a gate or its transitive implementation requires the operator to
-approve its current head. These controls protect against accidental bypass and autonomous agents;
-they do not protect against a repository administrator who disables the controls. The
-implementation worker records the ruleset identifier and read-back output in this plan. If its
-credential lacks ruleset-administration permission, the implementation worker records that exact
-external dependency under `Needs you`, and U1A remains incomplete. Local hooks alone do not satisfy
-acceptance.
+`/vitest.config.ts`. CODEOWNERS identifies responsibility and does not create a GitHub review
+requirement. Mandem has one operator account, so the ruleset sets code-owner review, approval of the
+latest push, and required GitHub approval count to false or zero. It does not grant agents bypass
+permission. These controls require the automated check without requiring a second GitHub account.
+
+Operator consent occurs in the active Mandem conversation for three consent-boundary actions:
+`execute-plan` authorizes implementation of one reviewed plan, `apply-ruleset` changes live
+repository administration policy, and `merge-pr` changes `main`.
+Ordinary issue-ref publication, branch publication, pull-request creation, comments, and read-only
+checks remain authorized workflow steps and do not require a separate response. Before each
+consent-boundary action, the orchestrating agent states one exact action and immutable target, then
+waits for a user message whose complete content is `APPROVED` or `DENIED`.
+
+The orchestrating agent records the exact response in a native issue comment with this canonical
+shape:
+
+    Mandem-Approval: v1
+    decision: "approved"
+    action: "apply-ruleset"
+    issue_id: "745eda80-1e74-4866-bc95-2f2983b31025"
+    target:
+      plan_sha256: "<64 lowercase hexadecimal characters>"
+      ruleset_sha256: "<64 lowercase hexadecimal characters>"
+      implementation_sha: "<full lowercase Git SHA>"
+    actor: "operator"
+    response: "APPROVED"
+    evidence:
+      channel: "mandem-conversation"
+      conversation_id: null
+      message_id: null
+      recorded_at: "<RFC 3339 UTC timestamp>"
+
+For `decision: "denied"`, `response` is exactly `"DENIED"`. No other decision, actor, response, or
+action value is valid. `conversation_id` and `message_id` are strings when the orchestration
+environment exposes them and explicit null otherwise. All other fields are required. Unknown keys
+are rejected.
+
+An `execute-plan` target contains only `plan_commit` and `plan_sha256`. An `apply-ruleset` target
+contains only `plan_sha256`, `ruleset_sha256`, and `implementation_sha`. The plan digest is the
+SHA-256 of the exact reviewed plan file. The ruleset digest is the SHA-256 of UTF-8 JSON produced by
+recursively sorting object keys lexicographically, preserving array order, and emitting no
+insignificant whitespace. The implementation SHA is the checked-out commit whose tracked files the
+ruleset command will execute; apply rejects another HEAD or tracked worktree changes. A `merge-pr`
+target contains only `repository`, `pull_request`, and `head_sha`; the repository is
+`"BrandonJF/mandem"`, the pull request is a positive integer, and the head is a full lowercase Git
+SHA. Changing the action or any target field requires a new response.
+
+Canonical approval comments use the marker on the first line, LF endings, two-space YAML
+indentation, double-quoted strings, explicit null, the key order shown above, and one final newline.
+For each exact `issue_id`, `action`, and target, the validator selects the one approval commit that
+descends from every other matching approval commit. It never selects by timestamp. No matching
+comment, malformed matching content, or incomparable maximal matching commits deny authorization.
+The selected decision authorizes only when it is `approved` and its response is `APPROVED`; a
+selected later `denied` decision denies authorization.
+
+The agent may append and push the approval comment solely to preserve the operator's response; that
+audit write does not require another approval. The agent verifies the exact remote issue-ref head
+after the push, then performs only the action and target recorded in the comment. A later plan
+revision, ruleset payload, or pull-request head invalidates the earlier approval. GitHub comments
+and reviews are projections or optional discussion; they do not grant consent.
+
+Add a pure approval parser, canonical serializer, target builder, and ancestry selector under
+`src/modules/architecture-standard/domain/approval-contract.ts`, with focused tests beside it.
+Add `scripts/check-approval.ts` to read raw commits from one exact native issue ref and validate an
+`execute-plan`, `apply-ruleset`, or `merge-pr` request. The authoritative ruleset definition is the
+named export `repositoryRuleset` from `scripts/configure-repository-ruleset.ts`; approval target
+construction imports that exact value. `scripts/configure-repository-ruleset.ts --apply` must call
+the same approval use case before its first `gh` write and perform zero GitHub writes when approval
+is absent, denied, malformed, ambiguous, stale, bound to another HEAD, or run from a tracked dirty
+worktree.
+
+Add `scripts/merge-approved-pr.ts`. It validates the exact native approval, requires the local and
+remote native issue refs to have the same head, reads the current PR head through `gh`, compares it
+with the approved full SHA, and only then runs `gh pr merge <number> --repo <owner/name> --merge
+--match-head-commit <approved-head-sha>`. GitHub must reject the merge atomically if the head changes
+after the read. The wrapper performs zero GitHub writes
+for absent, denied, malformed, ambiguous, changed-target, remote-ref mismatch, or stale-head
+approval. The implementation worker stops after the verified PR handoff. The orchestrating agent
+or operator alone runs this approved merge command. WI1 will reuse and extend this contract rather
+than define a competing approval format.
+
+Update `.agents/OPERATING.md` with this conversation-native approval contract. The implementation
+worker records the ruleset identifier and read-back output in this plan. If its credential lacks
+ruleset-administration permission, the implementation worker records that exact external dependency
+under `Needs you`, and U1A remains incomplete. Local hooks alone do not satisfy acceptance.
 
 Own this external configuration through `scripts/configure-repository-ruleset.ts`, not an
 undocumented UI step. The script requires an authenticated `gh` session whose token has repository
@@ -387,8 +593,8 @@ version `2026-03-10` and this exact semantic payload:
           "parameters": {
             "allowed_merge_methods": ["merge"],
             "dismiss_stale_reviews_on_push": true,
-            "require_code_owner_review": true,
-            "require_last_push_approval": true,
+            "require_code_owner_review": false,
+            "require_last_push_approval": false,
             "required_approving_review_count": 0,
             "required_review_thread_resolution": true
           }
@@ -419,9 +625,11 @@ ruleset back. `bun run repository-ruleset:check` is read-only and exits `1` when
 differs, including a nonempty bypass list; it exits `2` for authentication, authorization, API, or
 ambiguous duplicate-name failures. Apply creates or updates a ruleset only when discovery finds
 zero or one matching ruleset. On more than one match, it exits `2` without mutation. Tests mock only
-the `gh` process boundary and cover create,
-update, already-conformant, drifted, duplicate-with-no-mutation, unauthenticated, and unauthorized
-responses.
+the `gh` and raw-Git process boundaries and cover create, update, already-conformant, drifted,
+duplicate-with-no-mutation, unauthenticated, unauthorized, no-approval, approved, denied, malformed,
+wrong-action, changed-plan, changed-ruleset, changed-implementation, tracked-dirty,
+changed-PR-head, remote-ref mismatch, later-denied, and incomparable approval responses. Every
+non-approved case asserts zero GitHub writes.
 Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
 insufficient permission, the worker records the command, exit status, and secret-free API response
 in `Progress`, comments the same concise blocker
@@ -544,15 +752,41 @@ The package script names and targets are fixed:
     "authored-files:check": "bun scripts/check-authored-files.ts --mode full"
     "authored-files:revision": "bun scripts/check-authored-files.ts --mode revision"
     "check:revision": "bun scripts/check-revision.ts"
+    "check:core": "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint"
+    "check": "bun run check:core && bun run test:run"
+    "check:revision-target": "bun run check:core && bun run test:revision-target"
+    "test:revision-target": "MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD) bunx vitest run --exclude scripts/check-revision.test.ts"
+    "revision-worktrees:reconcile": "bun scripts/check-revision.ts --reconcile-only"
     "hooks:install": "bun scripts/hooks/install.ts"
     "hooks:check": "bun scripts/hooks/install.ts --check"
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts"
     "authoring:check": "bun scripts/hooks/post-write.ts"
+    "approval:check": "bun scripts/check-approval.ts"
+    "pr:merge:approved": "bun scripts/merge-approved-pr.ts"
     "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply"
     "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check"
 
 `bun run check` invokes `docs:audit` and `authored-files:check` after the Bun preflight and before
 typecheck, lint, and tests.
+
+The approval checker accepts exactly one of:
+
+    bun run approval:check -- --issue <uuid> --action execute-plan --plan <path> --plan-commit <full-sha>
+    bun run approval:check -- --issue <uuid> --action apply-ruleset --plan <path>
+    bun run approval:check -- --issue <uuid> --action merge-pr --repository <owner/name> --pull-request <positive-integer> --head <full-sha>
+
+For `apply-ruleset`, the command reads the reviewed plan and imports the exact exported
+`repositoryRuleset` value to compute both target digests. It exits `0` only for current approval,
+`1` for absent, denied, malformed, stale, or ambiguous approval, and `2` for Git or filesystem
+failure. It never writes refs or contacts GitHub.
+
+The approved merge command accepts:
+
+    bun run pr:merge:approved -- --issue <uuid> --repository <owner/name> --pull-request <positive-integer> --head <full-sha>
+
+It performs the same approval check, verifies the remote native issue ref and current provider PR
+head, and then requests a merge commit. It exits `1` without a merge request for approval or target
+failure and `2` for Git, network, authentication, or provider failure.
 
 `scripts/check-documentation.ts` accepts exactly:
 
@@ -569,9 +803,19 @@ values, unknown flags, or unresolvable refs exit `2`.
 `scripts/check-authored-files.ts` accepts exactly `--mode full`, `--mode staged`, or
 `--mode revision --revision <git-ref>`. Full mode reads the working tree, staged mode reads the
 virtual staged snapshot, and revision mode reads only the selected Git tree. Missing values,
-unknown flags, or unresolvable refs exit `2`. `scripts/check-revision.ts` accepts exactly one
-nonzero revision, verifies it resolves to a commit, and implements the disposable detached-worktree
-flow specified in D5; worktree setup, install, gate, or cleanup failures exit `2`.
+unknown flags, or unresolvable refs exit `2`. `scripts/check-revision.ts` accepts either exactly one
+nonzero revision or the sole flag `--reconcile-only`. Revision mode verifies the argument resolves
+to a commit and implements the bounded detached-worktree flow specified in D5. Reconcile-only mode
+repairs or validates the owned namespace without installing dependencies or running the target
+gate. Unsafe state, live concurrency, insufficient space, setup, install, target-gate, or cleanup
+failures exit `2`.
+
+`scripts/check-revision-worker.ts` is a private orchestration adapter reached only through the
+locked public entrypoint. It owns manifest validation, reconciliation, resource observation,
+detached-worktree lifecycle, dependency installation, and target-gate execution. Filesystem-type
+validation parses `/proc/self/mountinfo` with the allowlist and overlay-backing rules in D5 before
+`.verification` is created. Child processes use argument arrays and isolated process groups so
+timeout or storage-cap termination reaches the complete descendant tree.
 
 Pre-push analyzes every distinct nonzero outgoing `local-sha` against its calculated base. It never
 uses the working tree for an outgoing commit. Tests must include a dirty checkout whose outgoing SHA
@@ -702,10 +946,13 @@ Add integration fixtures that exercise the real filesystem and a disposable Git 
 added, modified, renamed, and deleted README/doc paths, a dirty checkout whose selected revision is
 clean, a non-current local ref, and the actual pre-push entrypoint selecting both documentation-only
 revision commands and the disposable full-revision gate. The full-revision integration test uses a
-real disposable Git repository and proves the package-entrypoint contract can read the selected
-commit's Git objects, the operator checkout remains dirty and untouched, and no temporary worktree
-registration remains after success or failure. Confirm failure output names the repair in plain language,
-remains bounded, and follows the selected revision rather than the checkout.
+real disposable Git repository on ordinary project storage and proves the package-entrypoint
+contract can read the selected commit's Git objects, the operator checkout remains dirty and
+untouched, and no verification worktree registration remains after success or failure. Add focused
+orchestration tests for the nonrecursive target gate, single-run lock, stale-run reconciliation,
+path-containment rejection, 2 GiB free-space floor, checker-owned temporary environment, and
+neighboring agent-worktree preservation. Confirm failure output names the repair in plain
+language, remains bounded, and follows the selected revision rather than the checkout.
 
 This milestone is complete when the implementer can run both modes against the Mandem repository
 and malformed fixtures demonstrate each failure class through the public command.
@@ -765,21 +1012,42 @@ policy or change repository content.
 Add the new checks and hook integration suite to package scripts and add the GitHub Actions workflow
 from D7. Make `bun run check` return a nonzero exit status when any check fails, and run the checks
 in this deterministic order: Bun preflight, documentation/authored-source architecture,
-TypeScript, lint, and tests. Run focused tests first,
-then the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
+TypeScript, lint, and tests. Run focused tests first. Run `bun run check:revision` against the
+current commit and observe exactly one target-gate launch and no remaining verification worktree.
+Then run the complete gate from a clean checkout. Install the Git hooks in the implementation worktree
 and perform one disposable valid and invalid commit proof.
 
-Configure and read back the required `main` ruleset, including required code-owner review for every
-gate-defining path listed in D7, stale-approval dismissal, and approval of the most recent push.
+After the operator approves the exact reviewed revision in the active conversation, record and push
+the structured native approval comment before changing GitHub. Configure and read back the required
+`main` ruleset, including no GitHub review requirement and no account bypass.
 Use `bun run repository-ruleset:apply` followed by `bun run repository-ruleset:check`; do not
 configure it manually. Trigger the workflow with the PR and record a successful
 `repository-quality` check; a skipped, pending, or billing-disabled check is not completion
 evidence.
 
+The bootstrap order is exact. First commit and review the revised plan. Request `APPROVED` for
+`execute-plan` with its commit and file SHA-256, append and push the matching native approval record,
+then verify the canonical comment and exact pushed ref with `git cat-file commit`, `git
+merge-base --is-ancestor`, and `git ls-remote`. The approval checker is itself a U1A deliverable, so
+this one `execute-plan` bootstrap uses the same schema and ancestry rule through explicit Git
+commands rather than a command that does not exist yet. This exception permits no GitHub write and
+does not apply after the checker exists. Set execution authorization without changing the reviewed
+instructions. Implement the approval and ruleset changes test-first and commit the resulting clean tracked tree.
+Compute the plan, canonical ruleset JSON, and implementation commit targets. Request `APPROVED` for
+`apply-ruleset` with all three, append and push the matching native approval record, run the
+approval check, then run the ruleset apply and read-only check.
+
+The implementation worker then pushes the final branch, opens the PR, waits for
+`repository-quality`, completes review, and returns the verified head to the orchestrator without
+merging. The orchestrator requests `APPROVED` for `merge-pr` with the PR number and full head SHA,
+appends and pushes the matching native approval record, and runs `pr:merge:approved`. That command
+re-reads the provider head immediately before the merge request and refuses any changed head.
+
 Run independent correctness, testing/adversarial, maintainability, and agent-vendor-neutral reviews.
 Repair all blocking and important findings test-first. Run the repository's single headless Learn
 step, focusing on documentation or hook surprises that future work can avoid. Commit, push, and open
-a PR. The worker must not merge.
+a PR. The worker must not merge; only the orchestrator or operator may run the approved merge
+command after the worker returns the verified PR head.
 
 This milestone is complete when the PR contains the implementation, tests, living-plan updates,
 provider evidence, and Learn artifact; every local gate is green; and the issue records the branch,
@@ -801,6 +1069,10 @@ Use these focused commands in milestone order:
     bunx vitest run src/modules/architecture-standard/tests/documentation-policy.test.ts
     bunx vitest run src/modules/architecture-standard/tests/authored-source-policy.test.ts
     bunx vitest run scripts/check-documentation.test.ts
+    bunx vitest run scripts/check-revision.test.ts
+    bunx vitest run src/modules/architecture-standard/domain/approval-contract.test.ts
+    bunx vitest run scripts/check-approval.test.ts
+    bunx vitest run scripts/merge-approved-pr.test.ts
     bunx vitest run scripts/configure-repository-ruleset.test.ts
     bunx vitest run scripts/hooks/hooks.integration.test.ts
     bunx vitest run scripts/hooks/provider-post-write.test.ts
@@ -819,6 +1091,43 @@ implementation, the fifth must fail `pre-commit evaluates the staged snapshot` a
 the named behavior, not missing module/configuration failure. Record the failing assertion and later
 passing test in `Progress`.
 
+Before repairing revision verification, `scripts/check-revision.test.ts` must fail named cases that
+prove the target gate is nonrecursive, a live lock prevents a second checkout, an interrupted run
+is reconciled, and unsafe state fails closed without touching a neighboring worktree. Cover a
+killed lock holder, simulated reboot and PID reuse, every manifest/marker/registration creation
+window, `tmpfs` rejection, generated-looking unowned content, a registered neighboring agent
+worktree, the 8 GiB cap, the 2 GiB reserve, and both child timeouts. Do not run `bun run check` or
+`bun run check:revision` while the recursive implementation remains reachable.
+
+The required red/green test names are `keeps revision target dependencies nonrecursive`,
+`launches one checkout and one target gate for the selected revision`, `releases the advisory lock
+after kill and reboot`, `serializes concurrent first-run namespace creation`, `reconciles every
+bootstrap directory and durable manifest and marker power-loss boundary`, `removes only the exact
+detached requested revision registration`, `never prunes and preserves a stale neighboring registration`, `rejects
+symlinked verification components and malformed transaction state`, `rejects unmanifested
+generated names and registered agent worktrees`, `rejects lookalike and invalid transaction
+temporaries`, `removes nested partial checkout content without following symlinks`, `durably
+reconciles every cleanup deletion boundary`, `keeps Bun cache and child temporary writes inside the
+owned run`, `accepts supported persistent storage and rejects
+ephemeral or unknown mounts`, `stops at the run cap and preserves the reserve during checkout`,
+`stops install before it consumes the reserve`, `stops the target gate before it consumes the reserve`,
+`terminates install and target process groups at their deadlines`, and `checks the selected
+revision without changing a dirty checkout`. Each case must have a nearby passing control and
+assert its exit status, bounded diagnostic, worktree registrations, transaction files, and
+operator-checkout status as applicable.
+
+Before changing the live ruleset, the approval tests must fail named cases that prove canonical
+serialization and fail-closed enforcement: `serializes one canonical approval record`, `rejects
+malformed and unknown approval fields`, `binds ruleset approval to plan and payload digests`,
+`binds merge approval to pull request and head`, `rejects a wrong action or changed target`,
+`selects the unique ancestry-maximal decision`, `rejects incomparable approval decisions`, `a later
+denial supersedes approval`, `rejects a changed implementation or tracked dirty tree`, `re-reads
+the PR head before merging`, and `performs no GitHub write without current approval`. Each case must
+have a passing control. The script tests use disposable Git repositories with real issue refs and
+mock only the GitHub process boundary. Merge tests assert zero merge calls for absent, denied,
+malformed, stale-head, changed-target, and remote-ref-mismatch approval, and assert that a provider
+head change at the merge boundary fails the compare-and-swap request without merging.
+
 After the policy and adapters exist, exercise:
 
     bun run docs:audit
@@ -828,7 +1137,10 @@ After the policy and adapters exist, exercise:
     bun run hooks:check
     bun run test:hooks
     bun run authoring:check -- src/modules/runtime/domain/types.ts
+    bun run approval:check -- --issue 745eda80-1e74-4866-bc95-2f2983b31025 --action apply-ruleset --plan docs/plans/units/u1a-documentation-authoring-quality-gates.md
     bun run repository-ruleset:check
+    bun run revision-worktrees:reconcile
+    bun run check:revision -- "$(git rev-parse HEAD)"
 
 Successful commands must print concise output that names the checked scope. Commands that evaluate
 malformed fixtures must exit `1` and print stable IDs with repository-relative paths. Commands that
@@ -873,6 +1185,12 @@ Acceptance requires all of the following observable behaviors:
   check.
 - Pre-push evaluates every outgoing commit snapshot, including a non-current local ref, without
   allowing unrelated dirty checkout content to change the result.
+- Exact-revision verification launches one detached disk-backed checkout and one nonrecursive
+  target gate. A simultaneous invocation exits `2` before creating another checkout.
+- After a simulated hard interruption, the next invocation and the explicit reconciler remove only
+  the checker-owned stale worktree and state. A malformed record, out-of-namespace path, unexpected
+  namespace entry, RAM-backed filesystem, 8 GiB run, less than 2 GiB reserve, or child timeout exits
+  `2` without touching an agent worktree.
 - Failed hooks do not alter working files, staged content, commits, branches, or remotes.
 - The shared post-write command typechecks a TypeScript write and checks a Markdown write without
   editing either file.
@@ -882,8 +1200,11 @@ Acceptance requires all of the following observable behaviors:
 - The `repository-quality` workflow runs on pull requests and pushes to `main`/`staging`; an active
   `main` ruleset requires both a pull request and that successful check before merge. Changes to the
   workflow, canonical commands, hook/check implementations, architecture gate, test/lint/type
-  configuration, lockfile, or CODEOWNERS protection require `@BrandonJF` code-owner approval of the
-  current head; a subsequent push dismisses the approval.
+  configuration, lockfile, or CODEOWNERS map make the approval scope especially important for this
+  U1A PR. Every PR merge requires an exact operator `APPROVED` response for its repository, PR
+  number, and current head in the active Mandem conversation. The orchestrating agent records and
+  pushes that approval in the native issue and uses the approved merge command; a subsequent push
+  invalidates it.
 - `bun run check`, `bun run build`, both bounded executable probes, and `git issue fsck` pass from a
   clean checkout.
 
@@ -897,6 +1218,15 @@ uninstall/recovery command restores that value or unsets the worktree-local key 
 Do not reconstruct a common hook value or disable `extensions.worktreeConfig` during uninstall
 because sibling worktrees may rely on their worktree-local values. Never edit global Git
 configuration.
+
+Revision verification is restart-safe as well as idempotent. Normal completion attempts exact
+cleanup, and every later invocation reconciles the durable manifest before creating new work. If a
+pane, process, or host dies after worktree creation, run `bun run revision-worktrees:reconcile`.
+The command may delete only the manifest-named immediate child of `.verification/` after validating
+its marker, canonical path, and Git registration. Preserve malformed state for diagnosis and exit
+`2`; never broaden cleanup to the parent worktree namespace. If the lock owner is still alive,
+wait for that process or stop it deliberately before retrying. Free disk space before retrying a
+2 GiB floor failure.
 
 If documentation baseline work exposes many failures, do not add broad exclusions or suppressions.
 Repair the README chain directory by directory, rerunning the full audit after each group. If the
@@ -991,7 +1321,102 @@ external sources.
 - [x] (2026-07-27) The operator approved exact plan revision
   `148819ea580606ed2be81a5bec58072471da9dba`; set `execution_authorized: true` without changing
   implementation scope.
-- [ ] Dispatch U1A from an isolated implementation worktree.
+- [x] (2026-07-27) Created isolated worktree
+  `/home/brandonjf/dev/work/mandem-worktrees/u1a-implementation` on
+  `feat/u1a-quality-gates` from authorized plan merge
+  `94d53d8f7c0be165f9b2d8f2fc5cdf4ec5b5a787`. Dispatched Milestones 1–3 to a bounded
+  implementation worker with the complete approved plan.
+- [x] (2026-07-27 21:10Z) Implemented and verified Milestones 1–3. Added the pure v1
+  documentation and authored-source policy, stable `DOC-*` catalog, in-memory policy tests,
+  filesystem and Git snapshot adapters, changed-path application ports, and full/revision/staged
+  CLI entrypoints. The initial documentation-catalog test failed with all five missing `DOC-*`
+  identifiers; the focused suite now passes 31 tests. `bunx tsc --noEmit`, focused ESLint, `bun run
+  architecture:check`, `bun scripts/check-documentation.ts --mode full`, and `bun
+  scripts/check-authored-files.ts --mode full` also pass.
+- [x] (2026-07-27 21:20Z) Implemented Milestone 4 documentation navigation baseline at
+  `ed04f2d`; the full documentation policy and repository check pass.
+- [x] (2026-07-27 21:30Z) Implemented and verified Milestone 5. The initial hook integration suite
+  failed because both checked-in entrypoints were absent (`expected null to be 0/1`). The focused
+  suite now passes three disposable-repository tests covering staged TypeScript and documentation
+  rejection, protected refs, documentation-only/code/indeterminate pre-push classification, and
+  worktree-local hook installation with common-value migration. `bunx tsc --noEmit` and
+  `git diff --check` pass.
+- [x] (2026-07-27 21:25Z) Implemented and verified Milestone 6. The initial provider-adapter
+  suite failed because the adapter and provider configurations were absent (`expected 1 to be 2`
+  and missing `.claude/settings.json`). The focused suite now passes seven tests covering Claude
+  Write/Edit/MultiEdit, Codex add/update/delete/move headers, nested directories, duplicate paths,
+  spaces, malformed input, out-of-root paths, bounded failures, no fixture mutation, and exact
+  configurations. Disposable live probes verified Claude Code `2.1.220` Write and Codex CLI
+  `0.145.0` apply_patch PostToolUse feedback through the shared adapter; the recorded evidence is
+  `docs/operations/provider-capability-baseline.md`.
+- [ ] Complete Milestone 7 review, Learn, and implementation PR (completed: local repository-gate
+  integration, workflow, CODEOWNERS, ruleset command, and active GitHub ruleset `19852337`;
+  remaining: correct the single-operator approval design, obtain exact conversation approval,
+  update and verify the live ruleset, verify the hosted workflow, complete reviews and Learn, and
+  open the PR).
+- [x] (2026-07-27 21:32Z) Integrated the local Milestone 7 quality-gate work. Added the
+  `repository-ruleset:apply` and `repository-ruleset:check` package commands, ordered the canonical
+  gate as Bun preflight, documentation, authored-source, architecture, TypeScript, lint, and tests,
+  added the `repository-quality` workflow and gate-path CODEOWNERS entries, and added the mocked
+  GitHub ruleset create, update, conformance, drift, duplicate, authentication, and authorization
+  tests. The initial focused test failed because `configure-repository-ruleset.ts` did not exist;
+  after implementation, the focused suite passed 3 tests and `bun run check` passed 50 tests.
+- [x] (2026-07-28 22:18Z) Revised the plan after the live merge attempt proved that GitHub
+  code-owner and latest-push approval require a second account. Defined exact conversation approval
+  recorded in the native issue, retained the required automated check, and reset execution
+  authorization pending fresh review and exact operator approval.
+- [x] (2026-07-28 22:42Z) Resolved fresh review findings by defining canonical action targets and
+  ancestry selection, binding ruleset approval to the executing commit, adding fail-closed ruleset
+  and merge commands, and assigning merge execution only to the orchestrator or operator.
+- [x] (2026-07-28 22:58Z) Completed fresh clean-room, coherence, and feasibility review of the
+  conversation-native approval revision; all reviewers approved with no remaining blockers.
+- [x] (2026-07-29 18:58Z) The operator replied `APPROVED` to exact `execute-plan` target
+  `3b88d7035f3d62eb692cc715c1a41e11cffe3838` with plan SHA-256
+  `ad913ec3f674083d428f11fee28397c745c05545f4c911821267716764df37af`. Recorded the canonical
+  decision at native issue commit `b7dc6d6`, pushed and verified the exact remote ref, and changed
+  only the authorization frontmatter before implementation.
+- [x] (2026-07-29 19:04Z) Implemented the strict approval parser/serializer and ancestry selector,
+  raw native-issue validator, guarded ruleset apply, and exact-head merge wrapper test-first.
+  Focused tests pass, the validator accepts the real execute-plan approval, `bun run check` passes
+  71 tests, `bun run build` passes, and `git issue fsck` reports 16 valid issues.
+- [x] (2026-07-29 19:15Z) Full code review found two approval CLI/merge P1 defects, one
+  crash-reconciliation P1 defect, and four P2 gaps in pagination, real-boundary tests, persistent
+  overlay handling, and CI issue-ref fetching. Repaired every finding test-first. The complete gate
+  now passes 77 tests, including real-Git approval ancestry, atomic provider rejection, exact
+  crash-window temporaries, and overlay backing fixtures; build and issue integrity also pass.
+- [x] (2026-07-29 19:17Z) Re-review confirmed every P1/P2 finding closed after one final
+  subprocess-level test corrected malformed merge-target exit classification. The final reviewer
+  verdict is approve, and exact-revision verification passes 76 nonrecursive target tests.
+- [x] (2026-07-29 19:37Z) The operator approved the exact `apply-ruleset` target for plan digest
+  `8a3c1567`, ruleset digest `dbe07787`, and implementation `da1b660`. Recorded and pushed approval
+  commit `4723794`, applied live ruleset `19852337`, reran apply with no change, and confirmed exact
+  read-back conformance.
+- [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
+  failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
+  changed root-link regressions, and provider symlink escape handling. Added root and dynamic
+  special-index checks, retained root/special findings in changed analysis, resolved provider paths
+  physically, unioned duplicate pre-push SHA paths, and separated quality-gate exit `1` from setup
+  and cleanup exit `2`. The focused suite now passes 24 tests; `bun run docs:audit`, `bun run
+  authored-files:check`, and `bunx tsc --noEmit` pass.
+- [x] (2026-07-27) Diagnosed GitHub issue #17 after the complete gate killed the agent pane. The
+  revision-check integration test recursively launched `bun run check`, which launched the same
+  integration test again. Each level created a RAM-backed `/tmp` worktree and installed
+  dependencies until the host reached about 29.5 GiB and killed the pane.
+- [x] (2026-07-27) Removed 136 abandoned checker and package directories after confirming no live
+  process owned them, pruned stale Git worktree metadata, and verified that the U1A branch, seven
+  commits, and three uncommitted policy-repair files remained intact.
+- [x] (2026-07-28 15:20Z) The operator instructed Codex to read the U1A reset handoff and continue,
+  authorizing exact recovery-plan commit `cecfc0c8ede4c9493b50193bf76edbd321d49a8f`.
+- [x] (2026-07-27) A fresh clean-room reviewer approved recovery plan content SHA-256
+  `f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or
+  P2 findings. Recorded the durable verdict and promoted the plan to `clean-room-approved`;
+  implementation remains unauthorized pending exact operator approval.
+- [x] (2026-07-28 15:27Z) Repaired revision orchestration with a nonrecursive target gate,
+  Git-directory advisory lock, disk-backed owned namespace, durable manifest and marker,
+  exact-worktree reconciliation, isolated temporary and Bun cache paths, storage reserve and run
+  caps, child timeouts, and process-group termination. The package graph test failed before the
+  new commands existed. The complete 61-test gate and an exact-revision run both pass without
+  recursion or abandoned state.
 
 ## Surprises & Discoveries
 
@@ -1032,6 +1457,73 @@ external sources.
   repository-policy helpers, `ARCH-UNSCOPED-TYPESCRIPT`, package entrypoint contracts, and focused
   architecture regression tests. U1A must extend these interfaces instead of recreating them.
 
+- Observation: Vitest's Node-compatible worker does not provide the Bun global even though Bun runs
+  the test command.
+  Evidence: the first filesystem and Git adapter tests failed with `ReferenceError: Bun is not
+  defined` from `Bun.file` and `Bun.spawn`. The adapters now use Node filesystem and child-process
+  APIs inside the infrastructure layer; the same tests pass under Bun's Vitest runner.
+
+- Observation: PR #16 added `.agents/OPERATING.md` after the reviewed U1A plan was authored, and
+  each skill now contains generated `agents/openai.yaml` metadata.
+  Evidence: the root README must link `.agents/OPERATING.md` for the repository navigation chain;
+  `openai.yaml` is provider metadata rather than maintained Markdown documentation.
+
+- Observation: A disposable hook fixture can execute the checked-in entrypoints by symlinking
+  `.githooks/` and `scripts/` while retaining its own Git index and refs.
+  Evidence: the first hook test run failed only because `.githooks/pre-commit` and
+  `.githooks/pre-push` did not exist; after adding them, the staged-snapshot assertion passed.
+
+- Observation: Claude Code installed version `2.1.220`, one patch release newer than the `2.1.219`
+  version named in the original plan, and still delivered the required PostToolUse feedback.
+  Evidence: `claude --version` printed `2.1.220`; a disposable Write probe returned
+  `DOC-UNSCOPED-DOCUMENT probe.md` as a blocking hook error.
+
+- Observation: Codex PostToolUse passes its apply-patch event after prior provider writes remain in
+  the disposable repository, so a full documentation check can report both old and new violations.
+  Evidence: the Codex probe returned findings for `codex-probe.md` and the earlier `probe.md`.
+
+- Observation: The package archive contract test needs an explicit commit SHA when it runs outside
+  the `test:run` package command.
+  Evidence: a direct focused Vitest invocation failed because `MANDEM_ARCHIVE_COMMIT` was unset;
+  rerunning with `MANDEM_ARCHIVE_COMMIT=$(git rev-parse HEAD)` passed.
+
+- Observation: GitHub adds an empty `required_reviewers` array to the pull-request rule when it
+  returns a ruleset, even when the submitted semantic payload omits that optional field.
+  Evidence: ruleset `19852337` matched every required value but the first read-back comparison
+  failed until the comparator normalized this empty server default. The focused regression test
+  failed before the repair and now passes.
+
+- Observation: GitHub CLI pagination features differ by installed version.
+  The installed client supports `--paginate` and jq but not `--slurp` or the `json` template
+  helper. A read-only live probe showed that `--paginate --jq '.[] | @json'` emits one complete
+  ruleset object per line across pages.
+  Evidence: Both unsupported forms failed before an API response; the jq form returned ruleset
+  `19852337`, and the conformance command then correctly reported the expected policy drift.
+
+- Observation: Lexical path containment accepts a repository symlink whose target is outside the
+  repository, including a deleted target beneath that symlink.
+  Evidence: a Codex event for `escape/write.md` exited `0` before the adapter resolved the nearest
+  existing path component; write, delete, and move tests now exit `2` with an outside-repository
+  error.
+
+- Observation: A duplicate outgoing SHA can have different changed-path classifications when each
+  remote ref supplies a different comparison base.
+  Evidence: replacing the SHA's first path set with its last set would classify a combined source
+  and documentation history as documentation-only. The pre-push adapter now unions the path sets
+  and invokes `check:revision`.
+
+- Observation: An integration test entered the same complete gate that included the integration
+  test, so each child process created another detached worktree and dependency installation.
+  Evidence: GitHub issue #17 records the chain
+  `check-revision.test.ts` to `check-revision.ts` to `bun run check` and back to
+  `check-revision.test.ts`; the killed run left 136 directories consuming 21 GiB in `/tmp`.
+
+- Observation: GNU `du` can fail while a child test removes files from the monitored run
+  directory.
+  Evidence: the first complete recovery gate reported transient `No such file or directory`
+  diagnostics for package-test and ESLint temporary files. The watchdog now sums allocated blocks
+  with a no-follow filesystem walk and tolerates entries removed during sampling.
+
 ## Decision Log
 
 - Decision: Track the U1 correctness defects and U1A quality-gate work as separate git-native issues.
@@ -1069,11 +1561,101 @@ external sources.
   the new policy objects from one manifest prevents scope drift while preserving verified behavior.
   Date/Author: 2026-07-27 / Codex orchestrator
 
+- Decision: Ignore only GitHub's empty `required_reviewers` read-back default during ruleset
+  comparison.
+  Rationale: The approved payload does not require named reviewers, and an empty server-supplied
+  array does not change its behavior. Every required field and any nonempty reviewer list still
+  participates in drift detection.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
 - Decision: Authorize implementation of exact reviewed revision
   `148819ea580606ed2be81a5bec58072471da9dba`.
   Rationale: The operator explicitly approved that clean-room-approved revision. This metadata and
   living-record update does not change its implementation instructions.
   Date/Author: 2026-07-27 / Brandon and Codex orchestrator
+
+- Decision: Add `.agents/OPERATING.md` to `documentationPolicyV1.rootIndexEntries` and exclude
+  `.agents/skills/*/agents/openai.yaml` from documentation scope.
+  Rationale: The shared operating contract is a maintained root document and must be discoverable.
+  Generated provider metadata is not Markdown authoring guidance and D2 limits the skill index
+  requirement to maintained Markdown files.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Keep the existing `architectureRules` export architecture-only and publish the expanded
+  catalog through `repositoryRules` and `documentationRules`.
+  Rationale: U1C contract tests treat `architectureRules` as the exact `ARCH-*` catalog. Separate
+  exported views add `DOC-*` rules without changing that compatibility surface.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Make hook entrypoints POSIX shell launchers and keep policy execution in TypeScript.
+  Rationale: Git can execute the checked-in entrypoints directly, while the shared architecture
+  composition remains the only location that evaluates repository policy.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Parse provider event formats in private infrastructure adapters and run the same public
+  authoring use case for every normalized path event.
+  Rationale: The adapters only translate provider input. They do not classify documentation or
+  source policy, so a future provider can add one parser without duplicating conformance rules.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Test repository-ruleset behavior through a typed `gh` process boundary and leave real
+  ruleset application to the orchestrator.
+  Rationale: The command needs deterministic local coverage without changing remote repository
+  administration state. The implementation worker's bounded scope excludes that external mutation.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Treat root and declared special indexes as global documentation invariants during
+  changed-file analysis.
+  Rationale: A changed root index can disconnect an unchanged target, so filtering those findings
+  by the changed file path hides a real regression.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Validate provider event paths through their physical filesystem location before using
+  their lexical repository-relative form.
+  Rationale: `..` checks do not identify symlink escapes. Resolving the target, or its nearest
+  existing parent for deleted and new paths, rejects every out-of-repository event consistently.
+  Date/Author: 2026-07-27 / Codex implementation worker
+
+- Decision: Supersede the prior authorization and separate exact-revision orchestration from its
+  nonrecursive target gate.
+  Rationale: A gate cannot safely include an integration test that launches that same gate.
+  Explicit command layering preserves full local and CI coverage while making one pushed-revision
+  check finite and testable.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
+- Decision: Authorize implementation of exact recovery-plan revision
+  `cecfc0c8ede4c9493b50193bf76edbd321d49a8f`.
+  Rationale: The operator instructed Codex to read the reset handoff and continue after the
+  clean-room review approved that exact commit with no P0, P1, or P2 findings.
+  Date/Author: 2026-07-28 / Brandon and Codex orchestrator
+
+- Decision: Own one bounded, disk-backed verification namespace with durable reconciliation.
+  Rationale: Process-finally cleanup cannot run after SIGKILL or reboot, and RAM-backed `/tmp`
+  multiplies the impact of a runaway checkout. A lock, manifest, path validation, one-worktree
+  bound, and explicit reconciler make interruption recoverable without risking agent worktrees.
+  Date/Author: 2026-07-27 / Codex orchestrator
+
+- Decision: Use exact operator responses in the active Mandem conversation instead of GitHub review
+  approvals.
+  Rationale: The repository has one GitHub account, so GitHub code-owner or latest-push approval
+  requirements cannot be satisfied. An exact `APPROVED` or `DENIED` response can authorize one
+  stated immutable target, while the orchestrating agent records the decision in the native issue
+  before acting.
+  Date/Author: 2026-07-28 / Brandon and Codex orchestrator
+
+- Decision: Validate approvals from raw Git commit objects and compare local and remote native issue
+  ref heads before a guarded write.
+  Rationale: Formatted Git log output adds presentation newlines and is not the immutable stored
+  representation. Raw commit messages preserve the canonical record exactly, while equal ref heads
+  prove that the authoritative decision was published before GitHub changes.
+  Date/Author: 2026-07-29 / Codex orchestrator
+
+- Decision: Keep operator-facing approval commands narrow and derive digests from the named plan,
+  exported ruleset, and checked-out commit.
+  Rationale: Requiring operators or agents to precompute derived fields duplicates canonical logic
+  and lets callers supply inconsistent targets. Exact fixed flags make the command scriptable while
+  one implementation owns target construction and exit classification.
+  Date/Author: 2026-07-29 / Codex orchestrator
 
 ## Outcomes & Retrospective
 
@@ -1082,12 +1664,53 @@ It centralizes policy, fails closed in non-interactive execution, avoids hook mu
 supports both agent vendors. The operator authorized implementation of the exact reviewed revision
 on 2026-07-27.
 
-Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
-exact plan revision. No dependency remains before implementation.
+Milestone 5 is complete. Versioned hooks evaluate the staged snapshot before commits and selected
+commit snapshots before pushes. The installer confines `.githooks` to the selected worktree while
+preserving a prior common hook path in sibling worktrees.
 
-Operator approval note (2026-07-27): Brandon approved exact plan revision
-`148819ea580606ed2be81a5bec58072471da9dba`. This revision sets `execution_authorized: true` and
-records the approval without changing the reviewed implementation scope.
+Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
+conversation-native approval revision. The approval is stored in the authoritative native issue,
+and the implemented validator has verified that real record from raw Git history.
+
+Milestone 6 is complete. The shared `authoring:check` command checks one path without editing it;
+Claude and Codex configurations call thin PostToolUse adapters that normalize provider events and
+invoke that shared policy. Focused tests and disposable live-provider probes verify feedback and
+failure boundaries. Milestone 7 remains.
+
+Milestones 1–3 now provide pure deterministic policies and repository adapters. The focused policy,
+snapshot, CLI, and existing architecture suite passes 31 tests. The next implementation worker can
+build the README navigation baseline in Milestone 4; the full documentation audit already passes
+against the current checked-out baseline, but `bun run check` will include the new checks only in the
+later package-gate integration milestone.
+
+The local Milestone 7 work is complete. `bun run check` now runs the documentation and
+authored-source checks before the existing architecture, TypeScript, lint, and test stages. The
+repository includes the required workflow, code-owner map, and tested GitHub ruleset command. The
+remaining Milestone 7 work requires repository-administration access and hosted workflow evidence;
+the orchestrator owns those actions.
+
+Validated review repairs are complete locally. Documentation evaluation now requires the root
+README and checks dynamic skill, script, hook, and module indexes. Changed-revision analysis retains
+global-index failures. Provider adapters reject physical symlink escapes, pre-push combines paths
+for duplicate outgoing commits, and the detached revision checker returns `1` for a failing quality
+gate and `2` for setup or cleanup failures. A disposable integration test proves that exact-revision
+behavior, a dirty caller checkout, and successful cleanup on both passing and failing gates.
+
+The P0 revision-check recovery is implemented and verified. `bun run check` passes 61 tests, and
+`bun run check:revision -- "$(git rev-parse HEAD)"` launches one detached checkout, runs the
+nonrecursive 60-test target suite, removes the transaction, and exits successfully. Remaining U1A
+work is the hosted workflow and review handoff described in Milestone 7.
+
+The first live ruleset design assumed a second GitHub account could approve the last push and
+code-owner changes. Mandem has one operator account. This revision removes GitHub approval
+requirements, keeps pull requests and `repository-quality` mandatory, and defines exact
+conversation responses recorded in native issues as the operator consent mechanism. The material
+change supersedes prior execution authorization and requires fresh review and exact approval.
+
+Superseded operator approval note (2026-07-27): Brandon approved exact earlier plan revision
+`148819ea580606ed2be81a5bec58072471da9dba`, which set `execution_authorized: true` at that time.
+The current material revision supersedes that approval and has `execution_authorized: false`; the
+earlier decision has no current execution effect.
 
 Post-U1C revalidation note (2026-07-27): Rebased the plan's assumptions on merge
 `27d4abe1a2815bfef1bec56c71bc6d90880ef035`. The corrected kernel already owns authored-source
@@ -1095,6 +1718,17 @@ scope helpers and `ARCH-UNSCOPED-TYPESCRIPT`, so this revision requires U1A to p
 those surfaces from the new manifest. Added explicit focused regression commands for the corrected
 architecture rules and package entrypoints. This instruction change supersedes the 2026-07-25
 clean-room approval; `execution_authorized` remains false.
+
+Single-operator approval revision note (2026-07-28): Replaced the unsatisfiable GitHub code-owner
+and latest-push approval requirements with an exact `APPROVED` or `DENIED` response in the active
+Mandem conversation. The orchestrating agent records that decision against one immutable target in
+the native issue before acting. GitHub continues to require a pull request and the
+`repository-quality` check.
+
+Approval-verification repair note (2026-07-28): Defined exact `execute-plan`, `apply-ruleset`, and
+`merge-pr` target schemas; canonical serialization and ancestry selection; approval-record audit
+publication; ruleset implementation binding; and commands that perform zero GitHub writes unless
+the current native approval matches the exact live action target.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
@@ -1129,3 +1763,41 @@ Clean-room refresh note (2026-07-25): A fresh Terra reviewer approved the plan v
 `2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339`. The reviewer found no
 P0/P1 blockers. The durable verdict is
 `docs/plans/reviews/2026-07-25-u1a-clean-room-refresh.md`; implementation remains unauthorized.
+
+Implementation note (2026-07-27): Completed Milestones 1–3 without adding README baseline files,
+Git hooks, provider adapters, workflow configuration, or ruleset configuration. Recorded the
+post-plan shared operating contract and generated provider metadata scope decision above. The next
+approved milestones remain 4–6.
+
+Milestone 6 implementation note (2026-07-27): Added the shared post-write command, private Claude
+and Codex event parsers, exact project configurations, focused event fixtures, a provider-hook
+maintenance guide, and recorded disposable probe evidence. The Claude probe used installed
+version `2.1.220`; the plan's required `2.1.219` behavior remains compatible. No Milestone 7
+workflow, CODEOWNERS, ruleset, or canonical-gate integration was added.
+
+Milestone 7 local implementation note (2026-07-27): Added the deterministic canonical package
+gate, the `repository-quality` workflow, code-owner entries for all D7 gate paths, and the
+repository-ruleset apply/check command with process-boundary tests. This update records completed
+local work and explicitly leaves the authorized external ruleset mutation, hosted workflow proof,
+review, Learn, and PR work to the orchestrator.
+
+P0 recovery revision note (2026-07-27): Superseded the prior authorization after GitHub issue #17
+proved that the approved revision-check design was recursive and depended on `finally` cleanup in
+RAM-backed `/tmp`. Replaced that contract with a nonrecursive target gate, one disk-backed
+checker-owned namespace, an operating-system advisory lock, transactional manifest and ownership
+marker, explicit crash reconciliation, filesystem-type rejection, an 8 GiB run cap, a 2 GiB
+free-space reserve, child timeouts, checker-owned subprocess temporary variables, and adversarial
+no-collateral cleanup tests. Implementation remains unauthorized until this exact revision passes
+clean-room review and receives operator approval.
+
+P0 recovery clean-room note (2026-07-27): A fresh reviewer approved plan-content SHA-256
+`f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580` with no P0, P1, or P2
+findings. The durable verdict is
+`docs/plans/reviews/2026-07-27-u1a-p0-recovery-clean-room.md`. This metadata and living-record
+update does not alter the reviewed implementation contract; `execution_authorized` remains false.
+
+P0 recovery authorization note (2026-07-28): Brandon instructed Codex to read the U1A reset
+handoff and continue, authorizing exact reviewed commit
+`cecfc0c8ede4c9493b50193bf76edbd321d49a8f`. This update sets
+`execution_authorized: true` and records the authorization without changing the reviewed
+implementation contract.

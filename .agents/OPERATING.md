@@ -70,6 +70,18 @@ Implementation requires a self-contained issue ExecPlan that has passed clean-ro
 exact operator approval, and has `execution_authorized: true`. Do not infer permission from a
 scaffold, epic summary, chat summary, issue, or partial plan.
 
+Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
+conversation. Before requesting it, state one consent-boundary action and its immutable target:
+`execute-plan` for a reviewed plan commit and digest, `apply-ruleset` for a plan digest, ruleset
+digest, and implementation commit, or `merge-pr` for a repository, pull-request number, and head
+commit. Record the exact response in the native issue using `Mandem-Approval: v1`, push that issue
+ref, and verify the remote ref before acting. A changed target needs a new response.
+
+Do not substitute a GitHub approval, infer approval from broader wording, or require another
+account. Issue-ref and branch publication, pull-request creation, comments, and read-only checks
+are ordinary workflow steps. Use `bun run repository-ruleset:apply` and
+`bun run pr:merge:approved` for the guarded write actions; do not bypass their approval checks.
+
 During implementation, keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` current. Continue through approved milestones without asking the
 operator for routine next steps. Stop when the plan requires operator judgment, the requested
@@ -85,3 +97,4 @@ Write a behaviorally meaningful failing test before implementation. Make it pass
 appropriate change, then refactor only while tests remain green.
 
 Workers use isolated Git worktrees. They commit, push, and open a pull request, but never merge.
+The orchestrating agent may merge only through the exact approved merge command.

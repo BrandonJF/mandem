@@ -2,14 +2,27 @@
 
 Mandem orchestrates bounded agent sessions through durable, observable workflows.
 
-Agent entry files point to the shared [operating contract](./.agents/OPERATING.md). The contract
-routes every supported agent to the same repository skills, including
-[clear writing](./.agents/skills/write-clearly/SKILL.md) and
-[git-native issue tracking](./.agents/skills/track-git-native-issues/SKILL.md).
-The [agent vendor-neutrality principle](./docs/architecture/agent-vendor-neutrality.md) explains
-why shared behavior lives behind thin harness-specific discovery adapters.
+Run `bun run check` to validate the repository, then run `bun run build` to create the two
+executables.
 
-Run `bun run check` to validate this repository, then `bun run build` to create the two bounded executables.
+## Repository guides
 
-See the [U1C engineering process audit](./docs/operations/2026-07-27-u1c-engineering-process-audit.md)
-for the agents, skills, commands, decisions, and review loops used during one Codex session.
+- [Agent instructions](./AGENTS.md) and [Claude instructions](./CLAUDE.md) point every supported
+  harness to the shared [operating contract](./.agents/OPERATING.md).
+- [ExecPlan rules](./PLANS.md) describe how Mandem authors and executes implementation plans.
+- [Documentation](./docs/README.md) indexes all maintained Mandem documentation.
+- [Architecture](./docs/architecture/README.md) describes the system and repository rules.
+- [Development](./docs/development/README.md) explains documentation and source-authoring practice.
+- [Operations](./docs/operations/README.md) records process and provider evidence.
+- [Plans](./docs/plans/README.md) indexes the program plan and child ExecPlans.
+- [Scripts](./scripts/README.md) describes repository-maintenance entrypoints.
+- [Git hooks](./.githooks/README.md) reserves the location for versioned Git hook entrypoints.
+- [Modules](./src/modules/README.md) indexes the module-level architecture documentation.
+
+## Agent workflow
+
+The shared operating contract routes agents to [clear writing](./.agents/skills/write-clearly/SKILL.md)
+and [git-native issue tracking](./.agents/skills/track-git-native-issues/SKILL.md). The
+[agent vendor-neutrality principle](./docs/architecture/agent-vendor-neutrality.md) explains why
+repository rules live in shared documents, skills, commands, and checks rather than in a single
+vendor's configuration.
