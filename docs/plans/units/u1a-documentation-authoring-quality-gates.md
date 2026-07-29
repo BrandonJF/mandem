@@ -1379,6 +1379,11 @@ external sources.
   raw native-issue validator, guarded ruleset apply, and exact-head merge wrapper test-first.
   Focused tests pass, the validator accepts the real execute-plan approval, `bun run check` passes
   71 tests, `bun run build` passes, and `git issue fsck` reports 16 valid issues.
+- [x] (2026-07-29 19:15Z) Full code review found two approval CLI/merge P1 defects, one
+  crash-reconciliation P1 defect, and four P2 gaps in pagination, real-boundary tests, persistent
+  overlay handling, and CI issue-ref fetching. Repaired every finding test-first. The complete gate
+  now passes 77 tests, including real-Git approval ancestry, atomic provider rejection, exact
+  crash-window temporaries, and overlay backing fixtures; build and issue integrity also pass.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
@@ -1629,6 +1634,13 @@ external sources.
   Rationale: Formatted Git log output adds presentation newlines and is not the immutable stored
   representation. Raw commit messages preserve the canonical record exactly, while equal ref heads
   prove that the authoritative decision was published before GitHub changes.
+  Date/Author: 2026-07-29 / Codex orchestrator
+
+- Decision: Keep operator-facing approval commands narrow and derive digests from the named plan,
+  exported ruleset, and checked-out commit.
+  Rationale: Requiring operators or agents to precompute derived fields duplicates canonical logic
+  and lets callers supply inconsistent targets. Exact fixed flags make the command scriptable while
+  one implementation owns target construction and exit classification.
   Date/Author: 2026-07-29 / Codex orchestrator
 
 ## Outcomes & Retrospective

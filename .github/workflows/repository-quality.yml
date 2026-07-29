@@ -18,6 +18,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
+      - name: Fetch native issues
+        run: git fetch origin '+refs/issues/*:refs/issues/*'
       - name: Install git-native-issue 1.3.3
         run: |
           git clone --branch v1.3.3 --depth 1 https://github.com/remenoscodes/git-native-issue.git "$RUNNER_TEMP/git-native-issue"

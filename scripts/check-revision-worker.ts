@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
+import { persistentFilesystem } from "./revision-storage";
 
 interface RunRecord {
   readonly schemaVersion: 1;
@@ -61,6 +62,8 @@ function isContained(parent: string, child: string): boolean {
 }
 
 function parseRecord(path: string): RunRecord {
+  const stat = lstatSync(path);
+  if (!stat.isFile() || stat.isSymbolicLink()) fail(`transaction record is not a regular file: ${path}`);
   const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) fail(`invalid transaction record: ${path}`);
   const value = raw as Readonly<Record<string, unknown>>;
@@ -125,7 +128,22 @@ function reconcile(
   const manifestPath = join(verificationDirectory, "active-run.json");
   const entries = Array.from(new Bun.Glob("*").scanSync({ cwd: verificationDirectory, dot: true }));
   if (!existsSync(manifestPath)) {
-    if (entries.some((entry) => entry !== "runs")) fail("verification namespace requires manual inspection");
+    const temporaryEntries = entries.filter((entry) => entry !== "runs");
+    if (temporaryEntries.length > 1) fail("verification namespace requires manual inspection");
+    const temporaryEntry = temporaryEntries[0];
+    if (temporaryEntry) {
+      const temporaryPath = join(verificationDirectory, temporaryEntry);
+      const temporaryRecord = parseRecord(temporaryPath);
+      validateRecord(temporaryRecord, canonicalCheckout, commonGitDirectory, runsDirectory);
+      if (temporaryEntry !== `active-run.json.tmp-${temporaryRecord.runId}`) {
+        fail(`unexpected manifest temporary requires manual inspection: ${temporaryPath}`);
+      }
+      if (existsSync(temporaryRecord.runDirectory)) {
+        fail(`manifest temporary has an unexpected run directory: ${temporaryRecord.runDirectory}`);
+      }
+      unlinkSync(temporaryPath);
+      directoryFsync(verificationDirectory);
+    }
     const runEntries = Array.from(new Bun.Glob("*").scanSync({ cwd: runsDirectory, dot: true }));
     if (runEntries.length !== 0) fail("unmanifested verification run requires manual inspection");
     return;
@@ -143,8 +161,21 @@ function reconcile(
       const marker = parseRecord(markerPath);
       validateRecord(marker, canonicalCheckout, commonGitDirectory, runsDirectory);
       if (JSON.stringify(marker) !== JSON.stringify(record)) fail("ownership marker does not match transaction record");
-    } else if (Array.from(new Bun.Glob("*").scanSync({ cwd: record.runDirectory, dot: true })).length !== 0) {
-      fail(`unmarked run directory requires manual inspection: ${record.runDirectory}`);
+    } else {
+      const runEntries = Array.from(new Bun.Glob("*").scanSync({ cwd: record.runDirectory, dot: true }));
+      const markerTemporary = `owner.json.tmp-${record.runId}`;
+      if (runEntries.length === 1 && runEntries[0] === markerTemporary) {
+        const temporaryPath = join(record.runDirectory, markerTemporary);
+        const temporaryMarker = parseRecord(temporaryPath);
+        validateRecord(temporaryMarker, canonicalCheckout, commonGitDirectory, runsDirectory);
+        if (JSON.stringify(temporaryMarker) !== JSON.stringify(record)) {
+          fail("temporary ownership marker does not match transaction record");
+        }
+        unlinkSync(temporaryPath);
+        directoryFsync(record.runDirectory);
+      } else if (runEntries.length !== 0) {
+        fail(`unmarked run directory requires manual inspection: ${record.runDirectory}`);
+      }
     }
     const registrations = worktreeEntries(root).filter((entry) => resolve(entry.path) === record.checkoutPath);
     if (registrations.length > 1) fail("multiple verification worktree registrations found");
@@ -163,16 +194,7 @@ function reconcile(
 }
 
 function ensurePersistent(path: string): void {
-  const mountInfo = readFileSync("/proc/self/mountinfo", "utf8").trim().split("\n");
-  const decoded = mountInfo.map((line) => {
-    const [left, right] = line.split(" - ");
-    const fields = left?.split(" ") ?? [];
-    return { mount: (fields[4] ?? "").replaceAll("\\040", " "), type: right?.split(" ")[0] ?? "" };
-  }).filter((entry) => entry.mount && isContained(entry.mount, path))
-    .sort((a, b) => b.mount.length - a.mount.length)[0];
-  if (!decoded || !["ext2", "ext3", "ext4", "xfs", "btrfs", "zfs"].includes(decoded.type)) {
-    fail(`verification storage must use a supported persistent filesystem, found ${decoded?.type || "unknown"}`);
-  }
+  persistentFilesystem(readFileSync("/proc/self/mountinfo", "utf8"), path);
 }
 
 function directoryBytes(path: string): number {

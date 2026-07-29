@@ -9,6 +9,7 @@
 /scripts/configure-repository-ruleset.test.ts @BrandonJF
 /scripts/merge-approved-pr.ts @BrandonJF
 /scripts/merge-approved-pr.test.ts @BrandonJF
+/scripts/revision-storage* @BrandonJF
 /scripts/hooks/ @BrandonJF
 /src/modules/architecture-standard/ @BrandonJF
 /eslint.config.ts @BrandonJF

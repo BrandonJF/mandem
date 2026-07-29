@@ -1,10 +1,12 @@
 /** @fileoverview Merges one pull request only at its conversation-approved exact head. */
 import type { ApprovalRecord } from "../src/modules/architecture-standard/domain/approval-contract";
-import { approvalRequest, assertApproval, type GitClient } from "./check-approval";
+import { ApprovalDeniedError, approvalRequest, assertApproval, type GitClient } from "./check-approval";
 
 export interface PullRequestClient {
   run(arguments_: readonly string[]): Promise<{ readonly exitCode: number; readonly output: string }>;
 }
+
+export class MergeTargetError extends Error {}
 
 export async function mergeApprovedPullRequest(
   approval: ApprovalRecord,
@@ -15,6 +17,7 @@ export async function mergeApprovedPullRequest(
   if (approval.action !== "merge-pr" || !("repository" in approval.target)) throw new Error("merge approval target is invalid");
   const target = approval.target;
   const current = await gh.run([
+    "pr",
     "view",
     String(target.pull_request),
     "--repo",
@@ -25,8 +28,9 @@ export async function mergeApprovedPullRequest(
     ".headRefOid",
   ]);
   if (current.exitCode !== 0) throw new Error(`pull-request read failed: ${current.output.trim()}`);
-  if (current.output.trim() !== target.head_sha) throw new Error("pull-request head changed after approval");
+  if (current.output.trim() !== target.head_sha) throw new MergeTargetError("pull-request head changed after approval");
   const merged = await gh.run([
+    "pr",
     "merge",
     String(target.pull_request),
     "--repo",
@@ -59,10 +63,16 @@ function argument(name: string): string {
 
 if (import.meta.main) {
   try {
+    const arguments_ = Bun.argv.slice(2);
+    const flags = arguments_.filter((_, index) => index % 2 === 0);
+    const expected = ["--issue", "--repository", "--pull-request", "--head"];
+    if (arguments_.length !== 8 || new Set(flags).size !== 4 || flags.some((flag) => !expected.includes(flag))) {
+      throw new MergeTargetError("merge command has missing, duplicate, or unknown flags");
+    }
     const issueId = argument("--issue");
     const repository = argument("--repository") as "BrandonJF/mandem";
     const pullRequest = Number(argument("--pull-request"));
-    const headSha = argument("--head-sha");
+    const headSha = argument("--head");
     const request = approvalRequest(issueId, "merge-pr", {
       repository,
       pull_request: pullRequest,
@@ -75,6 +85,6 @@ if (import.meta.main) {
     console.log(`Pull request ${pullRequest} merged at ${headSha}.`);
   } catch (error: unknown) {
     console.error(`approved merge failed: ${error instanceof Error ? error.message : "unexpected error"}`);
-    process.exitCode = 2;
+    process.exitCode = error instanceof ApprovalDeniedError || error instanceof MergeTargetError ? 1 : 2;
   }
 }

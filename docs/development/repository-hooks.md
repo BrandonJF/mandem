@@ -27,5 +27,5 @@ local/remote issue-ref match before its first GitHub write.
 Every pull-request merge needs a separate approval for its repository, number, and current head
 commit. Record that response in the native issue, push the issue ref, and run
 `bun run pr:merge:approved -- --issue <uuid> --repository BrandonJF/mandem --pull-request <number>
---head-sha <full-sha>`. The command reads the current head and asks GitHub to merge only if the head
+--head <full-sha>`. The command reads the current head and asks GitHub to merge only if the head
 still matches atomically.

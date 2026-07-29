@@ -15,6 +15,7 @@ export interface GitClient {
 }
 
 export class ApprovalCheckError extends Error {}
+export class ApprovalDeniedError extends ApprovalCheckError {}
 
 function output(result: { readonly exitCode: number; readonly output: string }, label: string): string {
   if (result.exitCode !== 0) throw new ApprovalCheckError(`${label} failed: ${result.output.trim() || `exit ${result.exitCode}`}`);
@@ -54,15 +55,15 @@ export async function assertApproval(
   const issueRefHead = output(await git.run(["rev-parse", reference]), "local native issue ref");
   const remoteLine = output(await git.run(["ls-remote", "origin", reference]), "remote native issue ref");
   const remoteHead = remoteLine.split(/\s+/u)[0];
-  if (remoteHead !== issueRefHead) throw new ApprovalCheckError("local and remote native issue refs differ");
+  if (remoteHead !== issueRefHead) throw new ApprovalDeniedError("local and remote native issue refs differ");
 
   if (options.requireCleanHead) {
     const head = output(await git.run(["rev-parse", "HEAD"]), "implementation HEAD");
     if (!("implementation_sha" in request.target) || head !== request.target.implementation_sha) {
-      throw new ApprovalCheckError("checked-out HEAD differs from the approved implementation SHA");
+      throw new ApprovalDeniedError("checked-out HEAD differs from the approved implementation SHA");
     }
     const status = output(await git.run(["status", "--porcelain", "--untracked-files=no"]), "tracked worktree status");
-    if (status !== "") throw new ApprovalCheckError("tracked worktree must be clean");
+    if (status !== "") throw new ApprovalDeniedError("tracked worktree must be clean");
   }
 
   const commitList = output(await git.run(["rev-list", reference]), "native issue history");
@@ -85,10 +86,10 @@ export async function assertApproval(
       throw new ApprovalCheckError(`approval ancestry check failed: ${result.output.trim()}`);
     });
   } catch (error: unknown) {
-    throw new ApprovalCheckError(error instanceof Error ? error.message : "approval validation failed");
+    throw new ApprovalDeniedError(error instanceof Error ? error.message : "approval validation failed");
   }
-  if (!selected) throw new ApprovalCheckError("exact approval was not found");
-  if (!selected.authorized) throw new ApprovalCheckError("exact approval was denied");
+  if (!selected) throw new ApprovalDeniedError("exact approval was not found");
+  if (!selected.authorized) throw new ApprovalDeniedError("exact approval was denied");
   return { approvalCommit: selected.commit, issueRefHead };
 }
 
@@ -130,27 +131,41 @@ function valueAfter(arguments_: readonly string[], name: string): string {
   return value;
 }
 
-function requestFromArguments(arguments_: readonly string[]): ApprovalRecord {
+function assertExactFlags(arguments_: readonly string[], expected: readonly string[]): void {
+  if (arguments_.length !== expected.length * 2) throw new ApprovalDeniedError("approval command has missing or unknown flags");
+  const supplied = arguments_.filter((_, index) => index % 2 === 0);
+  if (new Set(supplied).size !== supplied.length || supplied.some((flag) => !expected.includes(flag))) {
+    throw new ApprovalDeniedError("approval command has duplicate or unknown flags");
+  }
+}
+
+export async function requestFromArguments(arguments_: readonly string[], git: GitClient = gitClient): Promise<ApprovalRecord> {
   const issueId = valueAfter(arguments_, "--issue");
   const action = valueAfter(arguments_, "--action");
   if (action === "execute-plan") {
+    assertExactFlags(arguments_, ["--issue", "--action", "--plan", "--plan-commit"]);
+    const planPath = valueAfter(arguments_, "--plan");
     return approvalRequest(issueId, action, {
       plan_commit: valueAfter(arguments_, "--plan-commit"),
-      plan_sha256: valueAfter(arguments_, "--plan-sha256"),
+      plan_sha256: sha256(await readFile(planPath, "utf8")),
     });
   }
   if (action === "apply-ruleset") {
+    assertExactFlags(arguments_, ["--issue", "--action", "--plan"]);
+    const { repositoryRuleset } = await import("./configure-repository-ruleset");
+    const head = output(await git.run(["rev-parse", "HEAD"]), "implementation HEAD");
     return approvalRequest(issueId, action, {
-      plan_sha256: valueAfter(arguments_, "--plan-sha256"),
-      ruleset_sha256: valueAfter(arguments_, "--ruleset-sha256"),
-      implementation_sha: valueAfter(arguments_, "--implementation-sha"),
+      plan_sha256: sha256(await readFile(valueAfter(arguments_, "--plan"), "utf8")),
+      ruleset_sha256: sha256(canonicalJson(repositoryRuleset)),
+      implementation_sha: head,
     });
   }
   if (action === "merge-pr") {
+    assertExactFlags(arguments_, ["--issue", "--action", "--repository", "--pull-request", "--head"]);
     return approvalRequest(issueId, action, {
       repository: valueAfter(arguments_, "--repository") as "BrandonJF/mandem",
       pull_request: Number(valueAfter(arguments_, "--pull-request")),
-      head_sha: valueAfter(arguments_, "--head-sha"),
+      head_sha: valueAfter(arguments_, "--head"),
     });
   }
   throw new ApprovalContractError("action must be execute-plan, apply-ruleset, or merge-pr");
@@ -158,10 +173,11 @@ function requestFromArguments(arguments_: readonly string[]): ApprovalRecord {
 
 if (import.meta.main) {
   try {
-    const result = await assertApproval(requestFromArguments(Bun.argv.slice(2)), gitClient);
+    const request = await requestFromArguments(Bun.argv.slice(2), gitClient);
+    const result = await assertApproval(request, gitClient, { requireCleanHead: request.action === "apply-ruleset" });
     console.log(`Approval verified at native issue commit ${result.approvalCommit}.`);
   } catch (error: unknown) {
     console.error(`approval check failed: ${error instanceof Error ? error.message : "unexpected error"}`);
-    process.exitCode = 2;
+    process.exitCode = error instanceof ApprovalDeniedError || error instanceof ApprovalContractError ? 1 : 2;
   }
 }
