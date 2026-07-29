@@ -55,7 +55,7 @@ describe("configure repository ruleset", () => {
     const created = githubReadback(23);
     const fixture = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
-      { exitCode: 0, output: "[[]]" },
+      { exitCode: 0, output: "" },
       { exitCode: 0, output: JSON.stringify(created) },
       { exitCode: 0, output: JSON.stringify(created) },
     ]);
@@ -63,7 +63,7 @@ describe("configure repository ruleset", () => {
     await expect(configureRepositoryRuleset("apply", fixture.gh, async () => {})).resolves.toEqual({ id: 23, changed: true });
     expect(fixture.calls).toEqual([
       { arguments_: ["auth", "status"] },
-      { arguments_: ["api", "repos/BrandonJF/mandem/rulesets", "--paginate", "--slurp", "-H", "X-GitHub-Api-Version: 2026-03-10"] },
+      { arguments_: ["api", "repos/BrandonJF/mandem/rulesets", "--paginate", "--jq", ".[] | @json", "-H", "X-GitHub-Api-Version: 2026-03-10"] },
       {
         arguments_: ["api", "--method", "POST", "repos/BrandonJF/mandem/rulesets", "-H", "X-GitHub-Api-Version: 2026-03-10", "--input", "-"],
         input: JSON.stringify(repositoryRuleset),
@@ -77,7 +77,7 @@ describe("configure repository ruleset", () => {
     const conformant = { ...repositoryRuleset, id: 7, node_id: "RRS_kwDOexample" };
     const updating = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
-      { exitCode: 0, output: JSON.stringify([[], [{ id: 7, name: repositoryRuleset.name }]]) },
+      { exitCode: 0, output: `${JSON.stringify({ id: 7, name: repositoryRuleset.name })}\n` },
       { exitCode: 0, output: JSON.stringify(drifted) },
       { exitCode: 0, output: JSON.stringify(conformant) },
       { exitCode: 0, output: JSON.stringify(conformant) },
@@ -90,7 +90,7 @@ describe("configure repository ruleset", () => {
 
     const checking = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
-      { exitCode: 0, output: JSON.stringify([[{ id: 7, name: repositoryRuleset.name }]]) },
+      { exitCode: 0, output: `${JSON.stringify({ id: 7, name: repositoryRuleset.name })}\n` },
       { exitCode: 0, output: JSON.stringify(conformant) },
     ]);
     await expect(configureRepositoryRuleset("check", checking.gh, async () => {})).resolves.toEqual({ id: 7, changed: false });
@@ -100,14 +100,14 @@ describe("configure repository ruleset", () => {
   it("rejects drift, duplicate names, unauthenticated, and unauthorized responses without mutation", async () => {
     const drifted = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
-      { exitCode: 0, output: JSON.stringify([[{ id: 4, name: repositoryRuleset.name }]]) },
+      { exitCode: 0, output: `${JSON.stringify({ id: 4, name: repositoryRuleset.name })}\n` },
       { exitCode: 0, output: JSON.stringify({ ...repositoryRuleset, id: 4, enforcement: "disabled" }) },
     ]);
     await expect(configureRepositoryRuleset("check", drifted.gh, async () => {})).rejects.toMatchObject({ exitCode: 1 });
 
     const duplicate = client([
       { exitCode: 0, output: "github.com\n  ✓ Logged in" },
-      { exitCode: 0, output: JSON.stringify([[{ ...repositoryRuleset, id: 4 }], [{ ...repositoryRuleset, id: 5 }]]) },
+      { exitCode: 0, output: `${JSON.stringify({ ...repositoryRuleset, id: 4 })}\n${JSON.stringify({ ...repositoryRuleset, id: 5 })}\n` },
     ]);
     await expect(configureRepositoryRuleset("apply", duplicate.gh, async () => {})).rejects.toMatchObject({ exitCode: 2 });
     expect(duplicate.calls).toHaveLength(2);

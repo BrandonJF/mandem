@@ -1489,6 +1489,13 @@ external sources.
   failed until the comparator normalized this empty server default. The focused regression test
   failed before the repair and now passes.
 
+- Observation: GitHub CLI pagination features differ by installed version.
+  The installed client supports `--paginate` and jq but not `--slurp` or the `json` template
+  helper. A read-only live probe showed that `--paginate --jq '.[] | @json'` emits one complete
+  ruleset object per line across pages.
+  Evidence: Both unsupported forms failed before an API response; the jq form returned ruleset
+  `19852337`, and the conformance command then correctly reported the expected policy drift.
+
 - Observation: Lexical path containment accepts a repository symlink whose target is outside the
   repository, including a deleted target beneath that symlink.
   Evidence: a Codex event for `escape/write.md` exited `0` before the adapter resolved the nearest

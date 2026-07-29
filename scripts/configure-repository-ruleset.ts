@@ -70,15 +70,9 @@ function parseRulesets(output: string): readonly RemoteRuleset[] {
   }
 }
 
-function parseRulesetPages(output: string): readonly RemoteRuleset[] {
-  try {
-    const value: unknown = JSON.parse(output);
-    if (!Array.isArray(value) || !value.every(Array.isArray)) throw new Error("expected paginated GitHub ruleset arrays");
-    return value.flatMap((page) => parseRulesets(JSON.stringify(page)));
-  } catch (error: unknown) {
-    if (error instanceof RulesetError) throw error;
-    throw new RulesetError(2, `GitHub ruleset discovery returned invalid JSON: ${error instanceof Error ? error.message : "unexpected error"}`);
-  }
+function parseRulesetStream(output: string): readonly RemoteRuleset[] {
+  const lines = output.trim().split("\n").filter(Boolean);
+  return lines.length === 0 ? [] : parseRulesets(`[${lines.join(",")}]`);
 }
 
 function conforms(value: RemoteRuleset): boolean {
@@ -118,9 +112,14 @@ function stableJson(value: unknown): string {
 }
 
 async function discover(gh: GhClient): Promise<readonly RemoteRuleset[]> {
-  const result = await gh.run(api([`${repository}/rulesets`, "--paginate", "--slurp"]));
+  const result = await gh.run(api([
+    `${repository}/rulesets`,
+    "--paginate",
+    "--jq",
+    ".[] | @json",
+  ]));
   if (result.exitCode !== 0) throw new RulesetError(2, `GitHub ruleset discovery failed: ${message(result.output)}`);
-  return parseRulesetPages(result.output).filter((ruleset) => ruleset.name === repositoryRuleset.name);
+  return parseRulesetStream(result.output).filter((ruleset) => ruleset.name === repositoryRuleset.name);
 }
 
 async function read(gh: GhClient, id: number): Promise<RemoteRuleset> {
