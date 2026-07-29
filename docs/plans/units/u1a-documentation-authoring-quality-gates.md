@@ -4,8 +4,8 @@ plan_kind: mandem-child-execplan
 program_unit: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
 work_item: 745eda8
-promotion: planned
-execution_authorized: false
+promotion: executable
+execution_authorized: true
 date: 2026-07-25
 ---
 
