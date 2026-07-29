@@ -9,3 +9,5 @@ This directory records independent reviews of Mandem's program and child ExecPla
 - [U1A P0 recovery review](./2026-07-27-u1a-p0-recovery-clean-room.md) approves the restart-safe
   revision-check recovery contract.
 - [U1C review](./2026-07-25-u1c-clean-room.md) reviews the corrective U1C plan.
+- [WI1 vocabulary review](./2026-07-28-wi1-vocabulary-clean-room.md) reviews the canonical epic,
+  issue, and subissue terminology.

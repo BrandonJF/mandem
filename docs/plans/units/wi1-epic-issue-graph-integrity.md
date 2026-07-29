@@ -10,8 +10,8 @@ epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
 issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d
 depends_on_issue_ids:
   - 745eda80-1e74-4866-bc95-2f2983b31025
-promotion: executable
-execution_authorized: true
+promotion: planned
+execution_authorized: false
 date: 2026-07-28
 ---
 
@@ -26,7 +26,8 @@ This ExecPlan is a living document. Maintain it according to the repository-root
 - **Objective:** Replace the manual issue-export repair performed on 2026-07-28 with checked-in policy and commands that can validate the local Mandem v1 work graph and reconcile its managed GitHub projection repeatedly without creating duplicates or drift.
 - **Epic:** Git-native issue `abe862d6-b052-49fe-8611-bc1ab6e24253`.
 - **Issue:** Git-native issue `6a6a8bab-853f-4658-9bc0-38e2386b642d`, projected to GitHub issue `#25`.
-- **Dependency:** U1A issue `745eda80-1e74-4866-bc95-2f2983b31025`. Rebase implementation on U1A's merged authoring and canonical-check behavior before editing.
+- **Dependency:** U1A issue `745eda80-1e74-4866-bc95-2f2983b31025`, completed by merge
+  `e75f66591e5494cc94a8d8dd4d43c7be86d72227`.
 - **Authority:** This exact plan governs implementation only after a clean-room reviewer approves it, the operator approves that reviewed revision, and a metadata-only revision sets `execution_authorized: true`.
 - **Execution profile:** Use an isolated worktree, Bun only, no `any`, and a behaviorally meaningful failing test before each implementation step.
 - **Stop conditions:** Stop if the installed `git issue` version cannot provide stable git-native UUID and provider-mapping data without parsing human prose, if GitHub no longer exposes the required subissue APIs, or if reconciliation would have to delete or re-parent an unmanaged GitHub issue.
@@ -62,7 +63,10 @@ The issue ExecPlans also use inconsistent identity metadata. Some contain no `is
 #### GitHub projection and reconciliation
 
 - R7. A read-only remote check compares each managed issue with its GitHub projection: provider mapping, open or closed state, direct parent, direct subissues, milestone, and the subset of labels owned by this workflow.
-- R8. The apply command computes the desired changes before mutation, shows the proposed operations, mutates only after the operator supplies the explicit apply flag, and performs a read-only post-check.
+- R8. The apply command computes the desired changes before mutation, shows the proposed operations,
+  and performs a read-only post-check. The `--apply` flag expresses command mode but does not grant
+  consent; apply also requires an exact canonical conversation approval for the immutable operation
+  plan.
 - R9. Reconciliation requires one existing, unique GitHub Provider-ID mapping for every managed issue. A missing or ambiguous mapping fails closed before any write. Creating a provider issue through the repository-wide `git issue sync` bridge is a separate operator bootstrap action outside this command.
 - R10. Reconciliation creates or updates one managed milestone and the managed label definitions by stable names, updates each managed provider issue's open or closed state, and preserves unrelated labels and other provider fields.
 - R11. Reconciliation adds missing managed parent/subissue relationships and removes an unexpected relationship only when both issues belong to the native epic graph and the desired metadata names the replacement. It fails closed before all writes for any unmanaged current parent or any unmanaged subissue attached to a managed parent.
@@ -73,11 +77,21 @@ The issue ExecPlans also use inconsistent identity metadata. Some contain no `is
 #### Repository integration
 
 - R15. `bun run issue-graph:check` runs offline and joins the canonical `bun run check` sequence. Developer setup merges native refs before work; CI fetches `refs/issues/*` explicitly before the gate. Missing epic refs fail rather than silently skipping graph validation.
-- R16. `bun run issue-graph:remote:check` and `bun run issue-graph:remote:sync -- --apply` remain explicit operator commands because they read or mutate external state.
+- R16. `bun run issue-graph:remote:check` remains read-only. `bun run
+  issue-graph:remote:sync -- --approval-issue <uuid> --apply` is a guarded external write command.
 - R17. Repository documentation identifies the local issue graph as the implementation tracking contract, explains the two remote modes, and states that a successful local check does not prove GitHub is current.
 - R18. Automated tests cover contract parsing, graph validation, provider planning, mutation idempotence, interrupted-run recovery, and a disposable-repository integration path.
-- R19. `bun run issue-graph:native:set -- --issue <uuid> --file <yaml> --apply` appends and pushes one complete native metadata comment only when it differs from the current authoritative comment. Preview is the default, divergent local and remote issue refs fail closed, and repeating apply with the same payload performs no commit and no push.
+- R19. `bun run issue-graph:native:apply -- --approval-issue <uuid> --file <yaml> --apply`
+  appends and pushes the complete desired metadata set only where it differs from current
+  authoritative comments. Preview is the default, changed remote issue refs fail closed, and
+  repeating apply with the same payload performs no commit and no push.
 - R20. `bun run vocabulary:check` checks repository-owned instructions, skills, plans, registries, and operator documentation for the detectable obsolete issue-synonym contexts listed in this plan. It reports stable file-and-line findings, joins `bun run check`, and supports a one-line documented exception for official external names, historical quotations, and established terms such as unit test that do not describe issue hierarchy. The prose rule remains broader than this automated subset and applies during authoring and review.
+- R21. WI1 extends the merged `Mandem-Approval: v1` contract instead of creating another approval
+  format. `set-issue-graph` authorizes one complete native graph digest against the digest of the
+  exact remote issue-ref head map and implementation commit. `sync-issue-projection` authorizes one
+  repository, native graph digest, provider operation-plan digest, and implementation commit.
+  Both validators require a clean tracked worktree and equal local/remote approval-issue refs,
+  reject changed targets, and perform zero managed writes without exact approval.
 
 ### Actors
 
@@ -90,7 +104,11 @@ The issue ExecPlans also use inconsistent identity metadata. Some contain no `is
 
 - F1. **Offline validation.** The command loads versioned relationship metadata from git-native issue refs, reads the plans declared by those issues, validates both directions of every relationship, sorts findings, and exits zero only when they agree.
 - F2. **Remote preview.** The command first runs offline validation, loads GitHub state for provider-mapped issues, computes a stable operation list, prints it, and exits nonzero when drift exists without mutating GitHub.
-- F3. **Remote apply.** With `--apply`, the command applies only the stable provider-operation list one operation at a time, re-reads state after recoverable conflicts, and then runs the remote check again. It never changes or pushes native issue refs.
+- F3. **Remote apply.** The orchestrator presents the stable operation-plan digest and exact
+  implementation commit for conversation approval. With matching `sync-issue-projection` approval
+  and `--apply`, the command recomputes the plan, requires the same digest, applies one operation at
+  a time, re-reads after recoverable conflicts, and then runs the remote check again. It never
+  changes or pushes native issue refs.
 - F4. **Retry after interruption.** A rerun recomputes state. Completed operations disappear from the plan and remaining operations execute once.
 - F5. **New planned issue.** A contributor creates or selects a git-native issue first, appends its versioned relationship comment, then adds the same full UUID and dependencies to the issue ExecPlan. The checker fails until both records agree.
 - F6. **Native metadata update.** An operator previews one complete metadata payload, applies it through the native setter, observes the exact issue ref push, and can repeat the command with zero writes.
@@ -289,7 +307,9 @@ The initial diagnostic catalog is `IGRAPH-NATIVE-METADATA`, `IGRAPH-NATIVE-CONFL
 - KTD3. **Separate desired-state planning from mutation.** Pure domain code returns stable typed operations. The GitHub adapter executes those operations. Tests can prove idempotence without network access.
 - KTD4. **Use full git-native UUIDs as identities.** The provider adapter resolves GitHub numbers from existing provider mappings in native issue history. No checked-in contract contains a GitHub issue number.
 - KTD5. **Own only provider fields declared by native issues.** Reconciliation may update mapped managed issue state, managed labels, the managed milestone, and managed hierarchy. It preserves unrelated provider data and fails before destructive or ambiguous re-parenting.
-- KTD6. **Make apply explicit and post-verified.** Remote check is read-only by default. `--apply` authorizes only the printed operation types, and successful completion requires a fresh zero-drift comparison.
+- KTD6. **Make apply explicit, exactly approved, and post-verified.** Remote check is read-only by
+  default. `--apply` selects mutation mode but grants no consent. The canonical approval binds the
+  complete operation plan, and successful completion requires a fresh zero-drift comparison.
 - KTD7. **Model already-satisfied writes as success.** Before each write, the adapter checks current state. GitHub conflict or duplicate responses trigger one re-read; if desired state now exists, execution continues.
 - KTD8. **Use typed command runners rather than shell strings.** Infrastructure calls `git`, `git issue`, and `gh` with argument arrays. It never interpolates issue content into a shell command and never logs credentials.
 - KTD9. **Do not make remote synchronization part of the canonical gate.** `bun run check` proves repository integrity offline. Operators and scheduled automation invoke remote comparison separately.
@@ -308,7 +328,31 @@ If GitHub applies a write but the response is lost, the adapter re-reads that re
 
 ### Security and External-State Controls
 
-Use `gh api` so authentication remains in the existing GitHub CLI credential store. Never read or print the token. Encode REST payloads as structured arguments or JSON passed directly to the child process, not shell-expanded text. Remote tests use fakes and do not contact GitHub. A live smoke test may read the configured repository; mutation smoke testing occurs only through the explicit apply command against the already-declared managed graph.
+Use `gh api` so authentication remains in the existing GitHub CLI credential store. Never read or print the token. Encode REST payloads as structured arguments or JSON passed directly to the child process, not shell-expanded text. Remote tests use fakes and do not contact GitHub. A live smoke test may read the configured repository; mutation smoke testing occurs only through the exact approved apply command against the already-declared managed graph.
+
+Extend `ApprovalAction`, the canonical serializer/parser, CLI, and ancestry selector from U1A with
+these exact target shapes:
+
+    action: "set-issue-graph"
+    target:
+      repository: "BrandonJF/mandem"
+      graph_sha256: "<canonical desired NativeIssueGraphV1 digest>"
+      issue_refs_sha256: "<canonical sorted UUID-to-remote-head map digest>"
+      implementation_sha: "<full Git SHA>"
+
+    action: "sync-issue-projection"
+    target:
+      repository: "BrandonJF/mandem"
+      graph_sha256: "<same canonical native graph digest>"
+      operations_sha256: "<canonical sorted provider operation list digest>"
+      implementation_sha: "<full Git SHA>"
+
+Canonical JSON uses U1A's existing recursive key sort, preserved array order, UTF-8 encoding, and
+no insignificant whitespace. The native graph sorts issue entries and dependency UUIDs before
+hashing. Provider operations sort by their deterministic operation key before hashing. Unknown
+keys, a changed remote head map, changed provider state, another implementation commit, or a dirty
+tracked worktree deny authorization. Reuse the same `Mandem-Approval: v1` evidence and unique
+descendant selection; do not add a WI1-specific decision record.
 
 ---
 
@@ -334,7 +378,16 @@ Use `gh api` so authentication remains in the existing GitHub CLI credential sto
 
 - **Goal:** Make the checked-in epic graph satisfy the new contract and include the local check in the repository gate.
 - **Files:** Update the managed plan frontmatter and vocabulary in `AGENTS.md`, `CLAUDE.md`, `.agents/**/*.md`, `PLANS.md`, `README.md`, `docs/**/*.md`, `scripts/README.md`, and every `src/**/README.md`; rename obsolete plan paths and update every reference; append authoritative metadata comments to all managed git-native issues; create `src/modules/architecture-standard/application/use-cases/set-native-issue-graph-metadata.ts`, `src/modules/architecture-standard/api/issue-graph.ts`, `src/modules/architecture-standard/api/issue-graph.test.ts`, `scripts/check-issue-graph.ts`, `scripts/check-vocabulary.ts`, `scripts/set-issue-graph-metadata.ts`, and their tests; update the API and public module barrels, `package.json`, U1A's `.github/workflows/repository-quality.yml`, and documentation indexes required by U1A.
-- **Approach:** Compose the filesystem and git-native adapters with the application use cases in the API module. Keep scripts limited to argument parsing, rendering, and exit status. The setter fetches the exact remote issue ref into a temporary ref and applies the ancestry state machine in `Idempotence and Recovery`; it never appends on a stale local head. Only `--apply` may append through `git issue comment` or push the exact existing local ref. Use the setter to apply the reviewed native metadata set above, then normalize plan frontmatter and the complete repository-owned prose corpus named above. Rename `docs/plans/units/` to `docs/plans/issues/`, rename files containing `work-item` or `corrective` when those words classify hierarchy, and update all links and native plan paths.
+- **Approach:** Compose the filesystem and git-native adapters with the application use cases in the
+  API module. Keep scripts limited to argument parsing, rendering, and exit status. The native
+  command loads the complete desired set, fetches every exact remote issue ref into temporary refs,
+  computes the canonical graph and remote-head-map digests, and validates one
+  `set-issue-graph` approval before its first native issue commit or push. It then applies the
+  ancestry state machine in `Idempotence and Recovery` with exact force-with-lease expectations; it
+  never appends on a stale head. Use it to apply the reviewed native metadata set above, then
+  normalize plan frontmatter and the complete repository-owned prose corpus named above. Rename
+  `docs/plans/units/` to `docs/plans/issues/`, rename files containing `work-item` or `corrective`
+  when those words classify hierarchy, and update all links and native plan paths.
 
   The vocabulary checker rejects the phrases `program ExecPlan`, `program issue`, `program graph`, `program plan`, `program orchestrator`, `program membership`, `work item`, `work-item`, `child ExecPlan`, `child plan`, `child scaffold`, `child issue`, `child item`, `corrective item`, `corrective work`, `support item`, `support issue`, and `support incident`, plus `unit` when it modifies issue, plan, scaffold, hierarchy, or key. Matching is case-insensitive and includes inline code and fenced code. This finite list automates common violations; authors and reviewers still enforce the operating contract's general prohibition on using any synonym as a substitute.
 
@@ -356,7 +409,12 @@ Use `gh api` so authentication remains in the existing GitHub CLI credential sto
 
 - **Goal:** Add explicit preview and apply commands backed by a GitHub adapter and prove retry safety.
 - **Files:** Create `src/modules/architecture-standard/infrastructure/services/github-issue-graph-provider.ts`, `src/modules/architecture-standard/application/use-cases/reconcile-issue-graph.ts`, `src/modules/architecture-standard/api/issue-graph-reconciliation.ts`, `src/modules/architecture-standard/api/issue-graph-reconciliation.test.ts`, `scripts/reconcile-issue-graph.ts`, and corresponding tests. Update all affected barrels, `package.json`, and operator documentation.
-- **Approach:** Implement GitHub reads and writes with `gh api` argument arrays and the exact REST contract in `Interfaces and Dependencies`. Never invoke `git issue sync`. Execute one stable operation at a time, re-read after conflicts or uncertain responses, and finish with a fresh comparison. The API module composes ports and adapters. The script defaults to preview and only parses arguments, renders operations, and returns the API result; only `--apply` mutates.
+- **Approach:** Implement GitHub reads and writes with `gh api` argument arrays and the exact REST
+  contract in `Interfaces and Dependencies`. Never invoke `git issue sync`. Preview renders the
+  canonical operation-plan digest. Apply recomputes it and validates the exact
+  `sync-issue-projection` approval before its first `gh` write. Execute one stable operation at a
+  time, re-read after conflicts or uncertain responses, and finish with a fresh comparison. The API
+  module composes ports and adapters.
 - **Test scenarios:** Begin with a fake provider that records calls. Verify preview has zero writes; a complete apply uses the expected operation order; issue state is reconciled only for mapped managed issues; a second apply has zero writes; a lost response followed by matching state succeeds; interruption followed by retry completes only remaining operations; authentication and rate-limit failures exit nonzero; missing mappings, unmanaged current parents, and unmanaged subissues under managed parents cause zero writes; the bridge is never invoked; the exact singular subissue removal endpoint and payload are used; and command arguments do not expose tokens or interpret issue text as shell syntax.
 - **Verification:** Run all reconciliation tests. Then run `bun run issue-graph:remote:check` against `BrandonJF/mandem` and expect zero drift. Run the apply command twice regardless of initial drift; if state was already current, both are zero-write proof runs, otherwise the first repairs drift and the second reports zero operations.
 
@@ -394,14 +452,20 @@ Work from an isolated implementation worktree rebased on the merge commit that c
 
 For each step, add the named failing test first and run only that test file. Preserve the failing output in this plan's `Artifacts and Notes`, implement the smallest behavior, then rerun the focused test. After Step 3, run:
 
-    bun run issue-graph:native:set -- --issue <full-uuid> --file <payload.yaml>
-    bun run issue-graph:native:set -- --issue <full-uuid> --file <payload.yaml> --apply
-    bun run issue-graph:native:set -- --issue <full-uuid> --file <payload.yaml> --apply
+    bun run issue-graph:native:apply -- --approval-issue <full-uuid> --file <payload.yaml>
+
+Preview prints the canonical graph digest, remote-head-map digest, exact implementation commit, and
+proposed native ref changes. After the orchestrator records and pushes exact `set-issue-graph`
+approval for that target, run:
+
+    bun run issue-graph:native:apply -- --approval-issue <full-uuid> --file <payload.yaml> --apply
+    bun run issue-graph:native:apply -- --approval-issue <full-uuid> --file <payload.yaml> --apply
     bun run issue-graph:check
     bun run check
     git issue fsck
 
-For each reviewed payload, preview prints the normalized metadata and intended exact ref. First apply appends and pushes one metadata commit. Second apply prints `native issue metadata already current: 0 commits, 0 pushes`.
+First apply appends and pushes only differing metadata commits. Second apply prints `native issue
+metadata already current: 0 commits, 0 pushes`.
 
 Expect the local command to print one line in this form and exit zero:
 
@@ -417,8 +481,13 @@ An aligned provider prints `issue graph remote valid: 15 managed issues, 0 opera
 
 When preview reports only operations permitted by this plan, apply and immediately prove repeatability:
 
-    bun run issue-graph:remote:sync -- --apply
-    bun run issue-graph:remote:sync -- --apply
+    bun run issue-graph:remote:sync
+
+Preview prints the exact `sync-issue-projection` target. After the orchestrator records and pushes
+approval for that target, run:
+
+    bun run issue-graph:remote:sync -- --approval-issue <full-uuid> --apply
+    bun run issue-graph:remote:sync -- --approval-issue <full-uuid> --apply
 
 The first command must finish with zero post-check drift. The second must print `issue graph remote valid: 15 managed issues, 0 operations, 0 writes`. Run both even when the initial preview is already aligned; in that case both apply invocations must perform zero writes.
 
@@ -436,9 +505,16 @@ Commit the branch with a value-focused message, push it, and open a pull request
 
 The offline command is read-only. Repeating it against the same files and refs returns the same ordered diagnostics. It does not fetch, merge, sync, push, or invoke `gh`.
 
-The native setter is the only command in this plan that changes authoritative graph metadata. It fetches the matching remote ref into a temporary ref and compares exact heads and ancestry without merging. When heads are equal and one unique authoritative metadata comment equals the requested canonical payload, it returns zero commits and zero pushes. When heads are equal but metadata differs or the reachable metadata comments have no unique maximum, apply appends one resolving canonical comment and pushes it. When local is behind remote or the refs diverged, it makes no mutation and instructs the operator to run `git issue merge origin`, review the merge, and retry.
+The native graph command is the only command in this plan that changes authoritative graph
+metadata. It fetches every managed remote ref into a temporary ref and compares exact heads and
+ancestry without merging. When all metadata already equals the canonical payload, it returns zero
+commits and zero pushes. Otherwise apply validates the approved complete target before appending
+any resolving comments.
 
-When local is ahead of remote, the setter may recover a lost push only when `remote..local` contains exactly one commit, that commit is a `Mandem-Graph-Metadata: v1` comment, and its canonical payload equals the request. It then pushes the existing local ref with zero new commits. Any additional local issue comment, state edit, merge, or metadata commit causes an operator-review error and zero pushes. Apply always pushes `refs/issues/<uuid>:refs/issues/<uuid>` without force.
+Each push uses `--force-with-lease=refs/issues/<uuid>:<approved-remote-head>` as a compare-and-swap
+guard. The new local ref must descend from that approved remote head; the option never authorizes
+discarding history. A concurrent remote change rejects that ref and stops the batch. Retry reloads
+all heads and recomputes a new approval target; already-applied metadata causes no new commit.
 
 If the first push response is lost, retry fetches the remote ref. When remote still trails local by exactly the expected metadata commit, retry performs zero commits and one push. When remote and local heads are exactly equal, retry succeeds with zero commits and zero pushes. If remote is a descendant of local, the setter treats local as behind and requires merge and review even when the remote history contains the attempted commit. Disposable-repository tests cover equal, remote-descendant, behind, ahead, diverged, lost-response, and final no-op states.
 
@@ -448,7 +524,7 @@ After each write, apply reads the resource again. A matching desired value compl
 
 State changes use a field-specific issue patch. Label reconciliation adds or removes only labels named in the native epic issue's `managed_labels`. Milestone reconciliation selects the one milestone whose exact title matches native epic metadata. Hierarchy reconciliation removes a current parent only after proving both current and desired parents are managed. An unmanaged subissue attached to a managed parent produces `IGRAPH-PROVIDER-UNMANAGED-SUBISSUE` before any write; the operator must decide that external relationship separately. These rules preserve provider state outside the reviewed contract.
 
-The command never invokes the repository-wide bridge. If a Provider-ID is missing, the operator may separately preview and run `git issue sync github:BrandonJF/mandem --state all`, review its repository-wide effects, merge and push exact issue refs, and rerun the checker. That bootstrap is not authorized by `issue-graph:remote:sync -- --apply`.
+The command never invokes the repository-wide bridge. If a Provider-ID is missing, the operator may separately preview and run `git issue sync github:BrandonJF/mandem --state all`, review its repository-wide effects, merge and push exact issue refs, and rerun the checker. That bootstrap is not authorized by `sync-issue-projection` approval.
 
 ---
 
@@ -484,7 +560,11 @@ The domain layer defines `NativeIssueGraphV1`, `IssueGraphEntry`, `IssueGraphFin
 
 Use `unknown` only at untrusted parse boundaries and narrow it before domain construction. Do not use `any`. `LocalIssueRecord` includes full UUID, local open/closed state, and zero or more provider mappings. `ProviderMapping` includes provider kind, owner, repository, and provider issue number as an adapter value, never as portable identity. `IssueGraphOperation` includes create-or-update managed label, create-or-update milestone, set managed issue state, add managed label, remove managed label, set milestone, add subissue, and move managed subissue.
 
-The API layer exposes `runLocalIssueGraphCheck(options)`, `runSetNativeIssueGraphMetadata(options)`, and `runIssueGraphReconciliation(options)`. All three accept injected ports for tests. Production composition creates filesystem, git-native ref, process-runner, and GitHub adapters. Scripts contain no policy.
+The API layer exposes `runLocalIssueGraphCheck(options)`, `runApplyNativeIssueGraph(options)`, and
+`runIssueGraphReconciliation(options)`. The two write use cases accept the merged approval port and
+perform authorization before their first managed write. All three accept injected ports for tests.
+Production composition creates filesystem, git-native ref, process-runner, approval, and GitHub
+adapters. Scripts contain no policy.
 
 The git-native adapter reads the commits reachable from each exact `refs/issues/<uuid>` ref with `git rev-list` and `git cat-file commit`. Version 1 issues use an empty tree and store the record in commit messages. The root commit ends with `State`, `Labels`, `Priority`, optional `Milestone`, and `Format-Version: 1` trailers. Later commits record field changes, Provider-ID lines, ordinary comments, or complete `Mandem-Graph-Metadata: v1` comments. Parse recognized content from raw commit messages, not formatted `git issue show` output. Use `git merge-base --is-ancestor` to select the one metadata commit that descends from every other metadata commit; reject zero metadata comments for a claimed managed issue, incomparable latest comments, unknown versions, multiple distinct GitHub Provider-ID values, mappings to another repository, or a ref whose UUID does not match its ref name. Characterization tests copy representative root, edit, close, Provider-ID, provider-comment, native-metadata, and conflicting-metadata commit messages from the current repository into fixtures.
 
@@ -509,12 +589,12 @@ The implementation may add one maintained YAML parser compatible with Bun if U1A
 | --- | --- | --- |
 | Focused graph tests | `bunx vitest run src/modules/architecture-standard/domain/issue-graph-policy.test.ts src/modules/architecture-standard/application/use-cases/check-issue-graph.test.ts` | All local contract tests pass. |
 | Focused reconciliation tests | `bunx vitest run src/modules/architecture-standard/application/use-cases/plan-issue-graph-reconciliation.test.ts src/modules/architecture-standard/application/use-cases/reconcile-issue-graph.test.ts src/modules/architecture-standard/infrastructure/services/github-issue-graph-provider.test.ts` | Planning, apply, retry, and idempotence tests pass. |
-| Script integration | `bunx vitest run scripts/check-issue-graph.test.ts scripts/set-issue-graph-metadata.test.ts scripts/reconcile-issue-graph.test.ts` | Disposable-repository, native setter, and provider command behavior pass. |
+| Script integration | `bunx vitest run scripts/check-issue-graph.test.ts scripts/apply-native-issue-graph.test.ts scripts/reconcile-issue-graph.test.ts` | Disposable-repository, guarded native apply, and provider command behavior pass. |
 | Local graph | `bun run issue-graph:check` | Exits zero with the contract version and managed count; no network process runs. |
 | Git-native storage | `git issue fsck` | Reports no corrupt local issue objects or refs. |
 | Canonical gate | `bun run check` | Every repository check passes without GitHub credentials. |
 | Remote comparison | `bun run issue-graph:remote:check` | Exits zero and reports no managed GitHub drift. |
-| Idempotent apply proof | `bun run issue-graph:remote:sync -- --apply` twice | Both runs finish with zero post-check drift; the second run reports zero writes. |
+| Idempotent apply proof | Exact-approved `bun run issue-graph:remote:sync -- --approval-issue <uuid> --apply` twice | Both runs finish with zero post-check drift; the second run reports zero writes. |
 | Diff hygiene | `git diff --check` | Produces no output. |
 
 Remote comparison requires authenticated `gh`, network access, and permission to read the configured repository. Apply additionally requires issue write permission. CI must run every gate except the two remote commands and the live apply proof.
@@ -543,9 +623,14 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 - [x] (2026-07-28 20:40Z) Revised the contract after operator clarification so native issue refs own all graph and provider-policy inputs and GitHub is a one-way derived projection.
 - [x] (2026-07-28 20:47Z) Completed clean-room, coherence, and feasibility review; the later vocabulary correction invalidated that reviewed revision.
 - [x] (2026-07-28 21:24Z) Completed fresh clean-room, coherence, and feasibility review of the revised vocabulary contract and resolved both blocking findings.
+- [x] (2026-07-29 20:25Z) U1A merged and passed post-merge verification. Merged its exact
+  authoring, revision, ruleset, and conversation-approval contracts into this planning branch.
+  Reset the earlier authorization because it predates canonical `Mandem-Approval: v1` evidence and
+  does not cover guarded native-graph or projection writes.
 - [ ] Obtain operator approval of the exact reviewed revision.
 - [ ] Change only authorization metadata to `promotion: executable` and `execution_authorized: true`.
-- [ ] Rebase an isolated implementation worktree on merged U1A and complete Steps 1-6 in order.
+- [ ] Create an isolated implementation worktree from the merged planning authority and complete
+  Steps 1-6 in order.
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
