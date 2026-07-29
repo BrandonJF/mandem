@@ -1384,6 +1384,9 @@ external sources.
   overlay handling, and CI issue-ref fetching. Repaired every finding test-first. The complete gate
   now passes 77 tests, including real-Git approval ancestry, atomic provider rejection, exact
   crash-window temporaries, and overlay backing fixtures; build and issue integrity also pass.
+- [x] (2026-07-29 19:17Z) Re-review confirmed every P1/P2 finding closed after one final
+  subprocess-level test corrected malformed merge-target exit classification. The final reviewer
+  verdict is approve, and exact-revision verification passes 76 nonrecursive target tests.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
