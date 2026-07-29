@@ -1,4 +1,6 @@
 /** @fileoverview Tests exact-head approved pull-request merging. */
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ApprovalRecord } from "../src/modules/architecture-standard/domain/approval-contract";
 import { mergeApprovedPullRequest, type PullRequestClient } from "./merge-approved-pr";
@@ -33,6 +35,18 @@ function gh(head = "a".repeat(40)): { readonly client: PullRequestClient; readon
 }
 
 describe("approved PR merge", () => {
+  it("classifies malformed operator targets as exit 1", () => {
+    const result = spawnSync("bun", [
+      join(process.cwd(), "scripts", "merge-approved-pr.ts"),
+      "--issue", approval.issueId,
+      "--repository", "BrandonJF/mandem",
+      "--pull-request", "1",
+      "--head", "deadbeef",
+    ], { cwd: process.cwd(), encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("merge-pr target is invalid");
+  });
+
   it("reads the PR head and uses GitHub's atomic head match", async () => {
     const fixture = gh();
     await mergeApprovedPullRequest(approval, fixture.client, async () => {});

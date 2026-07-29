@@ -1,5 +1,5 @@
 /** @fileoverview Merges one pull request only at its conversation-approved exact head. */
-import type { ApprovalRecord } from "../src/modules/architecture-standard/domain/approval-contract";
+import { ApprovalContractError, type ApprovalRecord } from "../src/modules/architecture-standard/domain/approval-contract";
 import { ApprovalDeniedError, approvalRequest, assertApproval, type GitClient } from "./check-approval";
 
 export interface PullRequestClient {
@@ -85,6 +85,6 @@ if (import.meta.main) {
     console.log(`Pull request ${pullRequest} merged at ${headSha}.`);
   } catch (error: unknown) {
     console.error(`approved merge failed: ${error instanceof Error ? error.message : "unexpected error"}`);
-    process.exitCode = error instanceof ApprovalDeniedError || error instanceof MergeTargetError ? 1 : 2;
+    process.exitCode = error instanceof ApprovalDeniedError || error instanceof ApprovalContractError || error instanceof MergeTargetError ? 1 : 2;
   }
 }
