@@ -1,4 +1,5 @@
 /** @fileoverview Creates, updates, and verifies Mandem's GitHub repository ruleset. */
+import { assertRulesetApproval } from "./check-approval";
 
 const apiVersion = "X-GitHub-Api-Version: 2026-03-10";
 const repository = "repos/BrandonJF/mandem";
@@ -15,8 +16,8 @@ export const repositoryRuleset = {
       parameters: {
         allowed_merge_methods: ["merge"],
         dismiss_stale_reviews_on_push: true,
-        require_code_owner_review: true,
-        require_last_push_approval: true,
+        require_code_owner_review: false,
+        require_last_push_approval: false,
         required_approving_review_count: 0,
         required_review_thread_resolution: true,
       },
@@ -100,7 +101,7 @@ function normalizeRules(value: unknown): unknown {
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   if (typeof value === "object" && value !== null) {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(",")}}`;
+    return `{${Object.entries(value).sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)).map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -118,7 +119,12 @@ async function read(gh: GhClient, id: number): Promise<RemoteRuleset> {
   return rulesets[0] ?? (() => { throw new RulesetError(2, "GitHub ruleset read returned no ruleset"); })();
 }
 
-export async function configureRepositoryRuleset(mode: "apply" | "check", gh: GhClient): Promise<{ readonly id: number; readonly changed: boolean }> {
+export async function configureRepositoryRuleset(
+  mode: "apply" | "check",
+  gh: GhClient,
+  authorize: () => Promise<void>,
+): Promise<{ readonly id: number; readonly changed: boolean }> {
+  if (mode === "apply") await authorize();
   await requireAuthentication(gh);
   const matches = await discover(gh);
   if (matches.length > 1) throw new RulesetError(2, "GitHub ruleset discovery found duplicate mandem-repository-quality rulesets");
@@ -158,7 +164,16 @@ if (import.meta.main) {
   try {
     const argument = Bun.argv[2];
     if (Bun.argv.length !== 3 || (argument !== "--apply" && argument !== "--check")) throw new RulesetError(2, "use --apply or --check");
-    const result = await configureRepositoryRuleset(argument === "--apply" ? "apply" : "check", ghClient);
+    const mode = argument === "--apply" ? "apply" : "check";
+    const result = await configureRepositoryRuleset(
+      mode,
+      ghClient,
+      () => assertRulesetApproval(
+        repositoryRuleset,
+        "745eda80-1e74-4866-bc95-2f2983b31025",
+        "docs/plans/units/u1a-documentation-authoring-quality-gates.md",
+      ),
+    );
     console.log(`GitHub ruleset ${result.id} ${result.changed ? "applied" : "matches"}.`);
   } catch (error: unknown) {
     const details = error instanceof Error ? error.message : "unexpected error";

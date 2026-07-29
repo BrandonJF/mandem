@@ -23,6 +23,8 @@
     "hooks:check": "bun scripts/hooks/install.ts --check",
     "test:hooks": "bunx vitest run scripts/hooks/hooks.integration.test.ts scripts/hooks/provider-post-write.test.ts",
     "authoring:check": "bun scripts/hooks/post-write.ts",
+    "approval:check": "bun scripts/check-approval.ts",
+    "pr:merge:approved": "bun scripts/merge-approved-pr.ts",
     "repository-ruleset:apply": "bun scripts/configure-repository-ruleset.ts --apply",
     "repository-ruleset:check": "bun scripts/configure-repository-ruleset.ts --check",
     "preflight:bun": "bun scripts/preflight-bun.ts",

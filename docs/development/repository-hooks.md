@@ -20,4 +20,12 @@ GitHub runs the `repository-quality` check for pull requests and for pushes to `
 Repository administrators can verify the required `main` protection with
 `bun run repository-ruleset:check`. They can create or update that protection with
 `bun run repository-ruleset:apply`; the command requires an authenticated GitHub CLI session with
-repository administration permission.
+repository administration permission and an exact `apply-ruleset` approval recorded in the native
+issue. The command validates the plan, ruleset, implementation commit, clean tracked worktree, and
+local/remote issue-ref match before its first GitHub write.
+
+Every pull-request merge needs a separate approval for its repository, number, and current head
+commit. Record that response in the native issue, push the issue ref, and run
+`bun run pr:merge:approved -- --issue <uuid> --repository BrandonJF/mandem --pull-request <number>
+--head-sha <full-sha>`. The command reads the current head and asks GitHub to merge only if the head
+still matches atomically.

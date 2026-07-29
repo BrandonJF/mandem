@@ -1370,6 +1370,15 @@ external sources.
   and merge commands, and assigning merge execution only to the orchestrator or operator.
 - [x] (2026-07-28 22:58Z) Completed fresh clean-room, coherence, and feasibility review of the
   conversation-native approval revision; all reviewers approved with no remaining blockers.
+- [x] (2026-07-29 18:58Z) The operator replied `APPROVED` to exact `execute-plan` target
+  `3b88d7035f3d62eb692cc715c1a41e11cffe3838` with plan SHA-256
+  `ad913ec3f674083d428f11fee28397c745c05545f4c911821267716764df37af`. Recorded the canonical
+  decision at native issue commit `b7dc6d6`, pushed and verified the exact remote ref, and changed
+  only the authorization frontmatter before implementation.
+- [x] (2026-07-29 19:04Z) Implemented the strict approval parser/serializer and ancestry selector,
+  raw native-issue validator, guarded ruleset apply, and exact-head merge wrapper test-first.
+  Focused tests pass, the validator accepts the real execute-plan approval, `bun run check` passes
+  71 tests, `bun run build` passes, and `git issue fsck` reports 16 valid issues.
 - [x] (2026-07-27 21:55Z) Applied validated clean-room findings test-first. The first focused run
   failed four new assertions: root/special-index links, punctuation/tag-only fileoverviews,
   changed root-link regressions, and provider symlink escape handling. Added root and dynamic
@@ -1615,6 +1624,13 @@ external sources.
   before acting.
   Date/Author: 2026-07-28 / Brandon and Codex orchestrator
 
+- Decision: Validate approvals from raw Git commit objects and compare local and remote native issue
+  ref heads before a guarded write.
+  Rationale: Formatted Git log output adds presentation newlines and is not the immutable stored
+  representation. Raw commit messages preserve the canonical record exactly, while equal ref heads
+  prove that the authoritative decision was published before GitHub changes.
+  Date/Author: 2026-07-29 / Codex orchestrator
+
 ## Outcomes & Retrospective
 
 Planning produced a self-contained U1A design based on the pinned Pier Docs and Nucleus mechanisms.
@@ -1627,8 +1643,8 @@ commit snapshots before pushes. The installer confines `.githooks` to the select
 preserving a prior common hook path in sibling worktrees.
 
 Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
-earlier plan revision. This material approval-contract revision supersedes that authorization, so
-implementation is paused pending fresh review and exact approval.
+conversation-native approval revision. The approval is stored in the authoritative native issue,
+and the implemented validator has verified that real record from raw Git history.
 
 Milestone 6 is complete. The shared `authoring:check` command checks one path without editing it;
 Claude and Codex configurations call thin PostToolUse adapters that normalize provider events and

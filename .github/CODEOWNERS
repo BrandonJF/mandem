@@ -1,4 +1,4 @@
-# Require the repository owner to approve changes that define quality enforcement.
+# Identify the repository owner for quality-enforcement paths; this does not require a GitHub review.
 /.github/CODEOWNERS @BrandonJF
 /.github/workflows/repository-quality.yml @BrandonJF
 /package.json @BrandonJF
@@ -7,6 +7,8 @@
 /scripts/check-* @BrandonJF
 /scripts/configure-repository-ruleset.ts @BrandonJF
 /scripts/configure-repository-ruleset.test.ts @BrandonJF
+/scripts/merge-approved-pr.ts @BrandonJF
+/scripts/merge-approved-pr.test.ts @BrandonJF
 /scripts/hooks/ @BrandonJF
 /src/modules/architecture-standard/ @BrandonJF
 /eslint.config.ts @BrandonJF
