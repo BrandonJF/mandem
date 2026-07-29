@@ -1,0 +1,18 @@
+{
+  "description": "Mandem authoring feedback.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$(git rev-parse --show-toplevel)/scripts/hooks/provider-post-write.ts\" codex",
+            "timeout": 120,
+            "statusMessage": "Checking Mandem authoring quality"
+          }
+        ]
+      }
+    ]
+  }
+}

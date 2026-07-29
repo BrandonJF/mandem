@@ -32,6 +32,10 @@ describe("architecture analyzer", () => {
     ]));
   });
 
+  it("does not treat the module index README as a module", () => {
+    expect(analyzeRepositoryFiles([{ path: "src/modules/README.md", text: "# Modules" }]).violations).toEqual([]);
+  });
+
   it("returns exit 1 and stable findings for the malformed fixture", () => {
     try {
       execFileSync("bun", ["scripts/check-architecture.ts", "tests/fixtures/architecture/malformed"], { encoding: "utf8" });
@@ -101,6 +105,19 @@ describe("architecture analyzer", () => {
   it("detects nested any types and process imports independently", () => {
     const result = analyzeRepositoryFiles(completeModule("runtime", [{ path: "src/modules/runtime/domain/nested.ts", text: `${overview}import { env } from "node:process";\ntype Values = Array<any[]>;\nexport { env };` }]));
     expect(result.violations.map(({ ruleId }) => ruleId)).toEqual(expect.arrayContaining(["ARCH-NO-EXPLICIT-ANY", "ARCH-IO-PLACEMENT"]));
+  });
+
+  it("uses the authored-source fileoverview semantics for shebangs and placeholders", () => {
+    const result = analyzeRepositoryFiles([
+      { path: "src/cli.ts", text: "#!/usr/bin/env bun\n/** @fileoverview command. */\nexport {};" },
+      { path: "src/placeholder.ts", text: "/** @fileoverview todo */\nexport {};" }
+    ]);
+    expect(result.violations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "src/placeholder.ts" })
+    ]));
+    expect(result.violations).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: "ARCH-FILEOVERVIEW", path: "src/cli.ts" })
+    ]));
   });
 
   it("detects any in a template-literal type without scanning ordinary strings", () => {

@@ -1,4 +1,7 @@
 /** @fileoverview Public architecture-standard API. */
-export type { AnalysisResult, ArchitectureRule, RepositoryFile, RuleViolation } from "./domain/types";
-export { architectureRules } from "./domain/rules";
-export { analyzeRepositoryFiles } from "./api/composition";
+export type { AnalysisResult, ArchitectureRule, RepositoryFile, RepositoryPolicy, RepositorySnapshot, RuleViolation } from "./domain/types";
+export { architectureRules, documentationRules, repositoryRules } from "./domain/rules";
+export { authoredSourcePolicyV1, documentationPolicyV1, evaluateAuthoredSources, evaluateDocumentation } from "./domain/repository-policy";
+export { ApprovalContractError, canonicalJson, parseApproval, selectApproval, serializeApproval } from "./domain/approval-contract";
+export type { ApprovalAction, ApprovalCommit, ApprovalDecision, ApprovalRecord, ApprovalTarget, ApplyRulesetTarget, ExecutePlanTarget, MergePullRequestTarget } from "./domain/approval-contract";
+export { analyzeAuthoredSourceDirectory, analyzeDocumentationDirectory, analyzeRepositoryFiles, analyzeStagedRepository, analyzeStagedDocumentation, analyzeStagedAuthoredSources, checkAuthoredPath, checkProviderPostWrite } from "./api/composition";
