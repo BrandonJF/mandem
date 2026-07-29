@@ -11,3 +11,5 @@ This directory records independent reviews of Mandem's program and child ExecPla
 - [U1C review](./2026-07-25-u1c-clean-room.md) reviews the corrective U1C plan.
 - [WI1 vocabulary review](./2026-07-28-wi1-vocabulary-clean-room.md) reviews the canonical epic,
   issue, and subissue terminology.
+- [WI1 approval and recovery review](./2026-07-29-wi1-approval-and-recovery-clean-room.md) approves
+  the guarded native graph and GitHub projection transaction contract.
