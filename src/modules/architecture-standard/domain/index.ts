@@ -8,3 +8,4 @@ export { evaluateIssueGraph, parseGraphMetadata, parsePlanDeclaration, serialize
 export type { IssueGraphFinding, IssueGraphResult, IssuePromotion, LocalIssueRecord, NativeGraphMetadata, NativeIssueState, PlanDeclaration, ProviderMapping } from "./issue-graph-types";
 export { graphDigest, parseNativeIssueGraphManifest } from "./issue-graph-manifest";
 export type { NativeIssueGraphEntry, NativeIssueGraphManifest } from "./issue-graph-manifest";
+export type { IssueGraphOperation, ProviderIssue, ProviderLabel, ProviderMilestone, ProviderSnapshot, ReconciliationPlan } from "./issue-graph-operations";
