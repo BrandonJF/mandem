@@ -181,7 +181,7 @@ if (import.meta.main) {
       () => assertRulesetApproval(
         repositoryRuleset,
         "745eda80-1e74-4866-bc95-2f2983b31025",
-        "docs/plans/units/u1a-documentation-authoring-quality-gates.md",
+        "docs/plans/issues/u1a-documentation-authoring-quality-gates.md",
       ),
     );
     console.log(`GitHub ruleset ${result.id} ${result.changed ? "applied" : "matches"}.`);

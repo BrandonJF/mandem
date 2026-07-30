@@ -8,22 +8,26 @@ artifact_readiness: implementation-ready
 product_contract_source: ce-brainstorm
 execution: code
 deepened: 2026-07-22
-plan_scope: program
+plan_scope: epic
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+depends_on_issue_ids: []
 canonical_repository: BrandonJF/mandem
-program_coordination_authorized: true
+epic_coordination_authorized: true
+promotion: planned
 execution_authorized: false
 ---
 
 # Mandem - Plan
 
-The repository-root `PLANS.md` defines how to author, review, and execute this program ExecPlan.
+The repository-root `PLANS.md` defines how to author, review, and execute this epic ExecPlan.
 Read `PLANS.md` in full before working with this plan. Keep
 `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current at
 every stopping point.
 
-This is Mandem's current program plan. The copy previously merged in Strategy Builder Pro is
+This is Mandem's current epic plan. The copy previously merged in Strategy Builder Pro is
 historical provenance. This plan coordinates U1 through U10 but does not authorize implementation.
-Only an approved child ExecPlan authorizes its unit. The `program_coordination_authorized` field
+Only an approved issue ExecPlan authorizes its scope. The `epic_coordination_authorized` field
 permits sequencing; `execution_authorized` remains permanently `false` on this plan.
 
 ## Purpose / Big Picture
@@ -36,9 +40,9 @@ execution.
 **Product authority:** Brandon is Mandem's primary operator and defines its default doctrine. Other
 developers and product owners are secondary users.
 
-**Current boundary:** U1 merged, but post-merge verification opened corrective work item `5717221`.
+**Current boundary:** U1 merged, but post-merge verification opened corrective issue `5717221`.
 U1C is the planned corrective child at
-`docs/plans/units/u1-corrective-architecture-package-contract.md`. U1A is a newly planned
+`docs/plans/issues/u1-architecture-package-contract.md`. U1A is a newly planned
 foundational unit for documentation discoverability and continuous authoring-quality gates. U2-U10
 remain unauthorized, and U2 is blocked until U1C and U1A complete. The first consumer target is
 Strategy Builder Pro on Brandon's Linux agent host.
@@ -50,15 +54,15 @@ Strategy Builder Pro on Brandon's Linux agent host.
 Mandem is a new standalone repository. At the start of this plan it contains planning artifacts
 but no accepted implementation. Strategy Builder Pro is the first consumer repository, Nucleus is
 the definitive source for the target clean architecture, and Pier Infra supplies aligned examples
-of self-contained operational plans. A “program ExecPlan” is the durable, restartable plan for the
-whole Mandem build. A “child ExecPlan” is the self-contained implementation authority for exactly
+of self-contained operational plans. A “epic ExecPlan” is the durable, restartable plan for the
+whole Mandem build. A “issue ExecPlan” is the self-contained implementation authority for exactly
 one program unit. A “clean-room review” is a review by an agent that receives the plan and current
 repository but no private planning conversation, exposing assumptions a fresh executor could not
 recover.
 
 The repository root contains `AGENTS.md`, `CLAUDE.md`, and `PLANS.md`. A fresh Codex session must
-read those files and this plan before choosing work. Child plans live under `docs/plans/units/`,
-and `docs/plans/units/README.md` records their dependency and promotion state.
+read those files and this plan before choosing work. Issue plans live under `docs/plans/issues/`,
+and `docs/plans/issues/README.md` records their dependency and promotion state.
 
 The terms below have precise meanings in this plan:
 
@@ -138,7 +142,7 @@ phase opens a fresh, focused agent session in tmux and closes with a durable han
 workers are independently viewable and can be taken over only through an attributable control-plane
 action.
 
-**Self-contained plans.** Every work item has exactly one canonical ExecPlan maintained according
+**Self-contained plans.** Every issue has exactly one canonical ExecPlan maintained according
 to the repository-root `PLANS.md`, whose initial contract was copied from Nucleus. A complete
 ExecPlan, rather than an extracted milestone prompt, is the execution context for every fresh
 worker.
@@ -197,8 +201,8 @@ resident host mode
 - R3. Durable work state must be reconstructable without a provider transcript or surviving worker session.
 - R4. Work must support isolated execution so concurrent workers cannot silently interfere with one another.
 - R5. Integration must be serialized through explicit verification and merge authority rather than worker self-attestation.
-- R6. Every substantial workflow must begin from a project-local git-native work item with one canonical, nearly self-contained ExecPlan.
-- R6a. Visible work-item types must use conventional change vocabulary: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, and fallback `chore`.
+- R6. Every substantial workflow must begin from a project-local git-native issue with one canonical, nearly self-contained ExecPlan.
+- R6a. Visible issue types must use conventional change vocabulary: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, and fallback `chore`.
 
 **Workers and providers**
 
@@ -252,7 +256,7 @@ resident host mode
 - R38. `mandem report` must send sanitized Mandem defects, doctrine conflicts, and improvement proposals to the configured canonical Mandem repository.
 - R39. Upstream reporting must distinguish evidence from inference, include reproducible provenance, deduplicate likely repeats, and record the publication in the local event ledger.
 - R40. Every upstream Mandem report must begin as a local sanitized draft and require explicit operator publication approval.
-- R41. Mandem must not require a duplicate generic completion report. The ExecPlan, PR, review artifacts, checks, events, and final work-item summary form the implementation record; investigation work may produce a report as its primary outcome.
+- R41. Mandem must not require a duplicate generic completion report. The ExecPlan, PR, review artifacts, checks, events, and final issue summary form the implementation record; investigation work may produce a report as its primary outcome.
 - R42. The learn stage must ask whether the new knowledge has been made findable and whether the system would catch or apply it automatically next time.
 
 **Packaging and reuse**
@@ -265,15 +269,15 @@ resident host mode
 **Bounded phases, autonomy, and integration**
 
 - R47. `Plan`, `Work`, `Review`, and `Learn` must each begin in a fresh agent session. A phase may contain multiple exchanges, but crossing a phase boundary requires a durable handoff.
-- R48. The Plan phase must create or update the work item's complete ExecPlan, run fresh clean-room review until executor-safe, and require explicit operator approval of the exact plan revision before Work.
+- R48. The Plan phase must create or update the issue's complete ExecPlan, run fresh clean-room review until executor-safe, and require explicit operator approval of the exact plan revision before Work.
 - R49. Clean-room review must check missing prerequisites, hidden judgment, unsafe instructions, ambiguous authority, secret handling, and observable proof. After three failed repair/review rounds, Mandem must escalate a concise decision list.
 - R50. Plan approval authorizes unattended `Work -> Review -> repair -> Learn -> merge -> configured verification` until completion or a typed authority boundary.
 - R51. Each execution iteration must use a fresh worker, read the complete living ExecPlan, choose the next safe incomplete action, validate it, create a focused conventional commit, and update the ExecPlan.
-- R52. Independent work items may run concurrently in isolated worktrees; milestones within one plan are sequential unless the plan explicitly proves independence. Final sync, gate, and merge are serialized per project.
+- R52. Independent issues may run concurrently in isolated worktrees; milestones within one plan are sequential unless the plan explicitly proves independence. Final sync, gate, and merge are serialized per project.
 - R53. A PR must exist before implementation review begins. Review must be performed by a fresh agent that did not implement the work; v1 uses one general reviewer and adds specialist review only when risk triggers it.
 - R54. Actionable review findings return automatically to Work. After Review and Learn pass, Mandem must rerun affected gates and merge automatically using a merge commit by default.
 - R55. Worktrees remain until merge and any plan-defined deployment verification complete. Failed, blocked, interrupted, or unmerged worktrees remain resumable.
-- R56. Out-of-scope discoveries become linked follow-up work items. Blocking scope expansion requires plan revision, clean-room review, and renewed operator approval.
+- R56. Out-of-scope discoveries become linked follow-up issues. Blocking scope expansion requires plan revision, clean-room review, and renewed operator approval.
 - R57. The operator controls explicit queue order; Mandem enforces dependencies and may suggest, but never silently perform, reprioritization.
 
 **Test-driven and architecture-conformant engineering**
@@ -298,7 +302,7 @@ resident host mode
 - R70. A later required phase must add Alloy, Loki, Grafana, and standard Mandem dashboards to the
   product installation. This is not an optional deployment profile.
 - R71. The first usable release must prove one complete SBP vertical slice. The process must
-  initialize and baseline the repository, then create or select a git-native work item. A bounded
+  initialize and baseline the repository, then create or select a git-native issue. A bounded
   planning session must produce a compliant ExecPlan that passes clean-room review and receives
   operator approval. Claude or Codex must then execute the work unattended with TDD in an isolated
   worktree. The process must open the PR, complete review and repair, run Learn and the required
@@ -348,7 +352,7 @@ resident host mode
   commit history provide evidence that an expected failing test preceded production code and that
   the relevant green and browser gates passed.
 - AE11. **Covers R61-R64.** Given Mandem is initialized in SBP, when the architecture analyzer runs, then it produces a deterministic baseline against the Nucleus-derived standard, fails new violations, and creates actionable remediation candidates without blocking on grandfathered debt.
-- AE12. **Covers R71.** Given the first SBP work item completes and all Mandem and vendor sessions are stopped, when Mandem starts again, then the TUI shows the completed lifecycle, approved plan revision, iterations, PR, reviews, Learn outcome, merge, and evidence without reading an old chat transcript.
+- AE12. **Covers R71.** Given the first SBP issue completes and all Mandem and vendor sessions are stopped, when Mandem starts again, then the TUI shows the completed lifecycle, approved plan revision, iterations, PR, reviews, Learn outcome, merge, and evidence without reading an old chat transcript.
 - AE13. **Covers R23-R28.** Given a product owner submits or selects an outcome and reaches a typed
   decision gate, when Mandem asks for input, then the default explanation states the decision,
   practical impact, recommended action, and alternatives without infrastructure terminology; after
@@ -416,10 +420,10 @@ resident host mode
 ## Plan of Work
 
 Complete the program by promoting and executing U1 through U10 in dependency order. For each unit,
-first deepen its scaffold into a self-contained child ExecPlan that follows `PLANS.md`; then run a
+first deepen its scaffold into a self-contained issue ExecPlan that follows `PLANS.md`; then run a
 fresh clean-room review, repair the plan, obtain operator approval of the exact revision, and only
-then set that child plan’s `execution_authorized` field to `true`. Dispatch workers from the full
-child plan, not from this program summary or an extracted milestone. After the unit’s pull request
+then set that issue plan’s `execution_authorized` field to `true`. Dispatch workers from the full
+issue plan, not from this program summary or an extracted milestone. After the unit’s pull request
 is reviewed, verified, learned from, and merged, update both plans before promoting the next unit.
 
 The master plan may be resumed at any time to determine which child should be planned or executed
@@ -438,11 +442,11 @@ This document is the program-level ExecPlan. U1-U10 define the dependency graph 
 
 `PLANS.md` permits one checked-in ExecPlan to incorporate another checked-in ExecPlan by reference.
 This program uses that rule deliberately: it is self-contained for program sequencing and names
-every child path through `docs/plans/units/README.md`; each child is separately self-contained for
-implementation. A fresh program orchestrator needs only this file and the current working tree to
+every child path through `docs/plans/issues/README.md`; each child is separately self-contained for
+implementation. A fresh epic orchestrator needs only this file and the current working tree to
 discover and complete the whole program.
 
-Each U-ID owns one child ExecPlan under `docs/plans/units/`. Every child begins as a scaffold so the entire program can be reasoned about together. A child becomes executable only after it:
+Each U-ID owns one issue ExecPlan under `docs/plans/issues/`. Every child begins as a scaffold so the entire program can be reasoned about together. A child becomes executable only after it:
 
 1. is expanded into a nearly self-contained ExecPlan using the repository's `PLANS.md` contract;
 2. resolves its planning-time decisions against the master plan and the real outputs of completed dependencies;
@@ -450,16 +454,16 @@ Each U-ID owns one child ExecPlan under `docs/plans/units/`. Every child begins 
 4. passes clean-room review and any repair rounds;
 5. receives exact operator approval for that reviewed revision.
 
-A child plan has these promotion states:
+A issue plan has these promotion states:
 `scaffolded -> planned -> clean-room approved -> operator approved -> executable -> complete`. A
 downstream child may be refined early, but dependency completion invalidates any assumption
 contradicted by the produced artifacts and requires review refresh before promotion.
 
-The program orchestrator reads this master and the child registry. An implementation worker
-receives only the complete approved child ExecPlan, which must embed every program constraint and
-dependency interface it needs. Keeping the program plan with the orchestrator and providing
-workers only the approved child ExecPlan prevents competing execution authorities. A bounded unit
-packet may aid navigation but can never replace the child ExecPlan.
+The epic orchestrator reads this master and the child registry. An implementation worker
+receives only the complete approved issue ExecPlan, which must embed every program constraint and
+dependency interface it needs. Keeping the epic plan with the orchestrator and providing
+workers only the approved issue ExecPlan prevents competing execution authorities. A bounded unit
+packet may aid navigation but can never replace the issue ExecPlan.
 
 The program must apply Mandem's architecture standard to Mandem itself. Its source modules,
 composition roots, tests, and entrypoints must obey the same Nucleus-derived architecture standard
@@ -485,14 +489,14 @@ code may bypass the architecture checker.
   invalidation rule, checkpoint, and recovery action centrally instead of coordinating them through
   separate scripts. Reuse SBP's pipeline-graph approach—the design should make invalid ordering
   unreachable—while covering the full Mandem lifecycle and typed interruption states.
-- KTD7. **Approval binds to immutable intent.** Plan approval records the work item, canonical plan path, the hash of all approval-sensitive content, clean-room verdict, approver, and authority scope. Living-record regions are machine-delimited, schema-validated, and append-only; only progress, discoveries, evidence, and outcomes may enter them without reapproval. Changes elsewhere, or approval-sensitive instructions moved into an exempt region, invalidate approval.
+- KTD7. **Approval binds to immutable intent.** Plan approval records the issue, canonical plan path, the hash of all approval-sensitive content, clean-room verdict, approver, and authority scope. Living-record regions are machine-delimited, schema-validated, and append-only; only progress, discoveries, evidence, and outcomes may enter them without reapproval. Changes elsewhere, or approval-sensitive instructions moved into an exempt region, invalidate approval.
 - KTD8. **Primitive CLI before TUI and skills.** Implement stable AXI commands and TOON result envelopes before presentation layers. OpenTUI's Bun-first React renderer provides the v1 TUI, but every TUI action must map to the same primitive command and yield the same state transition and event history.
 - KTD9. **Provider adapters are capability contracts.** Claude and Codex adapters declare interactive phase support, autonomous execution, instruction injection, permission mode, structured completion, interruption, remote access, and failure classification. Fallback runs only after capability validation and reconciliation proves the prior process no longer owns a mutation lease.
 - KTD10. **Git-native issues are authoritative through an adapter.** Pin `git-native-issue` as an external executable dependency pending its GPL boundary review. Mandem owns a port and AXI wrapper, not a fork or copied implementation. GitHub mirroring is a projection and cannot silently overwrite workflow state.
 - KTD11. **Exact-SHA serialized landing.** Parallel worktrees are allowed, but one server-owned integration lease protects fetch, rebase, repair, review/gate refresh, exact-head verification, merge, and merge checkpoint. Automatic merge uses a merge commit by default.
 - KTD12. **TDD and architecture rules are mechanisms.** Provider prompts explain red-green-refactor and the Nucleus-derived architecture; deterministic checks prove them from commands, commits, imports, structure, naming, and code placement. LLM review supplements those mechanisms but cannot replace them.
 - KTD13. **Observability grows from the canonical event schema.** The TUI first consumes the event/projection API. Alloy, Loki, Grafana, and standard dashboards land only after the schema survives the SBP vertical slice, then become part of the single required installation path.
-- KTD14. **Program plan plus reviewed child ExecPlans.** U1-U10 are program boundaries. Implementation dispatch is forbidden until the owning child ExecPlan is self-contained, clean-room approved, operator approved, and validated against the actual outputs of its dependencies.
+- KTD14. **epic plan plus reviewed issue ExecPlans.** U1-U10 are issue boundaries. Implementation dispatch is forbidden until the owning issue ExecPlan is self-contained, clean-room approved, operator approved, and validated against the actual outputs of its dependencies.
 
 ### High-Level Technical Design
 
@@ -599,7 +603,7 @@ mandem/
       providers/
       runtime/
       sessions/
-      work-items/
+      issues/
       workspaces/
   tests/e2e/
   Dockerfile
@@ -613,7 +617,7 @@ Each module follows the canonical Nucleus layer shape where the layer is applica
 ### State and Checkpoint Contract
 
 Before acknowledging a transition, the server synchronously checkpoints any affected facts:
-project identity and pins; work-item creation; queue order and dependencies; canonical plan path and
+project identity and pins; issue creation; queue order and dependencies; canonical plan path and
 approval-sensitive hashes; clean-room verdicts; operator approvals; dispatch attempts; iteration
 commit SHAs; PR identity and head SHA; typed gate decisions; takeover, release, pause, and
 cancellation; Learn outcome; merge SHA; verification; and closure. Heartbeats, streaming logs, pane
@@ -632,13 +636,13 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - Takeover atomically revokes the worker lease and grants exclusive operator control. Automation resumes only after explicit release, operator summary, reconciliation, and a fresh worker.
 - Cancellation stops new dispatch, revokes leases, terminates the process tree, records dirty state, and retains the worktree. Merge is non-cancellable after the exact-SHA merge transaction begins.
 - Provider failures are classified as launch, authentication, quota, capability, transient transport, worker, or permanent. Retries and fallback are bounded; exhaustion becomes `Needs you`.
-- Post-merge verification failure never claims completion or auto-reverts. Mandem preserves evidence, marks `Needs you`, and drafts a linked `fix` work item.
+- Post-merge verification failure never claims completion or auto-reverts. Mandem preserves evidence, marks `Needs you`, and drafts a linked `fix` issue.
 
 ### Assumptions
 
 - The standalone repository is created before U1 begins, uses Bun exclusively, and can publish an executable package plus Docker image.
 - Linux is the complete v1 support target and uses a user service as the reference mechanism for persistent host mode. macOS is a post-v1 compatibility target expected to reuse the same application contract with platform-specific service installation.
-- The SBP consumer migration may preserve its existing orchestration until the Mandem vertical slice proves parity. Shims are temporary and one-way toward Mandem; there is never dual authority for the same work item.
+- The SBP consumer migration may preserve its existing orchestration until the Mandem vertical slice proves parity. Shims are temporary and one-way toward Mandem; there is never dual authority for the same issue.
 - U1 must settle and record the `git-native-issue` license/distribution boundary and pinned version before protocol or ledger work depends on it; the expected default is a separately installed executable.
 - OpenTUI is pinned to the version proven by a Bun/Linux smoke test during U7; the library choice is settled, while the exact compatible patch version is execution-time evidence.
 
@@ -652,7 +656,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Requirements:** R7-R9, R13-R19a, R43-R46, R58-R64, R68
 - **Dependencies:** None
 - **Files:** `package.json`, `.bun-version`, `bun.lock`, `tsconfig.json`, `eslint.config.ts`, `vitest.config.ts`, `PLANS.md`, `README.md`, `LICENSE`, `docs/architecture/mandem-system.md`, `docs/architecture/architecture-standard-v1.md`, `docs/sources/doctrine-source-manifest.yaml`, `docs/operations/provider-capability-baseline.md`, `assets/architecture-standard/**`, `src/modules/*/{domain,application,infrastructure,api}/**`, `scripts/check-architecture.ts`, `scripts/check-architecture.test.ts`, `tests/contract/provider-capability-baseline.test.ts`
-- **Approach:** Before the first implementation commit, install or verify the external `git-native-issue` executable pinned at v1.3.3 and create the U1 work item, recording this child-plan path and the temporary recovery procedure if installation fails. Create one package with `mandem` and `mandem-server` bin entries, but defer Docker runtime and container health behavior to U3. Normalize the architecture rules from Nucleus commit `7265e19cb24cf9e86c3facbd91326227dfa05dd1` into a complete versioned Mandem standard so later workers do not require access to the sibling repository. Create an immutable doctrine-source manifest covering Nucleus, SBP, Pier Infra, AXI, TOON, and local decision inputs. Use the pinned Nucleus generator outputs and tests only as evidence for analyzer rules and conformant fixtures; Mandem v1 does not ship a module generator. Record all adapted upstream sources and licenses. Before U2 promotion, record installed Claude/Codex versions and non-mutating evidence for the capabilities that shape the provider-neutral protocol. Complete the `git-native-issue` licensing/distribution decision before U2.
+- **Approach:** Before the first implementation commit, install or verify the external `git-native-issue` executable pinned at v1.3.3 and create the U1 issue, recording this issue plan path and the temporary recovery procedure if installation fails. Create one package with `mandem` and `mandem-server` bin entries, but defer Docker runtime and container health behavior to U3. Normalize the architecture rules from Nucleus commit `7265e19cb24cf9e86c3facbd91326227dfa05dd1` into a complete versioned Mandem standard so later workers do not require access to the sibling repository. Create an immutable doctrine-source manifest covering Nucleus, SBP, Pier Infra, AXI, TOON, and local decision inputs. Use the pinned Nucleus generator outputs and tests only as evidence for analyzer rules and conformant fixtures; Mandem v1 does not ship a module generator. Record all adapted upstream sources and licenses. Before U2 promotion, record installed Claude/Codex versions and non-mutating evidence for the capabilities that shape the provider-neutral protocol. Complete the `git-native-issue` licensing/distribution decision before U2.
 - **Execution note:** Build the repository gates test-first. The first red proof should show a deliberately malformed fixture escaping enforcement; green proves the standard catches it without flagging its conformant twin.
 - **Patterns to follow:** Nucleus `docs/development/module-creation-guide.md`, `docs/development/clean-architecture-rules.md`, `docs/development/use-case-architecture-guide.md`, `scripts/create-module.ts`, and `scripts/create-module.test.ts`; SBP `scripts/agents/check-commit-contract.ts` for fail-closed executable governance.
 - **Test scenarios:**
@@ -660,7 +664,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Fixtures with a missing infrastructure layer, deep cross-module import, infrastructure import from application, direct IO in a component, invalid module name, missing file overview, or root-barrel infrastructure export fail with stable rule IDs.
   - Nucleus-derived conformant fixtures remain stable and pass without requiring a Mandem-owned generator.
   - Package build produces both executable artifacts without requiring vendor credentials or a running server.
-  - The U1 git-native issue identifies the canonical child plan and remains readable after the implementation worker exits.
+  - The U1 git-native issue identifies the canonical issue plan and remains readable after the implementation worker exits.
   - The provider baseline proves or blocks every Claude/Codex capability required by U2 instead of
     deferring protocol discovery to U5.
 - **Verification:** A clean checkout installs with Bun, passes the repository check, produces both executables, and contains the complete canonical standard without relying on Nucleus access or Docker.
@@ -671,7 +675,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   archive/install proof.
 - **Requirements:** R43-R46, R58-R64, R68; KTD12 and KTD14.
 - **Dependencies:** Merged U1 and corrective Git-native issue `5717221`.
-- **Files:** `docs/plans/units/u1-corrective-architecture-package-contract.md`, `package.json`,
+- **Files:** `docs/plans/issues/u1-architecture-package-contract.md`, `package.json`,
   `tests/contract/package-entrypoints.test.ts`, `scripts/check-architecture.test.ts`,
   `src/modules/architecture-standard/domain/{rules,repository-policy,types,index}.ts`,
   `src/modules/architecture-standard/infrastructure/repositories/file-system-tree.ts`, and
@@ -690,14 +694,14 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   TypeScript fileoverviews, and provide provider hooks plus vendor-neutral Git/canonical backstops.
 - **Requirements:** R58-R64
 - **Dependencies:** U1C completion and post-merge verification
-- **Files:** `docs/plans/units/u1a-documentation-authoring-quality-gates.md`,
+- **Files:** `docs/plans/issues/u1a-documentation-authoring-quality-gates.md`,
   `src/modules/architecture-standard/**`, `scripts/check-documentation.ts`,
   `scripts/check-authored-files.ts`, `scripts/hooks/**`, `.githooks/**`, `.claude/settings.json`,
   `.codex/hooks.json`, documentation README indexes, and their tests.
 - **Approach:** Adapt Pier Docs' recursive README-chain behavior and Nucleus's immediate authoring
   feedback into one Bun/TypeScript policy kernel. Provider hooks invoke shared checks for fast
   feedback; staged Git hooks and `bun run check` remain authoritative. Implement only from the
-  reviewed U1A child plan.
+  reviewed U1A issue plan.
 - **Execution note:** Begin with malformed documentation, authored-source, Git-hook, and provider
   event fixtures that fail for the intended reason.
 - **Verification:** The real repository and conformant fixtures pass; unindexed docs, missing
@@ -718,7 +722,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Invalid ordering, missing artifacts, expired leases, stale approval hashes, stale gate revisions, and non-owner mutations fail with stable typed errors.
   - Schema-valid appends inside machine-delimited living-record regions preserve approval; edits elsewhere, invalid living entries, or approval-sensitive instructions placed in an exempt region invalidate it.
   - Event replay rebuilds identical projections after deleting projection tables.
-  - Concurrent commands against one work item yield one lease holder and one monotonically ordered event sequence.
+  - Concurrent commands against one issue yield one lease holder and one monotonically ordered event sequence.
   - Every routed finding has exactly one terminal disposition before Done is reachable.
 - **Verification:** A deterministic domain suite and real-SQLite adapter suite prove the lifecycle without tmux, Docker, GitHub, or vendor CLIs.
 
@@ -745,17 +749,17 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Backup-first SQLite migration failure leaves the prior database usable.
 - **Verification:** A Linux integration test repeatedly kills each process boundary and always reconstructs one correct next action without a duplicate lease or transition.
 
-### U4. Implement work items, ExecPlans, queueing, gates, and GitHub projection
+### U4. Implement issues, ExecPlans, queueing, gates, and GitHub projection
 
 - **Goal:** Give every workflow one authoritative git-native issue, one canonical self-contained ExecPlan, explicit dependencies, clean-room review, immutable approval, and a visible queue.
 - **Requirements:** R1-R6a, R34-R42, R47-R50, R56-R57; F1, AE8-AE9
 - **Dependencies:** U2, U3
-- **Files:** `src/modules/work-items/**`, `src/modules/execution/application/plan-*.ts`, `src/modules/execution/application/queue-*.ts`, `src/modules/execution/application/gate-*.ts`, `src/modules/work-items/infrastructure/git-native-issue/**`, `src/modules/work-items/infrastructure/github/**`, `src/modules/work-items/application/report-*.ts`, `src/cli/commands/{work,plan,gate,run,worker,events,report,reconcile}/**`, `src/modules/runtime/api/result-renderers/**`, `assets/operating-docs/workflows/plan/**`, `tests/e2e/plan-approval.test.ts`, `tests/contract/primitive-cli.test.ts`, `tests/contract/dispatch-authority.test.ts`
-- **Approach:** Keep workflow decisions in the server while typed resident-host capabilities execute filesystem, Git, `git issue`, and authenticated GitHub operations and return attributable results. Store work-item identity, conventional type, plan path, dependencies, queue position, projection links, and portable checkpoints in the issue event chain. Implement configurable plan directory and naming, PLANS.md validation, clean-room review rounds, typed gates rendered inside the self-contained plan, and hash-bound approval. Deliver the minimal AXI command families and versioned TOON envelopes here so skills and later presentation layers consume a stable canonical surface. Implement local Mandem report drafts, deduplication, explicit publication approval, upstream issue creation/update, and local publication events. The v1 report schema allows concise reproduction steps, Mandem versions, non-secret configuration names, artifact references, and clearly labeled evidence/inference; it rejects credential values and environment dumps before local draft creation and publication. It does not attempt general source-code or prose redaction. Mirror concise state to GitHub when configured while treating conflicts as events for reconciliation.
+- **Files:** `src/modules/issues/**`, `src/modules/execution/application/plan-*.ts`, `src/modules/execution/application/queue-*.ts`, `src/modules/execution/application/gate-*.ts`, `src/modules/issues/infrastructure/git-native-issue/**`, `src/modules/issues/infrastructure/github/**`, `src/modules/issues/application/report-*.ts`, `src/cli/commands/{work,plan,gate,run,worker,events,report,reconcile}/**`, `src/modules/runtime/api/result-renderers/**`, `assets/operating-docs/workflows/plan/**`, `tests/e2e/plan-approval.test.ts`, `tests/contract/primitive-cli.test.ts`, `tests/contract/dispatch-authority.test.ts`
+- **Approach:** Keep workflow decisions in the server while typed resident-host capabilities execute filesystem, Git, `git issue`, and authenticated GitHub operations and return attributable results. Store issue identity, conventional type, plan path, dependencies, queue position, projection links, and portable checkpoints in the issue event chain. Implement configurable plan directory and naming, PLANS.md validation, clean-room review rounds, typed gates rendered inside the self-contained plan, and hash-bound approval. Deliver the minimal AXI command families and versioned TOON envelopes here so skills and later presentation layers consume a stable canonical surface. Implement local Mandem report drafts, deduplication, explicit publication approval, upstream issue creation/update, and local publication events. The v1 report schema allows concise reproduction steps, Mandem versions, non-secret configuration names, artifact references, and clearly labeled evidence/inference; it rejects credential values and environment dumps before local draft creation and publication. It does not attempt general source-code or prose redaction. Mirror concise state to GitHub when configured while treating conflicts as events for reconciliation.
 - **Execution note:** Start with fixture repositories and fake tracker executors; add one real local Git integration suite without requiring network access.
 - **Patterns to follow:** Nucleus `PLANS.md`; Pier Infra clean-room review artifacts and approval issue model; SBP `clean-room.ts`, `check-clean-room-stamp.ts`, `check-plan-quality.ts`, issue dedupe, and question lifecycle.
 - **Test scenarios:**
-  - Creating from an idea, selecting an existing git-native issue, and importing a mapped GitHub issue all converge on one canonical work item before planning.
+  - Creating from an idea, selecting an existing git-native issue, and importing a mapped GitHub issue all converge on one canonical issue before planning.
   - Plan paths outside the default directory work through configuration and remain canonical after restart.
   - A clean-room failure triggers repair and a fresh reviewer; three failed rounds yield one concise `Needs you` decision list.
   - Approval records exact intent/verdict hashes; material edits invalidate it while living evidence edits do not.
@@ -768,7 +772,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - A Mandem report remains local until approval, then creates or updates the configured upstream issue and records provenance.
   - Credential-like canaries and environment dumps are rejected from report drafts, while an
     ordinary non-secret reproduction remains actionable.
-- **Verification:** From a fresh fixture repo, the work item reaches Queued only through compliant plan, clean-room verdict, and exact operator approval, and its portable state survives deleting SQLite.
+- **Verification:** From a fresh fixture repo, the issue reaches Queued only through compliant plan, clean-room verdict, and exact operator approval, and its portable state survives deleting SQLite.
 
 ### U5. Compile operating docs and launch bounded Claude/Codex sessions
 
@@ -799,7 +803,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Requirements:** R4-R5, R47-R60; F1-F3, AE8-AE10
 - **Dependencies:** U2-U5
 - **Files:** `src/modules/workspaces/**`, `src/modules/execution/application/run-*.ts`, `src/modules/execution/application/review-*.ts`, `src/modules/execution/application/learn-*.ts`, `src/modules/execution/application/merge-*.ts`, `src/modules/execution/infrastructure/git/**`, `src/modules/execution/infrastructure/tmux/**`, `assets/operating-docs/workflows/{work,review,learn}/**`, `tests/e2e/unattended-lifecycle.test.ts`, `tests/e2e/takeover-cancel.test.ts`, `tests/e2e/merge-race.test.ts`
-- **Approach:** Give each work item one branch, worktree, and mutation lease. A fresh worker reads the whole plan, chooses the next safe incomplete action, records red/green evidence, commits a bounded conventional change, updates living plan sections, and continues. Create a draft PR after the first pushed implementation commit. Independent Review loops to repair; Learn starts from friction and produces a prevention mechanism or typed no-learning outcome. Land through one exact-SHA integration lease, verify, then remove the worktree only after durable closure.
+- **Approach:** Give each issue one branch, worktree, and mutation lease. A fresh worker reads the whole plan, chooses the next safe incomplete action, records red/green evidence, commits a bounded conventional change, updates living plan sections, and continues. Create a draft PR after the first pushed implementation commit. Independent Review loops to repair; Learn starts from friction and produces a prevention mechanism or typed no-learning outcome. Land through one exact-SHA integration lease, verify, then remove the worktree only after durable closure.
 - **Execution note:** Characterize SBP's current worktree and gate behavior before adapting it. Prove each failure/restart boundary with fake provider processes before a live-provider vertical slice.
 - **Patterns to follow:** `create-worktree.ts`, `bootstrap-worktree.ts`, `dispatch-task.ts`, `pane-lifecycle.ts`, `gate-and-merge.ts`, `sync-worktree.ts`, `gate-task.ts`, `finish-task.ts`, `check-commit-contract.ts`, and the PAI-1770 ExecPlan's approval/resume discipline.
 - **Test scenarios:**
@@ -844,7 +848,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Requirements:** R13-R19a, R43-R46, R58-R64, R71; AE7, AE10-AE11
 - **Dependencies:** U1-U7
 - **Files:** `src/modules/architecture-standard/**`, `src/cli/commands/init.ts`, `src/cli/commands/architecture.ts`, `assets/architecture-standard/**`, `tests/e2e/init-existing-repo.test.ts`; **Strategy Builder Pro consumer:** `.mandem/config.*`, `.mandem/operating-docs/**`, `AGENTS.md`, `CLAUDE.md`, `package.json`, `scripts/agents/{resume-state,dispatch-task,gate-and-merge}.ts`, `docs/architecture/mandem-baseline.*`
-- **Approach:** Make init reversible: preflight repository/tool/provider/Docker state, back up replaced instructions, generate into staging, validate config and compiled prompts, then activate atomically. Analyze SBP against the Nucleus-derived standard using stable violation fingerprints and commit the standard version plus baseline. Fail new or worsened violations while allowing unchanged debt. Group remediation candidates for operator approval rather than flooding the queue. Replace only chosen package aliases/scripts with thin Mandem shims; a work item belongs to exactly one control plane.
+- **Approach:** Make init reversible: preflight repository/tool/provider/Docker state, back up replaced instructions, generate into staging, validate config and compiled prompts, then activate atomically. Analyze SBP against the Nucleus-derived standard using stable violation fingerprints and commit the standard version plus baseline. Fail new or worsened violations while allowing unchanged debt. Group remediation candidates for operator approval rather than flooding the queue. Replace only chosen package aliases/scripts with thin Mandem shims; a issue belongs to exactly one control plane.
 - **Execution note:** Begin with read-only baseline generation and fixture snapshots. Do not redirect any live SBP workflow until parity tests prove the corresponding Mandem command.
 - **Patterns to follow:** The supplied SBP architecture consistency report; Nucleus boundary script and module generator tests; SBP command/coherence checks and project migration lessons.
 - **Test scenarios:**
@@ -862,7 +866,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Requirements:** All v1 requirements, especially R71; AE1-AE12
 - **Dependencies:** U1-U8
 - **Files:** `tests/e2e/sbp-vertical-slice.test.ts`, `tests/e2e/provider-matrix.test.ts`, `tests/e2e/chaos-restart.test.ts`, `docs/operations/install.md`, `docs/operations/recovery.md`, `docs/operations/sbp-migration.md`, `.github/workflows/check.yml`, `.github/workflows/release.yml`
-- **Approach:** Run one real SBP work item through init, git-native issue selection, bounded planning, clean-room review, operator approval, unattended worktree iterations, PR review/repair, Learn, exact-SHA gates, automatic merge, and plan-defined verification. Execute once with Claude primary and once with Codex primary or equivalent contract fixtures where a live subscription test cannot run in CI. At every phase, kill the TUI, resident host, server container, provider process, and tmux server, then reconcile. Produce a pinned release candidate only after the same acceptance suite passes from a clean install; final v1 publication follows U10.
+- **Approach:** Run one real SBP issue through init, git-native issue selection, bounded planning, clean-room review, operator approval, unattended worktree iterations, PR review/repair, Learn, exact-SHA gates, automatic merge, and plan-defined verification. Execute once with Claude primary and once with Codex primary or equivalent contract fixtures where a live subscription test cannot run in CI. At every phase, kill the TUI, resident host, server container, provider process, and tmux server, then reconcile. Produce a pinned release candidate only after the same acceptance suite passes from a clean install; final v1 publication follows U10.
 - **Execution note:** Keep live-provider tests outside ordinary deterministic CI but make their evidence required for release. CI uses deterministic fake providers and local Git remotes to reproduce the full protocol.
 - **Patterns to follow:** First Mate restart-proof supervision; GNHF iteration/resume/failure rules; SBP's full lifecycle and merge gate; Pier Infra's deterministic operational evidence.
 - **Test scenarios:**
@@ -911,15 +915,15 @@ Work from the Mandem repository root. At the beginning of every fresh program se
     sed -n '1,$p' CLAUDE.md
     sed -n '1,$p' PLANS.md
     sed -n '1,$p' docs/plans/2026-07-21-001-feat-mandem-plan.md
-    sed -n '1,$p' docs/plans/units/README.md
+    sed -n '1,$p' docs/plans/issues/README.md
 
 The working directory must be the Mandem checkout. Read the complete canonical master before
 inspecting `Progress` in this file and the child
-registry to find the earliest dependency-ready incomplete unit. If its child plan is still a
+registry to find the earliest dependency-ready incomplete unit. If its issue plan is still a
 scaffold or has `execution_authorized: false`, continue planning or review only. Never start
 implementation.
 
-Before promoting a child plan, read the complete child file and confirm that it names `PLANS.md`,
+Before promoting a issue plan, read the complete child file and confirm that it names `PLANS.md`,
 contains every required living section, defines its terms, gives repository-relative files and
 exact commands, states observable acceptance, and ends with a revision note. Run its clean-room
 review, apply accepted repairs, record the review in both Decision Logs, and ask the operator to
@@ -948,14 +952,14 @@ master and U1 content in that baseline. Activating `execution_authorized` after 
 approval-state transition; it may update only that metadata field and the append-only living
 records, never plan instructions.
 
-When a child is authorized, give the executor the complete child plan. The program orchestrator
+When a child is authorized, give the executor the complete issue plan. The epic orchestrator
 retains this master for sequencing and ensures the child already contains every applicable program
 constraint. The executor proceeds through every milestone without routine “next step” questions,
 updates the child’s living sections at each stopping point, commits frequently in an isolated
 worktree, and opens a pull request. Review, repair, Learn, merge, and any plan-defined post-merge
 verification must complete before the unit is marked complete here.
 
-After each unit merges, run the verification commands named by that child plan at the merged
+After each unit merges, run the verification commands named by that issue plan at the merged
 commit. Record concise evidence and the merge SHA in both plans. Re-read all downstream scaffolds
 and revise any assumption or interface invalidated by the completed unit before promoting the next
 child.
@@ -987,7 +991,7 @@ child.
 - **Living ExecPlans accidentally retain stale approval.** Machine-delimit and schema-check append-only living regions, hash all other content, and reject approval-sensitive instructions inside exempt regions.
 - **Architecture checks could block unrelated SBP work.** Baseline stable fingerprints and fail only
   new or worsened violations while tracking debt reduction.
-- **Legacy and Mandem systems both mutate the same task.** Migrate one command/work-item ownership boundary at a time and fail if dual ownership is detected.
+- **Legacy and Mandem systems both mutate the same task.** Migrate one command/issue ownership boundary at a time and fail if dual ownership is detected.
 - **Automatic merge could use stale evidence.** Hold a server integration lease across target
   refresh, resync, validation, exact-head check, merge, and checkpoint.
 - **Observability services could accept non-local connections.** Keep services on internal Compose
@@ -1005,7 +1009,7 @@ child.
 
 ## Validation and Acceptance
 
-Program acceptance is observable only when every child ExecPlan has independently passed its
+Program acceptance is observable only when every issue ExecPlan has independently passed its
 approval, implementation, review, Learn, merge, and verification contract. A green build alone is
 not program completion. From a clean Strategy Builder Pro checkout, an operator must be able to
 install Mandem and complete the restart-proof vertical slice described by R71, then reconstruct
@@ -1035,13 +1039,13 @@ Verification evidence must bind to the tested commit SHA, plan approval hash, ga
 ## Idempotence and Recovery
 
 Reading plans, running checks, and reconciling state are safe to repeat. Planning and review may be
-repeated, but authorization always applies to one exact child-plan revision; changing
-approval-sensitive content invalidates it. An interrupted worker resumes from the child plan,
+repeated, but authorization always applies to one exact issue plan revision; changing
+approval-sensitive content invalidates it. An interrupted worker resumes from the issue plan,
 worktree, commits, issue, pull request, and Mandem event state rather than from a transcript.
 
 Never delete an incomplete worktree, overwrite an unreviewed plan, or infer completion from a
 missing process. Preserve partial work and record the stopping point. If an upstream unit changes
-an interface consumed downstream, return affected child plans to a non-executable state, revise
+an interface consumed downstream, return affected issue plans to a non-executable state, revise
 them, and repeat clean-room review and approval. If durable sources disagree and precedence cannot
 resolve the contradiction, stop in a visible operator-decision state rather than choosing silently.
 
@@ -1049,14 +1053,14 @@ resolve the contradiction, stop in a visible operator-decision state rather than
 
 ## Artifacts and Notes
 
-The durable program artifacts are this file, `docs/plans/units/README.md`, the ten child ExecPlans,
-their clean-room reviews, git-native work items, commits, pull requests, review and Learn outputs,
+The durable epic artifacts are this file, `docs/plans/issues/README.md`, the ten issue ExecPlans,
+their clean-room reviews, git-native issues, commits, pull requests, review and Learn outputs,
 verification evidence, and Mandem’s event ledger once implemented. Chat summaries and tmux panes
 may help an operator inspect work, but they are not authoritative state.
 
 The initial unreviewed U1 prototype was quarantined outside the repository in a temporary host
 archive named `mandem-u1-unreviewed-prototype-2026-07-24.tar.gz`. It is evidence of the process
-failure that led to the child-plan promotion contract, not approved implementation input.
+failure that led to the issue plan promotion contract, not approved implementation input.
 
 ---
 
@@ -1064,14 +1068,14 @@ failure that led to the child-plan promotion contract, not approved implementati
 
 The program-level dependency order is U1, U2, U3, U4, U5, U6, U7, U8, U9, then U10. A child may
 declare narrower parallel work only after proving that its inputs and merge boundaries are
-independent. `docs/plans/units/README.md` is the human-readable registry; each child plan must name
+independent. `docs/plans/issues/README.md` is the human-readable registry; each issue plan must name
 the exact upstream artifacts it consumes and downstream artifacts it produces.
 
 Mandem exposes two executable surfaces from one Bun/TypeScript package: `mandem` is the host-side
 CLI/TUI and resident host capability process, while `mandem-server` is the Docker-hosted durable
 control plane. Provider CLIs, tmux, Git worktrees, GitHub projection, git-native issues, SQLite,
 TOON output, OpenTUI, and the later Grafana stack stay behind the boundaries described in the
-relevant child plans. No child may silently redefine a program requirement or another unit’s
+relevant issue plans. No child may silently redefine a epic requirement or another unit’s
 published interface.
 
 ---
@@ -1080,7 +1084,7 @@ published interface.
 
 - The standalone Mandem repository builds and publishes the `mandem` client and `mandem-server` image from a clean Bun install.
 - SBP can be initialized transactionally with committed pins, operating docs, generated agent entry files, and a reproducible Nucleus-derived architecture baseline.
-- A git-native work item cannot enter Work without one canonical compliant ExecPlan, executor-safe clean-room verdict, and exact operator approval.
+- A git-native issue cannot enter Work without one canonical compliant ExecPlan, executor-safe clean-room verdict, and exact operator approval.
 - Claude and Codex satisfy the same bounded-session and autonomous-worker contract using existing subscriptions rather than direct vendor APIs.
 - An approved SBP queue executes in isolated worktrees through TDD, draft PR, independent review/repair, Learn, serialized exact-SHA gates, automatic merge, and plan-defined verification.
 - TUI, CLI, and agent skills operate through the same primitives and produce identical attributable state transitions.
@@ -1098,14 +1102,14 @@ published interface.
 - [x] (2026-07-22) SBP, Nucleus, Pier Infra, AXI, First Mate, GNHF, git-native-issue, Compound Engineering, Obra TDD, Bun, Docker, and OpenTUI inputs researched.
 - [x] (2026-07-22) Implementation approach and first-release vertical slice confirmed.
 - [x] (2026-07-24) Created the public standalone `BrandonJF/mandem` repository.
-- [x] (2026-07-24) Installed `PLANS.md`, Codex/Claude discovery guidance, the program plan, and U1-U10 child-plan registry.
-- [x] (2026-07-24) Quarantined the premature unreviewed U1 prototype and added the child-plan promotion contract.
+- [x] (2026-07-24) Installed `PLANS.md`, Codex/Claude discovery guidance, the epic plan, and U1-U10 issue plan registry.
+- [x] (2026-07-24) Quarantined the premature unreviewed U1 prototype and added the issue plan promotion contract.
 - [x] (2026-07-24) Repaired the first program clean-room findings, including unit ownership,
   sole child-worker authority, empty-repository bootstrap, recovery coverage, and pinned external
   AXI/TOON provenance.
-- [x] (2026-07-24) Final independent verification of the program ExecPlan and registry returned no
+- [x] (2026-07-24) Final independent verification of the epic ExecPlan and registry returned no
   unresolved P0-P2 findings.
-- [x] (2026-07-24) Rewrote and clean-room approved the U1 child ExecPlan.
+- [x] (2026-07-24) Rewrote and clean-room approved the U1 issue ExecPlan.
 - [x] (2026-07-24) Established planning root `a600d340c5306dad64f7405de6bb6b30b0a8f1b7`
   and U1 git-native issue `da645bd`.
 - [x] (2026-07-24) Recorded exact operator approval for authority head
@@ -1118,9 +1122,9 @@ published interface.
 - [x] (2026-07-24) Revalidated U2's scaffold against U1's merged package, architecture checker,
   public module surfaces, repository gates, provider capability baseline, and durable evidence.
   U2 remains unauthorized pending its own complete plan, clean-room review, and exact approval.
-- [x] (2026-07-25) Post-merge verification opened U1 corrective work item `5717221`, created U1A
-  work item `745eda8`, and invalidated U2 dependency readiness.
-- [x] (2026-07-25) Created non-executable U1C corrective child plan for Git-native issue `5717221`.
+- [x] (2026-07-25) Post-merge verification opened U1 corrective issue `5717221`, created U1A
+  issue `745eda8`, and invalidated U2 dependency readiness.
+- [x] (2026-07-25) Created non-executable U1C corrective issue plan for Git-native issue `5717221`.
 - [x] (2026-07-27) Recorded exact operator approval and authorized U1C for implementation after
   planning PR #12 merges.
 - [ ] Complete U1C and U1A, then promote and complete U2 through U10 in dependency order.
@@ -1133,15 +1137,15 @@ published interface.
   Evidence: `src/lib/pipeline-graph/pipeline-state.server.ts` models `dispatched`, `started`, `complete`, `synced`, `gated`, `harvested`, and `merged`, omitting Plan, approval, Review, Learn, pause/cancel, and verification.
 - Observation: Bun natively supports server and client HTTP over Unix domain sockets plus server WebSockets, making an event-driven local protocol possible without a public or loopback TCP port.
   Evidence: Bun's official HTTP server and fetch documentation expose `unix` socket options; its WebSocket server exposes open/message/close/drain lifecycle handlers.
-- Observation: The merged SBP artifact had strong product and implementation-unit content but was not a `PLANS.md`-compliant program ExecPlan.
+- Observation: The merged SBP artifact had strong product and implementation-unit content but was not a `PLANS.md`-compliant epic ExecPlan.
   Evidence: It lacked the required `PLANS.md` opening reference, `Context and Orientation`, `Concrete Steps`, `Idempotence and Recovery`, `Artifacts and Notes`, `Interfaces and Dependencies`, and bottom revision note.
 - Observation: Running Mandem's program from the SBP checkout creates ambiguous authority and prevents fresh Mandem worktrees from discovering their governing plan.
   Evidence: The standalone repository initially had no committed `PLANS.md` or agent entry guidance even though the SBP copy of the plan had already merged.
 - Observation: The first clean-room pass found overlapping U1/U3 Docker ownership and no
   bootstrap path for R6's work ledger.
-  Evidence: Both units named `Dockerfile` and `compose.yaml`, while the git-native work-item
+  Evidence: Both units named `Dockerfile` and `compose.yaml`, while the git-native issue
   capability itself does not arrive until U4.
-- Observation: A self-contained child plan should not compete with the master for worker authority.
+- Observation: A self-contained issue plan should not compete with the master for worker authority.
   Evidence: The first clean-room pass flagged the instruction to give workers both plans even
   though each child is required to embed all applicable program constraints.
 
@@ -1162,16 +1166,16 @@ published interface.
 - Decision: Validate the local event transport before selecting its concrete mechanism.
   Rationale: Push delivery, reconnection, backpressure, host/container operation, no polling, and no public service are product constraints; Unix sockets, WebSockets, protobuf, or another implementation may satisfy them.
   Date/Author: 2026-07-22 / Brandon and Codex document review
-- Decision: Make the Mandem copy of this document the canonical living program ExecPlan and retain the SBP copy only as historical provenance.
+- Decision: Make the Mandem copy of this document the canonical living epic ExecPlan and retain the SBP copy only as historical provenance.
   Rationale: A fresh Codex session must be able to enter the Mandem repository, discover the full program, and continue without depending on SBP chat or files.
   Date/Author: 2026-07-24 / Brandon and Codex
-- Decision: Separate program coordination authority from child implementation authority.
-  Rationale: The program plan must be resumable and capable of coordinating the whole build, while
+- Decision: Separate epic coordination authority from child implementation authority.
+  Rationale: The epic plan must be resumable and capable of coordinating the whole build, while
   its generic `execution_authorized` flag remains false so it cannot be mistaken for a worker
-  prompt. `program_coordination_authorized` permits sequencing; each implementation worker still
+  prompt. `epic_coordination_authorized` permits sequencing; each implementation worker still
   needs one reviewed, self-contained child with `execution_authorized: true`.
   Date/Author: 2026-07-24 / Brandon and Codex
-- Decision: Make the approved child ExecPlan the sole implementation-worker authority.
+- Decision: Make the approved issue ExecPlan the sole implementation-worker authority.
   Rationale: The master owns program sequencing; duplicating it in each worker context creates
   conflict and unnecessary tokens after the child has incorporated its relevant constraints.
   Date/Author: 2026-07-24 / Codex after clean-room scope review
@@ -1191,8 +1195,8 @@ published interface.
 
 ## Outcomes & Retrospective
 
-Current planning outcome: Mandem has a dependency-ordered program ExecPlan in its own repository,
-plus child-plan boundaries for U1, U1C, U1A, and U2-U10. The program is restartable from durable
+Current planning outcome: Mandem has a dependency-ordered epic ExecPlan in its own repository,
+plus issue plan boundaries for U1, U1C, U1A, and U2-U10. The program is restartable from durable
 artifacts and no longer depends on the SBP orchestrator conversation. U1 merged at
 `88b9533ab840c9d357a1d09d2341709e2cbdd986`, but planned corrective child U1C for item `5717221`
 and U1A item `745eda8` must complete before U2 dependency revalidation can run again.
@@ -1206,7 +1210,7 @@ and U1A item `745eda8` must complete before U2 dependency revalidation can run a
   Any local process or container that can reach the project socket could otherwise submit approvals, takeovers, cancellations, worker launches, or merge commands as a trusted Mandem client. A version handshake prevents incompatibility but does not authenticate the caller or authorize individual mutations. This is deferred as post-v1 local security hardening.
 
 Revision note (2026-07-24): Converted the Mandem copy from a unified product/technical artifact
-into the canonical `PLANS.md`-governed program ExecPlan, then repaired its clean-room findings.
+into the canonical `PLANS.md`-governed epic ExecPlan, then repaired its clean-room findings.
 Added the missing orientation, plan-of-work, concrete-step, validation, recovery, artifact,
 interface, living-document, empty-repository bootstrap, child-authority, and phase-recovery
 contracts. Recorded Mandem as the sole living home and identified AXI and TOON as pinned,
@@ -1223,13 +1227,13 @@ U1 completion update (2026-07-24): Recorded PR #4 merge
 closed git-native issue `da645bd`, and U2 dependency revalidation. U2 remains a non-executable
 scaffold.
 
-U1 post-merge correction update (2026-07-25): Recorded corrective work item `5717221`, added U1A
-documentation/authoring-quality work item `745eda8`, and blocked U2 until both foundational units
+U1 post-merge correction update (2026-07-25): Recorded corrective issue `5717221`, added U1A
+documentation/authoring-quality issue `745eda8`, and blocked U2 until both foundational units
 complete. The change keeps the master non-executable and moves implementation detail into the U1A
-child ExecPlan.
+issue ExecPlan.
 
-U1C planning update (2026-07-25): Added the non-executable corrective child ExecPlan at
-`docs/plans/units/u1-corrective-architecture-package-contract.md` for all six validated
+U1C planning update (2026-07-25): Added the non-executable corrective issue ExecPlan at
+`docs/plans/issues/u1-architecture-package-contract.md` for all six validated
 architecture and package silent-pass findings. U1C is planned only. U1A, U2, and later units remain
 blocked until U1C merges and post-merge verification passes.
 

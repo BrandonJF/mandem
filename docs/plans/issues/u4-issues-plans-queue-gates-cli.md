@@ -1,47 +1,53 @@
 ---
-title: "U8: SBP installation, architecture baseline, and migration shims"
-plan_kind: mandem-child-execplan
-program_unit: U8
+title: "U4: Issues, ExecPlans, queue, gates, primitive CLI, and projections"
+plan_kind: mandem-issue-execplan
+issue_key: U4
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 11538b56-bd63-42c2-8242-87ac7a76d35d
+depends_on_issue_ids:
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - d946e066-84d5-4651-b3b4-30a18e80008c
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U8: SBP installation, architecture baseline, and migration shims
+# U4: Issues, ExecPlans, queue, gates, primitive CLI, and projections
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U8 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U4 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U1, U2, U3, U4, U5, U6, U7
+**Depends on:** U2, U3
 
 ### Consumes
 
-- Complete Mandem client/server vertical capability
-- Versioned architecture standard and checker
-- Operating-doc compiler
-- SBP repository and current orchestration
+- U2 lifecycle, approval, event, and lease contracts
+- U3 resident host capability path
+- git-native-issue v1.3.3 external executable
 
 ### Produces
 
-- Transactional Mandem init
-- Committed SBP project identity/configuration
-- Stable architecture-debt baseline and ratchet
-- Generated agent entry files
-- Selected one-way legacy command shims
-- Evidence that workers receive implementation instructions from only one authority
+- Git-native issue adapter
+- issue ExecPlan validation and promotion workflow
+- Services for queue and dependency management and clean-room review
+- Approvals bound to hashes and typed gates
+- Minimal AXI CLI and TOON envelopes
+- GitHub projection and workflow for Mandem reports
 
 ### Downstream Consumers
 
-- U9 real SBP lifecycle acceptance
-- Future architecture remediation work items
+- U5 skills and bounded sessions
+- U6 autonomous execution
+- U7 complete CLI/TUI
+- U8 SBP migration aliases
 
 ## Architecture Constraint
 
@@ -52,12 +58,13 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Baseline fingerprint identity
-- Init backup/rollback transaction
-- First migrated command boundaries
-- Legacy coexistence cutoff
+- Canonical issue/plan mapping
+- Plan promotion and invalidation rules
+- Queue mutation and dependency failure behavior
+- GitHub conflict/import policy
+- Report publication boundary
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:

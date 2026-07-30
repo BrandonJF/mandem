@@ -1,48 +1,55 @@
 ---
-title: "U4: Work items, ExecPlans, queue, gates, primitive CLI, and projections"
-plan_kind: mandem-child-execplan
-program_unit: U4
+title: "U9: Restart-proof SBP vertical slice and v1 release candidate"
+plan_kind: mandem-issue-execplan
+issue_key: U9
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 7351af1b-d406-4768-bbf9-21f878aad28a
+depends_on_issue_ids:
+  - 11538b56-bd63-42c2-8242-87ac7a76d35d
+  - 22a35ab0-878b-448b-9341-6679b70a499d
+  - 6ca36caa-37e2-447b-935e-792a6f6566b6
+  - 9e6cde19-27d2-4228-8a93-628829ae1b92
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - cf239716-00e2-46ae-82e7-84ac8f31baaf
+  - d946e066-84d5-4651-b3b4-30a18e80008c
+  - da645bd0-9899-40b3-9f23-3b48d65362a4
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U4: Work items, ExecPlans, queue, gates, primitive CLI, and projections
+# U9: Restart-proof SBP vertical slice and v1 release candidate
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U4 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U9 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U2, U3
+**Depends on:** U1, U2, U3, U4, U5, U6, U7, U8
 
 ### Consumes
 
-- U2 lifecycle, approval, event, and lease contracts
-- U3 resident host capability path
-- git-native-issue v1.3.3 external executable
+- Installed SBP control plane
+- All provider, lifecycle, architecture, and operator surfaces
+- Master acceptance examples AE1-AE12
 
 ### Produces
 
-- Git-native work-item adapter
-- Child ExecPlan validation and promotion workflow
-- Services for queue and dependency management and clean-room review
-- Approvals bound to hashes and typed gates
-- Minimal AXI CLI and TOON envelopes
-- GitHub projection and workflow for Mandem reports
+- Real Claude-primary and Codex-primary lifecycle evidence
+- Matrix of process-kill and restart cases
+- Clean-install proof
+- Reconstructable completed SBP issue
+- Pinned v1 release candidate
 
 ### Downstream Consumers
 
-- U5 skills and bounded sessions
-- U6 autonomous execution
-- U7 complete CLI/TUI
-- U8 SBP migration aliases
+- U10 observability validation and final v1 publication
 
 ## Architecture Constraint
 
@@ -53,13 +60,12 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Canonical issue/plan mapping
-- Plan promotion and invalidation rules
-- Queue mutation and dependency failure behavior
-- GitHub conflict/import policy
-- Report publication boundary
+- Live-provider versus deterministic CI evidence boundary
+- Chaos checkpoint matrix
+- Release evidence manifest
+- Release-candidate acceptance threshold
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:

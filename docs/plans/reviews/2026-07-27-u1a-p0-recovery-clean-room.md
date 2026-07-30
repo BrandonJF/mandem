@@ -2,7 +2,7 @@
 
 Date: 2026-07-27
 
-Reviewed artifact: `docs/plans/units/u1a-documentation-authoring-quality-gates.md`
+Reviewed artifact: `docs/plans/issues/u1a-documentation-authoring-quality-gates.md`
 
 Reviewed content SHA-256: `f8c58462bf7b8f6a2fd4325023fb20e715005dc5d66237e29d21e48228f86580`
 

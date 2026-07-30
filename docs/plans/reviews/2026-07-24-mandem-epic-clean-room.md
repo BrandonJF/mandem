@@ -1,4 +1,4 @@
-# Mandem Program ExecPlan Clean-Room Review
+# Mandem Epic ExecPlan Clean-Room Review
 
 Date: 2026-07-24
 
@@ -6,7 +6,7 @@ Reviewed artifact: `docs/plans/2026-07-21-001-feat-mandem-plan.md`
 
 Reviewed SHA-256: `fb745b3df4a5d6648f382787c246d6becb314a65b2f6d1385d971d1583981414`
 
-The reviewers read the repository-root `PLANS.md` and reviewed the program plan without relying on
+The reviewers read the repository-root `PLANS.md` and reviewed the epic plan without relying on
 the planning conversation. Review lenses covered scope ownership, program/child authority,
 feasibility, product flow, recovery, nonvisual observability, security posture, provenance,
 empty-repository bootstrap, and novice-executor self-containment.
@@ -20,5 +20,5 @@ independently governed MIT-licensed `toon-format` project with v4.0.0 as the imp
 
 Final independent verdict: clean. No unresolved P0, P1, or P2 findings.
 
-This verdict does not authorize implementation. The program plan retains
+This verdict does not authorize implementation. The epic plan retains
 `execution_authorized: false`.

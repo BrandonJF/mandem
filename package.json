@@ -20,7 +20,7 @@
     "authored-files:revision": "bun scripts/check-authored-files.ts --mode revision",
     "check:revision": "bun scripts/check-revision.ts",
     "revision-worktrees:reconcile": "bun scripts/check-revision.ts --reconcile-only",
-    "check:core": "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run typecheck && bun run lint",
+    "check:core": "bun run preflight:bun && bun run docs:audit && bun run authored-files:check && bun run architecture:check && bun run vocabulary:check && bun run issue-graph:check && bun run typecheck && bun run lint",
     "check:revision-target": "bun run check:core && bun run test:revision-target",
     "hooks:install": "bun scripts/hooks/install.ts",
     "hooks:check": "bun scripts/hooks/install.ts --check",

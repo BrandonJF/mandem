@@ -1,0 +1,177 @@
+version: 1
+issues:
+  - issue_id: "11538b56-bd63-42c2-8242-87ac7a76d35d"
+    issue_key: "U4"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u4-issues-plans-queue-gates-cli.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6", "d946e066-84d5-4651-b3b4-30a18e80008c"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u4"]
+  - issue_id: "22a35ab0-878b-448b-9341-6679b70a499d"
+    issue_key: "U6"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u6-unattended-work-review-learn-merge.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["11538b56-bd63-42c2-8242-87ac7a76d35d", "cb67d131-975c-4d97-9a6f-4934be991ac6", "cf239716-00e2-46ae-82e7-84ac8f31baaf", "d946e066-84d5-4651-b3b4-30a18e80008c"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u6"]
+  - issue_id: "237397e3-cf06-4c6f-bf5d-ce83d8187ee3"
+    issue_key: "U10"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u10-observability-final-v1.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["7351af1b-d406-4768-bbf9-21f878aad28a"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u10"]
+  - issue_id: "38f956c8-0f18-4d85-af1a-d908bcc54248"
+    issue_key: "U1A-INCIDENT-1"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: null
+    parent_issue_id: "745eda80-1e74-4866-bc95-2f2983b31025"
+    depends_on_issue_ids: []
+    expected_native_state: "closed"
+    expected_native_labels: ["incident"]
+  - issue_id: "5717221b-f9e6-4c8f-abca-77a1ad3811bf"
+    issue_key: "U1C"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u1-architecture-package-contract.md"
+    parent_issue_id: "da645bd0-9899-40b3-9f23-3b48d65362a4"
+    depends_on_issue_ids: ["da645bd0-9899-40b3-9f23-3b48d65362a4"]
+    expected_native_state: "closed"
+    expected_native_labels: ["u1c"]
+  - issue_id: "6a6a8bab-853f-4658-9bc0-38e2386b642d"
+    issue_key: "WI1"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/wi1-epic-issue-graph-integrity.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["745eda80-1e74-4866-bc95-2f2983b31025"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked"]
+  - issue_id: "6ca36caa-37e2-447b-935e-792a6f6566b6"
+    issue_key: "U7"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u7-complete-cli-toon-opentui.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["11538b56-bd63-42c2-8242-87ac7a76d35d", "22a35ab0-878b-448b-9341-6679b70a499d", "cb67d131-975c-4d97-9a6f-4934be991ac6", "cf239716-00e2-46ae-82e7-84ac8f31baaf", "d946e066-84d5-4651-b3b4-30a18e80008c"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u7"]
+  - issue_id: "7351af1b-d406-4768-bbf9-21f878aad28a"
+    issue_key: "U9"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u9-restart-proof-sbp-release-candidate.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["11538b56-bd63-42c2-8242-87ac7a76d35d", "22a35ab0-878b-448b-9341-6679b70a499d", "6ca36caa-37e2-447b-935e-792a6f6566b6", "9e6cde19-27d2-4228-8a93-628829ae1b92", "cb67d131-975c-4d97-9a6f-4934be991ac6", "cf239716-00e2-46ae-82e7-84ac8f31baaf", "d946e066-84d5-4651-b3b4-30a18e80008c", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u9"]
+  - issue_id: "745eda80-1e74-4866-bc95-2f2983b31025"
+    issue_key: "U1A"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u1a-documentation-authoring-quality-gates.md"
+    parent_issue_id: "da645bd0-9899-40b3-9f23-3b48d65362a4"
+    depends_on_issue_ids: ["5717221b-f9e6-4c8f-abca-77a1ad3811bf"]
+    expected_native_state: "closed"
+    expected_native_labels: ["u1a"]
+  - issue_id: "9e6cde19-27d2-4228-8a93-628829ae1b92"
+    issue_key: "U8"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u8-sbp-install-architecture-baseline.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["11538b56-bd63-42c2-8242-87ac7a76d35d", "22a35ab0-878b-448b-9341-6679b70a499d", "6ca36caa-37e2-447b-935e-792a6f6566b6", "cb67d131-975c-4d97-9a6f-4934be991ac6", "cf239716-00e2-46ae-82e7-84ac8f31baaf", "d946e066-84d5-4651-b3b4-30a18e80008c", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u8"]
+  - issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    issue_key: "EPIC"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/2026-07-21-001-feat-mandem-plan.md"
+    parent_issue_id: null
+    depends_on_issue_ids: []
+    expected_native_state: "open"
+    expected_native_labels: ["in-progress"]
+    provider:
+      kind: "github"
+      owner: "BrandonJF"
+      repository: "mandem"
+    milestone:
+      title: "Mandem v1"
+      description: "Tracks the planned Mandem v1 issues through final publication."
+      state: "open"
+      due_on: null
+    managed_labels:
+      blocked:
+        color: "B60205"
+        description: "Work cannot proceed until its recorded dependency or decision changes."
+      in-progress:
+        color: "ededed"
+        description: ""
+      incident:
+        color: "D93F0B"
+        description: "Operational or reliability incident."
+      planned:
+        color: "D4C5F9"
+        description: "Tracked work that requires planning or authorization before execution."
+      u10:
+        color: "ededed"
+        description: ""
+      u1a:
+        color: "C5DEF5"
+        description: "Mandem issue U1A."
+      u1c:
+        color: "C5DEF5"
+        description: "Mandem issue U1C."
+      u2:
+        color: "ededed"
+        description: ""
+      u3:
+        color: "ededed"
+        description: ""
+      u4:
+        color: "ededed"
+        description: ""
+      u5:
+        color: "ededed"
+        description: ""
+      u6:
+        color: "ededed"
+        description: ""
+      u7:
+        color: "ededed"
+        description: ""
+      u8:
+        color: "ededed"
+        description: ""
+      u9:
+        color: "ededed"
+        description: ""
+  - issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    issue_key: "U2"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2-protocol-lifecycle-sqlite.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["6a6a8bab-853f-4658-9bc0-38e2386b642d", "745eda80-1e74-4866-bc95-2f2983b31025", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u2"]
+  - issue_id: "cf239716-00e2-46ae-82e7-84ac8f31baaf"
+    issue_key: "U5"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u5-operating-docs-provider-sessions.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["11538b56-bd63-42c2-8242-87ac7a76d35d", "d946e066-84d5-4651-b3b4-30a18e80008c"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u5"]
+  - issue_id: "d946e066-84d5-4651-b3b4-30a18e80008c"
+    issue_key: "U3"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u3-server-docker-resident-reconciliation.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "u3"]
+  - issue_id: "da645bd0-9899-40b3-9f23-3b48d65362a4"
+    issue_key: "U1"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u1-bootstrap-repository-architecture-contract.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: []
+    expected_native_state: "closed"
+    expected_native_labels: []

@@ -1,8 +1,14 @@
 ---
 title: "U2: Protocol, lifecycle kernel, and SQLite event model"
-plan_kind: mandem-child-execplan
-program_unit: U2
+plan_kind: mandem-issue-execplan
+issue_key: U2
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: cb67d131-975c-4d97-9a6f-4934be991ac6
+depends_on_issue_ids:
+  - 6a6a8bab-853f-4658-9bc0-38e2386b642d
+  - 745eda80-1e74-4866-bc95-2f2983b31025
+  - da645bd0-9899-40b3-9f23-3b48d65362a4
 promotion: scaffolded
 execution_authorized: false
 ---
@@ -14,7 +20,7 @@ execution_authorized: false
 
 ## Purpose
 
-Expand this scaffold into a self-contained U2 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U2 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
@@ -40,7 +46,7 @@ implementation instruction.
 ### Downstream Consumers
 
 - U3 transport/server/reconciliation
-- U4 work-item and gate behavior
+- U4 issue and gate behavior
 - U6 autonomous iteration loop
 - U7 CLI/TOON parity
 - U10 telemetry schema
@@ -59,7 +65,7 @@ by the unit.
 - Approval-sensitive versus living-plan content representation
 - Terminal disposition invariants
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:
@@ -93,7 +99,7 @@ When a dependency completes or its producer changes a consumed artifact, the pla
 compare the output with this plan's assumptions. If it materially differs, the plan author must set
 `promotion` to `planned` and obtain a refreshed review before execution.
 
-The Mandem program orchestrator completed the original U1 dependency revalidation on 2026-07-24
+The Mandem epic orchestrator completed the original U1 dependency revalidation on 2026-07-24
 against merge
 `88b9533ab840c9d357a1d09d2341709e2cbdd986`. The repository now provides Bun `1.3.14`, the
 canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the
@@ -101,9 +107,9 @@ versioned 22-rule catalog, deterministic filesystem analysis, two bounded entryp
 completed Claude/Codex capability baseline. U2 must extend the existing `runtime` module, preserve
 those public barrels, keep SQLite behind infrastructure ports, and avoid weakening any U1 rule or
 gate. Post-merge verification on 2026-07-25 found material package and architecture-gate gaps,
-tracked by work item `5717221`, and the operator added the U1A documentation/authoring-quality
+tracked by issue `5717221`, and the operator added the U1A documentation/authoring-quality
 dependency tracked by `745eda8`. U2 dependency readiness is therefore invalidated until both
-foundational work items merge and this scaffold is revalidated against their actual outputs.
+foundational issues merge and this scaffold is revalidated against their actual outputs.
 
 ## Progress
 
@@ -129,7 +135,7 @@ foundational work items merge and this scaffold is revalidated against their act
   Rationale: U1's merged package and architecture contract specify the interfaces U2 must use. A
   parallel lifecycle root would create a second public surface and conflict with the U1-to-U2
   handoff.
-  Date/Author: 2026-07-24 / Mandem program orchestrator
+  Date/Author: 2026-07-24 / Mandem epic orchestrator
 
 ## Outcomes & Retrospective
 
@@ -138,9 +144,9 @@ and U1A requirement supersede that conclusion. U2 becomes dependency-ready for d
 only after corrected U1 and U1A complete. It remains `promotion: scaffolded` and
 `execution_authorized: false`.
 
-Revision note (2026-07-24): The Mandem program orchestrator revalidated U2 against U1's actual
+Revision note (2026-07-24): The Mandem epic orchestrator revalidated U2 against U1's actual
 merged artifacts and recorded the concrete interfaces, gates, provider evidence, and
 module-extension constraint. This update does not authorize U2 implementation.
 
 Revision note (2026-07-25): Invalidated U2 dependency readiness after post-merge U1 verification
-opened corrective work item `5717221` and documentation/authoring-quality work item `745eda8`.
+opened corrective issue `5717221` and documentation/authoring-quality issue `745eda8`.

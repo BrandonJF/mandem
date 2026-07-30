@@ -14,7 +14,7 @@ executables.
 - [Architecture](./docs/architecture/README.md) describes the system and repository rules.
 - [Development](./docs/development/README.md) explains documentation and source-authoring practice.
 - [Operations](./docs/operations/README.md) records process and provider evidence.
-- [Plans](./docs/plans/README.md) indexes the program plan and child ExecPlans.
+- [Plans](./docs/plans/README.md) indexes the epic plan and issue ExecPlans.
 - [Scripts](./scripts/README.md) describes repository-maintenance entrypoints.
 - [Git hooks](./.githooks/README.md) reserves the location for versioned Git hook entrypoints.
 - [Modules](./src/modules/README.md) indexes the module-level architecture documentation.

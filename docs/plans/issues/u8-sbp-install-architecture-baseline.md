@@ -1,47 +1,57 @@
 ---
-title: "U7: Complete AXI CLI, TOON output, OpenTUI, and worker witnessability"
-plan_kind: mandem-child-execplan
-program_unit: U7
+title: "U8: SBP installation, architecture baseline, and migration shims"
+plan_kind: mandem-issue-execplan
+issue_key: U8
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 9e6cde19-27d2-4228-8a93-628829ae1b92
+depends_on_issue_ids:
+  - 11538b56-bd63-42c2-8242-87ac7a76d35d
+  - 22a35ab0-878b-448b-9341-6679b70a499d
+  - 6ca36caa-37e2-447b-935e-792a6f6566b6
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - cf239716-00e2-46ae-82e7-84ac8f31baaf
+  - d946e066-84d5-4651-b3b4-30a18e80008c
+  - da645bd0-9899-40b3-9f23-3b48d65362a4
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U7: Complete AXI CLI, TOON output, OpenTUI, and worker witnessability
+# U8: SBP installation, architecture baseline, and migration shims
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U7 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U8 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U2, U3, U4, U5, U6
+**Depends on:** U1, U2, U3, U4, U5, U6, U7
 
 ### Consumes
 
-- U4 primitive CLI/TOON contract
-- U3 push event transport
-- U5 phase-session actions
-- U6 worker/takeover lifecycle
+- Complete Mandem client/server vertical capability
+- Versioned architecture standard and checker
+- Operating-doc compiler
+- SBP repository and current orchestration
 
 ### Produces
 
-- Complete canonical command surface
-- Concise human and schema-versioned TOON renderers
-- Tmux-native OpenTUI control surface
-- Keyboard and narrow-terminal accessibility
-- Evidence that the CLI, TUI, skills, and providers support the same actions
+- Transactional Mandem init
+- Committed SBP project identity/configuration
+- Stable architecture-debt baseline and ratchet
+- Generated agent entry files
+- Selected one-way legacy command shims
+- Evidence that workers receive implementation instructions from only one authority
 
 ### Downstream Consumers
 
-- U8 installed SBP operator surface
-- U9 complete operator acceptance flow
-- U10 operational dashboard navigation context
+- U9 real SBP lifecycle acceptance
+- Future architecture remediation issues
 
 ## Architecture Constraint
 
@@ -52,12 +62,12 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Command taxonomy and progressive disclosure
-- Home-view attention hierarchy
-- Pane/window focus lifecycle
-- Terminal testing strategy
+- Baseline fingerprint identity
+- Init backup/rollback transaction
+- First migrated command boundaries
+- Legacy coexistence cutoff
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:

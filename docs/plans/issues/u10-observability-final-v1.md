@@ -1,49 +1,48 @@
 ---
-title: "U3: Server, Docker lifecycle, resident host mode, and reconciliation"
-plan_kind: mandem-child-execplan
-program_unit: U3
+title: "U10: Alloy, Loki, Grafana, and final v1 publication"
+plan_kind: mandem-issue-execplan
+issue_key: U10
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 237397e3-cf06-4c6f-bf5d-ce83d8187ee3
+depends_on_issue_ids:
+  - 7351af1b-d406-4768-bbf9-21f878aad28a
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U3: Server, Docker lifecycle, resident host mode, and reconciliation
+# U10: Alloy, Loki, Grafana, and final v1 publication
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U3 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U10 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U2
+**Depends on:** U9
 
 ### Consumes
 
-- U2 protocol and lifecycle kernel
-- U2 persistence ports and checkpoint schema
-- U1 executable/container composition roots
+- U2 event schema, with stability demonstrated during U9
+- U9 release candidate and lifecycle fixtures
+- Local-only deployment constraint
 
 ### Produces
 
-- Project-scoped server runtime
-- Local push transport selected from spike evidence
-- Resident host capability protocol
-- Docker and Linux service lifecycle
-- Version handshake and reconciliation engine
-- Evidence that restart and interrupt integration works
+- Required Alloy/Loki/Grafana Compose services
+- Provisioned operational dashboards
+- Retention and local-binding policy
+- Observability failure-isolation evidence
+- Final v1 artifacts and publication record
 
 ### Downstream Consumers
 
-- U4 host-executed Git/tracker operations
-- U5 bounded provider sessions
-- U6 tmux/worktree execution
-- U7 live event following
-- U8 installed SBP runtime
+- Mandem operational use and future Learn/report feedback
 
 ## Architecture Constraint
 
@@ -54,12 +53,12 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Concrete local transport selected by spike
-- Host/server capability ownership
-- Service installation and compatibility rules
-- Reconciliation conflict taxonomy
+- Log/metric derivation boundary
+- Dashboard information hierarchy
+- Retention/disk defaults
+- Final release promotion checklist
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:

@@ -1,48 +1,55 @@
 ---
-title: "U6: Unattended worktree delivery through Review, Learn, and merge"
-plan_kind: mandem-child-execplan
-program_unit: U6
+title: "U7: Complete AXI CLI, TOON output, OpenTUI, and worker witnessability"
+plan_kind: mandem-issue-execplan
+issue_key: U7
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 6ca36caa-37e2-447b-935e-792a6f6566b6
+depends_on_issue_ids:
+  - 11538b56-bd63-42c2-8242-87ac7a76d35d
+  - 22a35ab0-878b-448b-9341-6679b70a499d
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - cf239716-00e2-46ae-82e7-84ac8f31baaf
+  - d946e066-84d5-4651-b3b4-30a18e80008c
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U6: Unattended worktree delivery through Review, Learn, and merge
+# U7: Complete AXI CLI, TOON output, OpenTUI, and worker witnessability
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U6 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U7 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U2, U3, U4, U5
+**Depends on:** U2, U3, U4, U5, U6
 
 ### Consumes
 
-- Lifecycle and lease kernel
-- Resident tmux/Git/provider capabilities
-- Work-item, ExecPlan, queue, and gate services
-- Provider/session contracts
+- U4 primitive CLI/TOON contract
+- U3 push event transport
+- U5 phase-session actions
+- U6 worker/takeover lifecycle
 
 ### Produces
 
-- Worktree mutation ownership
-- TDD iteration and conventional-commit evidence
-- Draft PR and independent review-and-repair cycle
-- Mandatory Learn outcome
-- Exact-SHA serialized merge and post-merge verification
-- Takeover, cancellation, and cleanup behavior
+- Complete canonical command surface
+- Concise human and schema-versioned TOON renderers
+- Tmux-native OpenTUI control surface
+- Keyboard and narrow-terminal accessibility
+- Evidence that the CLI, TUI, skills, and providers support the same actions
 
 ### Downstream Consumers
 
-- U7 worker witnessability and takeover UI
-- U8 SBP command migration
-- U9 restart-proof end-to-end proof
+- U8 installed SBP operator surface
+- U9 complete operator acceptance flow
+- U10 operational dashboard navigation context
 
 ## Architecture Constraint
 
@@ -53,13 +60,12 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Iteration boundary and completion evidence
-- Review invalidation and repair permissions
-- Learn prevention mechanisms
-- Integration lease transaction
-- Post-merge failure disposition
+- Command taxonomy and progressive disclosure
+- Home-view attention hierarchy
+- Pane/window focus lifecycle
+- Terminal testing strategy
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:

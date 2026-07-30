@@ -1,8 +1,11 @@
 ---
 title: "U1: Bootstrap the standalone repository and architecture contract"
-plan_kind: mandem-child-execplan
-program_unit: U1
+plan_kind: mandem-issue-execplan
+issue_key: U1
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4
+depends_on_issue_ids: []
 promotion: complete
 execution_authorized: false
 date: 2026-07-24
@@ -10,7 +13,7 @@ date: 2026-07-24
 
 # U1: Bootstrap the Standalone Repository and Architecture Contract
 
-This child ExecPlan is a living document governed by the repository-root `PLANS.md`. Read that file in full and maintain this document in accordance with it. Keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current during execution. No implementation may begin until this revision passes clean-room review and receives exact operator approval.
+This issue ExecPlan is a living document governed by the repository-root `PLANS.md`. Read that file in full and maintain this document in accordance with it. Keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current during execution. No implementation may begin until this revision passes clean-room review and receives exact operator approval.
 
 ## Purpose / Big Picture
 
@@ -23,13 +26,13 @@ processing, and local transport belong to U3.
 
 ## Context and Orientation
 
-The program orchestrator uses `docs/plans/2026-07-21-001-feat-mandem-plan.md` to promote and
-sequence work. This child ExecPlan is the sole implementation-worker authority for U1 and embeds
+The epic orchestrator uses `docs/plans/2026-07-21-001-feat-mandem-plan.md` to promote and
+sequence work. This issue ExecPlan is the sole implementation-worker authority for U1 and embeds
 the program constraints U1 needs. U1 implements only the repository bootstrap and
 architecture-contract boundary. It must not implement lifecycle state, SQLite persistence,
-Docker runtime, provider adapters, tmux orchestration, Mandem work-item behavior, or the TUI.
+Docker runtime, provider adapters, tmux orchestration, Mandem issue behavior, or the TUI.
 
-U1 produces the architectural and repository substrate consumed by every later unit. Any later child ExecPlan that conflicts with U1's actual published interfaces must be revised and re-reviewed before promotion.
+U1 produces the architectural and repository substrate consumed by every later unit. Any later issue ExecPlan that conflicts with U1's actual published interfaces must be revised and re-reviewed before promotion.
 
 A “module” is a cohesive business capability under `src/modules/<module>/`. “Domain” is pure
 business policy and data. “Application” coordinates use cases through interfaces called ports.
@@ -56,7 +59,7 @@ so baselines and automation can compare findings across runs.
 - Master KTD1: one Bun package, two executables, clean modules.
 - Master KTD10: `git-native-issue` remains a pinned external executable behind a port.
 - Master KTD12: TDD and architecture rules are executable mechanisms.
-- Master KTD14: no engineer dispatch before this child plan is reviewed and approved.
+- Master KTD14: no engineer dispatch before this issue plan is reviewed and approved.
 
 ## Resolved Inputs
 
@@ -79,7 +82,7 @@ so baselines and automation can compare findings across runs.
   completed Mandem work must not depend on an ambient Nucleus checkout.
 - The external `git-native-issue` executable is not currently installed on the reference host. U1
   must install or otherwise make the pinned v1.3.3 executable available before its first
-  implementation commit, create the U1 work item, and record this child-plan path in that ledger.
+  implementation commit, create the U1 issue, and record this issue plan path in that ledger.
 
 ## Architecture Source Precedence
 
@@ -204,7 +207,7 @@ owner.
 
 ### D8. Planning artifacts are first-class repository content
 
-The program ExecPlan, child registry, all U1-U10 scaffolds, and `PLANS.md` are committed in the initial repository history. No worker is dispatched from a scaffold.
+The epic ExecPlan, child registry, all U1-U10 scaffolds, and `PLANS.md` are committed in the initial repository history. No worker is dispatched from a scaffold.
 
 ## Files
 
@@ -230,17 +233,17 @@ The program ExecPlan, child registry, all U1-U10 scaffolds, and `PLANS.md` are c
 - `docs/sources/doctrine-source-manifest.yaml`
 - `docs/operations/provider-capability-baseline.md`
 - `docs/plans/2026-07-21-001-feat-mandem-plan.md`
-- `docs/plans/units/README.md`
-- `docs/plans/units/u1-bootstrap-repository-architecture-contract.md`
-- `docs/plans/units/u2-protocol-lifecycle-sqlite.md`
-- `docs/plans/units/u3-server-docker-resident-reconciliation.md`
-- `docs/plans/units/u4-work-items-plans-queue-gates-cli.md`
-- `docs/plans/units/u5-operating-docs-provider-sessions.md`
-- `docs/plans/units/u6-unattended-work-review-learn-merge.md`
-- `docs/plans/units/u7-complete-cli-toon-opentui.md`
-- `docs/plans/units/u8-sbp-install-architecture-baseline.md`
-- `docs/plans/units/u9-restart-proof-sbp-release-candidate.md`
-- `docs/plans/units/u10-observability-final-v1.md`
+- `docs/plans/issues/README.md`
+- `docs/plans/issues/u1-bootstrap-repository-architecture-contract.md`
+- `docs/plans/issues/u2-protocol-lifecycle-sqlite.md`
+- `docs/plans/issues/u3-server-docker-resident-reconciliation.md`
+- `docs/plans/issues/u4-issues-plans-queue-gates-cli.md`
+- `docs/plans/issues/u5-operating-docs-provider-sessions.md`
+- `docs/plans/issues/u6-unattended-work-review-learn-merge.md`
+- `docs/plans/issues/u7-complete-cli-toon-opentui.md`
+- `docs/plans/issues/u8-sbp-install-architecture-baseline.md`
+- `docs/plans/issues/u9-restart-proof-sbp-release-candidate.md`
+- `docs/plans/issues/u10-observability-final-v1.md`
 - `assets/architecture-standard/v1/**`
 - `src/cli/main.ts`
 - `src/server/main.ts`
@@ -262,7 +265,7 @@ empty remote has no base branch for a pull request. It contains project-local Co
 `PLANS.md`, the master ExecPlan, the child registry, and all ten scaffolds, with execution still
 unauthorized. Before the first implementation commit, make the pinned external
 `git-native-issue` v1.3.3 executable available, create U1's project-local issue, and record this
-canonical child-plan path plus the approved revision. A fresh session must be able to reconstruct
+canonical issue plan path plus the approved revision. A fresh session must be able to reconstruct
 why U1 is authorized without chat. Every U1 implementation change then uses a worktree branch and
 pull request; no implementation is pushed directly to `main`.
 
@@ -337,7 +340,7 @@ the pinned external work ledger:
     sed -n '1,240p' AGENTS.md
     sed -n '1,260p' CLAUDE.md
     sed -n '1,240p' PLANS.md
-    sed -n '1,$p' docs/plans/units/u1-bootstrap-repository-architecture-contract.md
+    sed -n '1,$p' docs/plans/issues/u1-bootstrap-repository-architecture-contract.md
     git issue version
 
 If the last command does not report version 1.3.3, use a temporary directory outside the
@@ -353,12 +356,12 @@ stop before implementation.
     export PATH="$HOME/.local/bin:$PATH"
     git issue version
 
-Create the U1 work item and initialize its durable issue chain before the first implementation
+Create the U1 issue and initialize its durable issue chain before the first implementation
 commit:
 
     git issue init origin
     git issue create "feat: bootstrap Mandem repository and architecture contract" \
-      -m "Canonical ExecPlan: docs/plans/units/u1-bootstrap-repository-architecture-contract.md" \
+      -m "Canonical ExecPlan: docs/plans/issues/u1-bootstrap-repository-architecture-contract.md" \
       -l feat -l mandem -p high
     git issue ls --format full
     git issue fsck
@@ -443,7 +446,7 @@ Hash Mandem's own approved decision inputs from the repository checkout:
 
     sha256sum \
       docs/plans/2026-07-21-001-feat-mandem-plan.md \
-      docs/plans/units/u1-bootstrap-repository-architecture-contract.md
+      docs/plans/issues/u1-bootstrap-repository-architecture-contract.md
 
 In
 `docs/sources/doctrine-source-manifest.yaml`, record the Nucleus repository URL, full commit,
@@ -581,11 +584,11 @@ Every verification record must name the commit SHA under test. The worker report
 - Dependency installation failure leaves source unchanged and is retriable.
 - Architecture checker parse/read failures are typed violations or explicit tool failures; they never silently pass.
 - Re-running `git issue init`, focused tests, architecture analysis, and repository checks must not
-  duplicate the U1 work item or mutate accepted results. If issue initialization already exists,
+  duplicate the U1 issue or mutate accepted results. If issue initialization already exists,
   inspect and reuse it.
 - A failed milestone keeps the branch and worktree intact. No cleanup occurs before PR merge, verification, and durable closure.
 - If a planning assumption conflicts with actual package, Bun, TypeScript, or Git behavior, stop
-  implementation, update this child ExecPlan, re-run clean-room review, and obtain approval for the
+  implementation, update this issue ExecPlan, re-run clean-room review, and obtain approval for the
   changed revision.
 
 ## Interfaces and Dependencies
@@ -628,7 +631,7 @@ U1 closes with:
 - consumer integration contract ready for U8 without copying consumer source;
 - verification evidence tied to the merged U1 SHA.
 
-U2 must revalidate its scaffold against these real outputs before its child plan is promoted.
+U2 must revalidate its scaffold against these real outputs before its issue plan is promoted.
 
 ## Artifacts and Notes
 
@@ -645,9 +648,9 @@ the Decision Log and re-reviewed.
 
 ## Definition of Done
 
-- Planning-only initial history exists and this exact child plan is the approved execution authority.
+- Planning-only initial history exists and this exact issue plan is the approved execution authority.
 - Mandem is a public MIT-licensed Bun repository with no npm/package-name collision.
-- The repository contains the master plan and linked U1-U10 child-plan registry.
+- The repository contains the master plan and linked U1-U10 issue plan registry.
 - `architecture-standard` and `runtime` are self-conforming clean-architecture modules.
 - The deterministic checker rejects every enumerated malformed fixture and accepts Mandem itself.
 - Both executables build and bounded U1 version/help behavior works.
@@ -657,13 +660,13 @@ the Decision Log and re-reviewed.
 
 ## Progress
 
-- [x] (2026-07-24) Master program ExecPlan reviewed and merged in Strategy Builder Pro.
+- [x] (2026-07-24) Master epic ExecPlan reviewed and merged in Strategy Builder Pro.
 - [x] (2026-07-24) Public `BrandonJF/mandem` repository created.
 - [x] (2026-07-24) Package/repository coordinate and git-native-issue license boundary resolved.
 - [x] (2026-07-24) Premature unreviewed implementation quarantined outside the repository.
-- [x] (2026-07-24) U1-U10 child-plan registry scaffolded.
+- [x] (2026-07-24) U1-U10 issue plan registry scaffolded.
 - [x] (2026-07-24) Installed the Nucleus `PLANS.md` contract and durable Codex/Claude discovery instructions.
-- [x] (2026-07-24) Rewrote this child ExecPlan to satisfy the `PLANS.md` section and self-containment contract.
+- [x] (2026-07-24) Rewrote this issue ExecPlan to satisfy the `PLANS.md` section and self-containment contract.
 - [x] (2026-07-24) Repaired the clean-room verification findings: executable authorization
   transition, meaningful TDD red seam, complete rule catalog, reproducible doctrine acquisition,
   provider probe matrix, checker exit contract, Bun pin, and U8 consumer handoff.
@@ -692,7 +695,7 @@ the Decision Log and re-reviewed.
   `88b9533ab840c9d357a1d09d2341709e2cbdd986`, reran the full check/build/entrypoint/fsck contract
   on merged `main`, and closed issue `da645bd`.
 - [x] (2026-07-27) Post-merge verification found package and architecture checker silent-pass gaps.
-  U1C owns the correction at `docs/plans/units/u1-corrective-architecture-package-contract.md`.
+  U1C owns the correction at `docs/plans/issues/u1-architecture-package-contract.md`.
   U1 remains historically complete; corrected completion requires U1C to merge and pass its
   post-merge verification.
 
@@ -700,7 +703,7 @@ the Decision Log and re-reviewed.
 
 - Observation: Post-merge verification found that clean package archives omitted both declared
   executables and that several architecture rules had bypasses.
-  Evidence: Work item `5717221b-f9e6-4c8f-abca-77a1ad3811bf` and U1C's red contract tests.
+  Evidence: issue `5717221b-f9e6-4c8f-abca-77a1ad3811bf` and U1C's red contract tests.
   Response: Created U1C as a separately approved corrective plan; do not claim the corrected
   package and checker behavior until U1C merges.
 
@@ -712,13 +715,13 @@ the Decision Log and re-reviewed.
   Evidence: The standalone repository initially triggered separate filesystem approvals.
   Response: Commit project-local Codex permissions and Terra worker defaults as part of planning authority.
 
-- Observation: The first U1 child-plan draft was created without first reading the canonical Nucleus `PLANS.md`.
+- Observation: The first U1 issue plan draft was created without first reading the canonical Nucleus `PLANS.md`.
   Evidence: The draft omitted the required `PLANS.md` reference, several skeleton sections, and the bottom revision note.
   Response: Installed the verbatim contract, added durable discovery instructions, and blocked clean-room promotion until the draft is rewritten against it.
 
 - Observation: Clean-room review of the master exposed duplicate Docker ownership and a missing
   R6 bootstrap ledger path.
-  Evidence: U1 and U3 both named Docker/Compose files, while Mandem's own work-item adapter does not
+  Evidence: U1 and U3 both named Docker/Compose files, while Mandem's own issue adapter does not
   arrive until U4.
   Response: Moved all Docker/runtime behavior to U3 and made U1 use the pinned external
   `git-native-issue` executable before its first implementation commit.
@@ -745,7 +748,7 @@ the Decision Log and re-reviewed.
   authorization, implementation, and verification required for the correction.
   Date/Author: 2026-07-27 / Brandon and Codex
 
-- Decision: Treat the master plan as a program ExecPlan and U1-U10 as child-plan boundaries.
+- Decision: Treat the master plan as a epic ExecPlan and U1-U10 as issue plan boundaries.
   Rationale: Cross-program dependency reasoning and implementation-level self-containment are different planning altitudes.
   Date/Author: 2026-07-24 / Brandon and Codex
 
@@ -761,7 +764,7 @@ the Decision Log and re-reviewed.
   Rationale: The governing format must be durable and discoverable by a stateless agent before it authors, reviews, discusses, or executes a plan.
   Date/Author: 2026-07-24 / Brandon and Codex
 
-- Decision: Make this child ExecPlan the sole U1 implementation authority.
+- Decision: Make this issue ExecPlan the sole U1 implementation authority.
   Rationale: The program master sequences work, but a worker must receive one bounded,
   self-contained contract without reconciling two authorities.
   Date/Author: 2026-07-24 / Codex after clean-room master review
@@ -860,5 +863,5 @@ preserving the exact historical approval and delivery evidence.
 
 Corrective revision note (2026-07-27): Post-merge verification found package and checker
 silent-pass gaps. U1C owns the correction at
-`docs/plans/units/u1-corrective-architecture-package-contract.md`; this plan does not claim
+`docs/plans/issues/u1-architecture-package-contract.md`; this plan does not claim
 corrected completion until U1C merges and its post-merge verification passes.

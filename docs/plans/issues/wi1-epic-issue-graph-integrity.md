@@ -146,7 +146,7 @@ U1A must merge first because it changes the canonical check sequence, documentat
 
 ### Context and Orientation
 
-The epic plan is `docs/plans/2026-07-21-001-feat-mandem-plan.md`. Its issue ExecPlans live below `docs/plans/units/`, and `docs/plans/units/README.md` records their sequence. The authoritative issue ledger is stored in Git refs managed by `git-native-issue`; contributors use `git issue show`, `git issue merge`, `git issue sync`, and `git issue fsck` to inspect and exchange it.
+The epic plan is `docs/plans/2026-07-21-001-feat-mandem-plan.md`. Its issue ExecPlans live below `docs/plans/issues/`, and `docs/plans/issues/README.md` records their sequence. The authoritative issue ledger is stored in Git refs managed by `git-native-issue`; contributors use `git issue show`, `git issue merge`, `git issue sync`, and `git issue fsck` to inspect and exchange it.
 
 On 2026-07-28, the epic was projected to GitHub `#29`, its subissues to issues `#21` through `#32`, and the current hierarchy was applied with GitHub's subissue API. The milestone and selected labels were also applied directly because the installed bridge did not update those fields on existing issues. These numbers are historical evidence only. The implementation must discover current numbers from provider records attached to each full git-native UUID.
 
@@ -175,7 +175,7 @@ The native setter accepts YAML without the comment marker. A subissue with an Ex
 
     issue_key: "U2"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
-    plan: "docs/plans/units/u2-protocol-lifecycle-sqlite.md"
+    plan: "docs/plans/issues/u2-protocol-lifecycle-sqlite.md"
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids:
       - "6a6a8bab-853f-4658-9bc0-38e2386b642d"
@@ -298,20 +298,20 @@ duplicates neither field. The epic comment additionally contains the nested `pro
 `milestone`, and complete `managed_labels` objects from the canonical epic payload above.
 
       - { issue_key: EPIC, issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/2026-07-21-001-feat-mandem-plan.md, parent_issue_id: null, depends_on_issue_ids: [], state: open, labels: [in-progress] }
-      - { issue_key: U1, issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1-bootstrap-repository-architecture-contract.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [], state: closed, labels: [] }
-      - { issue_key: U1C, issue_id: 5717221b-f9e6-4c8f-abca-77a1ad3811bf, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1-corrective-architecture-package-contract.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4], state: closed, labels: [u1c] }
-      - { issue_key: U1A, issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u1a-documentation-authoring-quality-gates.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [5717221b-f9e6-4c8f-abca-77a1ad3811bf], state: closed, labels: [u1a] }
+      - { issue_key: U1, issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u1-bootstrap-repository-architecture-contract.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [], state: closed, labels: [] }
+      - { issue_key: U1C, issue_id: 5717221b-f9e6-4c8f-abca-77a1ad3811bf, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u1-architecture-package-contract.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4], state: closed, labels: [u1c] }
+      - { issue_key: U1A, issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u1a-documentation-authoring-quality-gates.md, parent_issue_id: da645bd0-9899-40b3-9f23-3b48d65362a4, depends_on_issue_ids: [5717221b-f9e6-4c8f-abca-77a1ad3811bf], state: closed, labels: [u1a] }
       - { issue_key: U1A-INCIDENT-1, issue_id: 38f956c8-0f18-4d85-af1a-d908bcc54248, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: null, parent_issue_id: 745eda80-1e74-4866-bc95-2f2983b31025, depends_on_issue_ids: [], state: closed, labels: [incident] }
-      - { issue_key: WI1, issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/wi1-epic-issue-graph-integrity.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [745eda80-1e74-4866-bc95-2f2983b31025], state: open, labels: [blocked] }
-      - { issue_key: U2, issue_id: cb67d131-975c-4d97-9a6f-4934be991ac6, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u2-protocol-lifecycle-sqlite.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, 745eda80-1e74-4866-bc95-2f2983b31025, 6a6a8bab-853f-4658-9bc0-38e2386b642d], state: open, labels: [blocked, u2] }
-      - { issue_key: U3, issue_id: d946e066-84d5-4651-b3b4-30a18e80008c, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u3-server-docker-resident-reconciliation.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6], state: open, labels: [blocked, u3] }
-      - { issue_key: U4, issue_id: 11538b56-bd63-42c2-8242-87ac7a76d35d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u4-work-items-plans-queue-gates-cli.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c], state: open, labels: [blocked, u4] }
-      - { issue_key: U5, issue_id: cf239716-00e2-46ae-82e7-84ac8f31baaf, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u5-operating-docs-provider-sessions.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d], state: open, labels: [blocked, u5] }
-      - { issue_key: U6, issue_id: 22a35ab0-878b-448b-9341-6679b70a499d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u6-unattended-work-review-learn-merge.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf], state: open, labels: [blocked, u6] }
-      - { issue_key: U7, issue_id: 6ca36caa-37e2-447b-935e-792a6f6566b6, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u7-complete-cli-toon-opentui.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d], state: open, labels: [blocked, u7] }
-      - { issue_key: U8, issue_id: 9e6cde19-27d2-4228-8a93-628829ae1b92, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u8-sbp-install-architecture-baseline.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d, 6ca36caa-37e2-447b-935e-792a6f6566b6], state: open, labels: [blocked, u8] }
-      - { issue_key: U9, issue_id: 7351af1b-d406-4768-bbf9-21f878aad28a, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u9-restart-proof-sbp-release-candidate.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d, 6ca36caa-37e2-447b-935e-792a6f6566b6, 9e6cde19-27d2-4228-8a93-628829ae1b92], state: open, labels: [blocked, u9] }
-      - { issue_key: U10, issue_id: 237397e3-cf06-4c6f-bf5d-ce83d8187ee3, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/units/u10-observability-final-v1.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [7351af1b-d406-4768-bbf9-21f878aad28a], state: open, labels: [blocked, u10] }
+      - { issue_key: WI1, issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/wi1-epic-issue-graph-integrity.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [745eda80-1e74-4866-bc95-2f2983b31025], state: open, labels: [blocked] }
+      - { issue_key: U2, issue_id: cb67d131-975c-4d97-9a6f-4934be991ac6, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u2-protocol-lifecycle-sqlite.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, 745eda80-1e74-4866-bc95-2f2983b31025, 6a6a8bab-853f-4658-9bc0-38e2386b642d], state: open, labels: [blocked, u2] }
+      - { issue_key: U3, issue_id: d946e066-84d5-4651-b3b4-30a18e80008c, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u3-server-docker-resident-reconciliation.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6], state: open, labels: [blocked, u3] }
+      - { issue_key: U4, issue_id: 11538b56-bd63-42c2-8242-87ac7a76d35d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u4-issues-plans-queue-gates-cli.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c], state: open, labels: [blocked, u4] }
+      - { issue_key: U5, issue_id: cf239716-00e2-46ae-82e7-84ac8f31baaf, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u5-operating-docs-provider-sessions.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d], state: open, labels: [blocked, u5] }
+      - { issue_key: U6, issue_id: 22a35ab0-878b-448b-9341-6679b70a499d, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u6-unattended-work-review-learn-merge.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf], state: open, labels: [blocked, u6] }
+      - { issue_key: U7, issue_id: 6ca36caa-37e2-447b-935e-792a6f6566b6, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u7-complete-cli-toon-opentui.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d], state: open, labels: [blocked, u7] }
+      - { issue_key: U8, issue_id: 9e6cde19-27d2-4228-8a93-628829ae1b92, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u8-sbp-install-architecture-baseline.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d, 6ca36caa-37e2-447b-935e-792a6f6566b6], state: open, labels: [blocked, u8] }
+      - { issue_key: U9, issue_id: 7351af1b-d406-4768-bbf9-21f878aad28a, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u9-restart-proof-sbp-release-candidate.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [da645bd0-9899-40b3-9f23-3b48d65362a4, cb67d131-975c-4d97-9a6f-4934be991ac6, d946e066-84d5-4651-b3b4-30a18e80008c, 11538b56-bd63-42c2-8242-87ac7a76d35d, cf239716-00e2-46ae-82e7-84ac8f31baaf, 22a35ab0-878b-448b-9341-6679b70a499d, 6ca36caa-37e2-447b-935e-792a6f6566b6, 9e6cde19-27d2-4228-8a93-628829ae1b92], state: open, labels: [blocked, u9] }
+      - { issue_key: U10, issue_id: 237397e3-cf06-4c6f-bf5d-ce83d8187ee3, epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, plan: docs/plans/issues/u10-observability-final-v1.md, parent_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253, depends_on_issue_ids: [7351af1b-d406-4768-bbf9-21f878aad28a], state: open, labels: [blocked, u10] }
 
 The epic issue's `managed_labels` field defines these exact reviewed values. Colors omit the leading `#`; an empty quoted string is intentional.
 
@@ -471,15 +471,24 @@ writes.
   ancestry state machine in `Idempotence and Recovery` with exact force-with-lease expectations; it
   never appends on a stale head. Use it to apply the reviewed native metadata set above, then
   normalize plan frontmatter and the complete repository-owned prose corpus named above. Rename
+<!-- vocabulary-check: allow-next-line reason="Names an obsolete path that this migration must replace." -->
   `docs/plans/units/` to `docs/plans/issues/`, rename files containing `work-item` or `corrective`
   when those words classify hierarchy, and update all links and native plan paths.
 
+<!-- vocabulary-check: allow-next-line reason="Documents the checker’s exact prohibited literal list." -->
   The vocabulary checker rejects the phrases `program ExecPlan`, `program issue`, `program graph`, `program plan`, `program orchestrator`, `program membership`, `work item`, `work-item`, `child ExecPlan`, `child plan`, `child scaffold`, `child issue`, `child item`, `corrective item`, `corrective work`, `support item`, `support issue`, and `support incident`, plus `unit` when it modifies issue, plan, scaffold, hierarchy, or key. Matching is case-insensitive and includes inline code and fenced code. This finite list automates common violations; authors and reviewers still enforce the operating contract's general prohibition on using any synonym as a substitute.
 
-  An exceptional physical line must be preceded immediately by `<!-- vocabulary-check: allow-next-line reason="TEXT" -->`. `TEXT` must contain at least ten non-whitespace characters. The directive applies to exactly the next physical line, including a line inside a code fence, and never to a blank line or another directive. Directives cannot nest. The checker rejects a malformed directive, a blank or directive target, an unused directive whose target has no vocabulary finding, and a second directive before the first has been consumed. This mechanism permits a precise historical quotation or official external term without suppressing a paragraph, file, or pattern. The checker does not support file-wide, block, glob, or configuration-file exclusions.
+  An exceptional physical line must be preceded immediately by the required one-line exemption
+  comment with a non-empty reason. The directive applies to exactly the next physical line,
+  including a line inside a code fence, and never to a blank line or another directive. Directives
+  cannot nest. The checker rejects a malformed directive, a blank or directive target, an unused
+  directive whose target has no vocabulary finding, and a second directive before the first has
+  been consumed. This mechanism permits a precise historical quotation or official external term
+  without suppressing a paragraph, file, or pattern. The checker does not support file-wide,
+  block, glob, or configuration-file exclusions.
 
   Add `vocabulary:check` and `issue-graph:check` before typecheck in the repository `check` sequence. Before the CI gate, add `git fetch origin '+refs/issues/*:refs/issues/*'` to `.github/workflows/repository-quality.yml`; the quoted refspec prevents shell glob expansion.
-- **Test scenarios:** Begin with a failing disposable-repository test that creates plan files and issue refs, then proves success, malformed-plan failure, missing-issue failure, and deterministic output. Add vocabulary fixtures for every rejected phrase, case variants, inline and fenced code, sorted findings, and renamed-path discovery. Test a valid one-line exception, missing and short reasons, a blank target, a directive target, an unused directive, adjacent or nested directives, and proof that the following line is checked normally. Verify the setter preview performs no commit or push; first apply appends and pushes one ref; a local-behind remote ref fails without append; divergent refs fail without append; a merged metadata conflict appends one resolving canonical comment even when one conflicting payload matches the request; retry after a lost push performs zero commits and one push only when the remote-to-local range is exactly the expected metadata commit; an extra unpushed comment causes zero pushes and an operator-review error; and the next repeated apply performs zero commits and zero pushes. Verify `bun run vocabulary:check` and `bun run issue-graph:check` do not invoke `gh`, fetch, merge, sync, or push. Verify the CI workflow fetches issue refs before `bun run check` and the current repository passes.
+- **Test scenarios:** Begin with a failing disposable-repository test that creates plan files and issue refs, then proves success, malformed-plan failure, missing-issue failure, and deterministic output. Add vocabulary fixtures for every rejected phrase, case variants, inline and fenced code, sorted findings, and renamed-path discovery. Test a valid one-line exception, missing and short reasons, a blank target, a directive target, an unused directive, adjacent or nested directives, and proof that the following line is checked normally. Verify the setter preview performs no commit or push; first apply appends and pushes one ref; a local-behind remote ref fails without append; divergent refs fail without append; a merged metadata conflict appends one resolving canonical comment even when one conflicting payload matches the request; retry after a lost push performs zero commits and one push only when the remote-to-local range is exactly the expected metadata commit; an extra unpushed comment causes zero pushes and an operator-review error; and the next repeated apply performs zero commits and zero pushes. Verify the vocabulary and graph checks do not invoke `gh`, fetch, merge, sync, or push. Verify the CI workflow fetches issue refs before `bun run check` and the current repository passes.
 - **Verification:** Run `bun run issue-graph:check` twice and compare output. Run `bun run check` without GitHub credentials and expect success.
 
 ### Step 4. Plan GitHub reconciliation without mutation
@@ -506,7 +515,7 @@ writes.
 ### Step 6. Document the contract and integrate final verification
 
 - **Goal:** Make the workflow discoverable and prove the complete repository remains conformant.
-- **Files:** Update `README.md`, `docs/plans/README.md`, `docs/plans/units/README.md`, `scripts/README.md`, and `src/modules/architecture-standard/README.md` as required by the merged U1A indexing policy.
+- **Files:** Update `README.md`, `docs/plans/README.md`, `docs/plans/issues/README.md`, `scripts/README.md`, and `src/modules/architecture-standard/README.md` as required by the merged U1A indexing policy.
 - **Approach:** Explain when contributors create an issue, where full UUIDs appear, how local check differs from remote check, what apply owns, and how to recover from interruption. Include one example that uses UUIDs and no GitHub issue number.
 - **Test scenarios:** U1A documentation checks must discover every new file and link. Command help tests must distinguish offline check, remote preview, and explicit apply.
 - **Verification:** Run the full verification contract and inspect `git diff --check`.
@@ -730,10 +739,17 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   authoring, revision, ruleset, and conversation-approval contracts into this planning branch.
   Reset the earlier authorization because it predates canonical `Mandem-Approval: v1` evidence and
   does not cover guarded native-graph or projection writes.
-- [ ] Obtain operator approval of the exact reviewed revision.
-- [ ] Change only authorization metadata to `promotion: executable` and `execution_authorized: true`.
-- [ ] Create an isolated implementation worktree from the merged planning authority and complete
-  Steps 1-6 in order.
+- [x] (2026-07-30 14:45Z) Recorded exact operator approval for plan commit
+  `81d91b4608ddffbb4d4fbe2de1d22ca1f394a7cd` and plan digest
+  `4585680643841ee453904bf378a55f2008fceb9c7ce540ee37be5fc259df0aca`.
+- [x] (2026-07-30 14:48Z) Promoted the plan, merged planning PR #33 at
+  `645f32287b96d0fe22086e8a16deb7d64071bc04`, and created the isolated
+  `feat/wi1-issue-graph-integrity` worktree.
+- [x] (2026-07-30 15:34Z) Implemented the versioned graph parser, validator, raw native-issue
+  adapter, guarded native writer, approval verifier, vocabulary checker, and focused tests.
+- [ ] Complete Steps 1-6 in order (completed: local contract, guarded native writer, vocabulary
+  and plan migration, 102-test local suite; remaining: approved live native metadata apply,
+  GitHub operation planning and adapter, remote reconciliation, documentation, and final review).
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
@@ -744,6 +760,9 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   Evidence: The documented CLI command set and local help contain issue CRUD, merge, sync, and provider mappings, but no structured parent or dependency mutation command.
 - Observation: Current issue ExecPlan identity metadata is incomplete or abbreviated.
   Evidence: U1A contains `issue_id: 745eda8`, while multiple U2-U10 scaffolds contain no `issue_id`.
+- Observation: The offline graph check correctly fails before the native migration is applied.
+  Evidence: `bun run issue-graph:check` reports only `IGRAPH-EPIC` while the existing issue refs
+  contain no version 1 graph metadata.
 
 ## Decision Log
 
@@ -762,10 +781,18 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 - Decision: Use epic, issue, and subissue as the only hierarchy terms.
   Rationale: A subissue describes parentage only. Labels such as bug and incident classify issues independently, which avoids duplicate names and overloaded hierarchy meanings.
   Date/Author: 2026-07-28 / Codex
+- Decision: Check in one complete desired-state YAML file for the guarded native migration.
+  Rationale: The native refs remain authoritative after apply. The file makes the proposed
+  multi-ref transaction reviewable, hashable, repeatable, and safe to retry without making GitHub
+  or plan prose authoritative.
+  Date/Author: 2026-07-30 / Codex
 
 ## Outcomes & Retrospective
 
-Planning is being revised and is not authorized. No implementation or provider mutation is authorized by this revision.
+The exact plan is authorized and implementation is in progress. The local graph contract,
+guarded native writer, vocabulary migration, and 102-test suite are complete. The native refs have
+not been changed yet because the guarded write requires separate approval of the final graph
+digest, exact issue-ref baseline, and implementation commit. GitHub has not been changed.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -773,4 +800,8 @@ Revision note (2026-07-28): Repaired first-pass clean-room findings. The reconci
 
 Revision note (2026-07-28): Clarified authority after operator feedback. Versioned comments in native issue refs now own the graph and provider policy; plan frontmatter is a checked cross-reference, and GitHub is only a projection. Removed the hand-edited manifest design, added deterministic conflict handling for concurrent metadata comments, covered state and unmanaged-subissue planning, and corrected GitHub's singular subissue removal endpoint.
 
-Revision note (2026-07-28): Standardized the model on epic, issue, and subissue. Removed hierarchy kinds and the program, work-item, unit, child-item, support-item, and corrective-item synonyms. Classifications such as bug and incident are independent labels.
+Revision note (2026-07-28): Standardized the model on epic, issue, and subissue. Removed hierarchy kinds and the program, issue, unit, child-item, support-item, and corrective-item synonyms. Classifications such as bug and incident are independent labels.
+
+Revision note (2026-07-30): Recorded approved execution and implementation progress. Added the
+checked-in desired-state graph transaction because it provides the stable input required for exact
+approval and idempotent multi-ref application while native issue refs remain authoritative.

@@ -1,47 +1,53 @@
 ---
-title: "U5: Operating docs and bounded Claude/Codex sessions"
-plan_kind: mandem-child-execplan
-program_unit: U5
+title: "U3: Server, Docker lifecycle, resident host mode, and reconciliation"
+plan_kind: mandem-issue-execplan
+issue_key: U3
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: d946e066-84d5-4651-b3b4-30a18e80008c
+depends_on_issue_ids:
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U5: Operating docs and bounded Claude/Codex sessions
+# U3: Server, Docker lifecycle, resident host mode, and reconciliation
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U5 child ExecPlan that incorporates every applicable
+Expand this scaffold into a self-contained U3 issue ExecPlan that incorporates every applicable
 master-program constraint. Use the master program to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U3, U4
+**Depends on:** U2
 
 ### Consumes
 
-- U4 canonical CLI and plan/work-item primitives
-- U3 resident host process execution
-- Approved child ExecPlan containing the applicable master-program contracts
+- U2 protocol and lifecycle kernel
+- U2 persistence ports and checkpoint schema
+- U1 executable/container composition roots
 
 ### Produces
 
-- Composable operating-doc compiler
-- Deterministic AGENTS.md and CLAUDE.md adapters
-- Claude and Codex capability adapters
-- Typed contracts for launching and handing off phase sessions
-- Evidence of provider conformance and prompt provenance
+- Project-scoped server runtime
+- Local push transport selected from spike evidence
+- Resident host capability protocol
+- Docker and Linux service lifecycle
+- Version handshake and reconciliation engine
+- Evidence that restart and interrupt integration works
 
 ### Downstream Consumers
 
-- U6 worker/reviewer/Learn sessions
-- U7 agent-surface parity
-- U8 SBP generated instructions
-- U9 live provider matrix
+- U4 host-executed Git/tracker operations
+- U5 bounded provider sessions
+- U6 tmux/worktree execution
+- U7 live event following
+- U8 installed SBP runtime
 
 ## Architecture Constraint
 
@@ -52,12 +58,12 @@ by the unit.
 
 ## Decisions Required Before Promotion
 
-- Prompt composition metadata and budgets
-- Provider capability/fallback matrix
-- Remote-control exposure
-- Session interruption and accepted-handoff semantics
+- Concrete local transport selected by spike
+- Host/server capability ownership
+- Service installation and compatibility rules
+- Reconciliation conflict taxonomy
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:
