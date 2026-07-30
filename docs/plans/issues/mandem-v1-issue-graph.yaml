@@ -31,7 +31,7 @@ issues:
     parent_issue_id: "745eda80-1e74-4866-bc95-2f2983b31025"
     depends_on_issue_ids: []
     expected_native_state: "closed"
-    expected_native_labels: ["incident"]
+    expected_native_labels: ["incident", "u1a"]
   - issue_id: "5717221b-f9e6-4c8f-abca-77a1ad3811bf"
     issue_key: "U1C"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"

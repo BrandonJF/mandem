@@ -763,6 +763,10 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 - Observation: The offline graph check correctly fails before the native migration is applied.
   Evidence: `bun run issue-graph:check` reports only `IGRAPH-EPIC` while the existing issue refs
   contain no version 1 graph metadata.
+- Observation: The incident issue retains both its classification label and its parent issue label.
+  Evidence: The first guarded native apply performed zero writes and reported
+  `native issue state or managed labels changed: 38f956c8-0f18-4d85-af1a-d908bcc54248`;
+  a complete managed-label comparison found expected `incident` and actual `incident,u1a`.
 
 ## Decision Log
 
@@ -790,9 +794,10 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 ## Outcomes & Retrospective
 
 The exact plan is authorized and implementation is in progress. The local graph contract,
-guarded native writer, vocabulary migration, and 102-test suite are complete. The native refs have
-not been changed yet because the guarded write requires separate approval of the final graph
-digest, exact issue-ref baseline, and implementation commit. GitHub has not been changed.
+guarded native writer, vocabulary migration, and 102-test suite are complete. The first approved
+native apply performed zero metadata writes because the incident issue also carries the managed
+`u1a` label. The desired graph now preserves both labels and requires a new exact approval because
+its digest and WI1 baseline changed. GitHub has not been changed.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -805,3 +810,6 @@ Revision note (2026-07-28): Standardized the model on epic, issue, and subissue.
 Revision note (2026-07-30): Recorded approved execution and implementation progress. Added the
 checked-in desired-state graph transaction because it provides the stable input required for exact
 approval and idempotent multi-ref application while native issue refs remain authoritative.
+
+Revision note (2026-07-30): Corrected the incident issue's expected managed labels after the
+guarded pre-write check proved that its native record contains both `incident` and `u1a`.
