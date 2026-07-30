@@ -30,8 +30,29 @@ request, and commits. Keep the issue's phase, blocker, verified result, and next
 through meaningful transitions.
 
 Use git-native issues for live work status, ExecPlans for complete implementation instructions,
-Git for code state, and GitHub for pull-request state. Do not infer the next work item from the plan
+Git for code state, and GitHub for pull-request state. Do not infer the next issue from the plan
 registry or pull-request list without reconciling it with the open issues.
+
+## Canonical issue vocabulary
+
+Use one term for each issue concept. Do not introduce synonyms for variety.
+
+- An `epic` is a top-level parent issue that coordinates a larger product or engineering outcome.
+- An `issue` is every tracked record, including an epic.
+- A `subissue` is an issue that has a parent issue. This term describes hierarchy only.
+- Bug, feature, incident, chore, and similar terms classify an issue. They do not define another
+  hierarchy level and do not change whether the record is an issue or subissue.
+- An `ExecPlan` is the implementation specification associated with an issue when the work requires
+  one.
+- A `milestone` groups issues toward a release or dated outcome. It is not a parent issue.
+
+Do not use `program`, `work item`, `unit`, `child item`, or `corrective item` as substitutes for
+epic, issue, or subissue. Use `parent issue` and `subissue` when describing a relationship. Preserve
+an external system's official term only when describing that system, and state the mapping to
+Mandem's vocabulary once.
+
+Hierarchy and classification are independent. For example, a bug with a parent is a subissue whose
+classification is bug; it is not a special kind of subissue.
 
 ## Planning and execution
 
@@ -41,13 +62,13 @@ The repository-root [`PLANS.md`](../PLANS.md) governs every ExecPlan.
 Immediately before authoring, discussing, reviewing, or executing an ExecPlan, read the complete
 `PLANS.md` and follow it to the letter.
 
-The program ExecPlan provides shared direction. It is not an implementation prompt. Every worker
-must receive the complete approved child ExecPlan for its unit and keep that plan's living sections
-current throughout execution.
+The epic ExecPlan provides shared direction. It is not an implementation prompt. Every worker must
+receive the complete approved ExecPlan for its issue and keep that plan's living sections current
+throughout execution.
 
-Implementation requires a self-contained child ExecPlan that has passed clean-room review, received
+Implementation requires a self-contained issue ExecPlan that has passed clean-room review, received
 exact operator approval, and has `execution_authorized: true`. Do not infer permission from a
-scaffold, program unit, chat summary, issue, or partial plan.
+scaffold, epic summary, chat summary, issue, or partial plan.
 
 Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
 conversation. Before requesting it, state one consent-boundary action and its immutable target:

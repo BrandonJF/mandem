@@ -37,7 +37,7 @@ the surrounding prose.
 
 ## Agency and grammatical subjects
 
-- Make the grammatical subject the person or program performing the action.
+- Make the grammatical subject the person or process performing the action.
 - Do not assign human agency to code, files, plans, issues, pull requests, checks, or phases.
 - Guidance can instruct; it does not enforce, ensure, check, guarantee, or prevent behavior.
 - Use the active voice when the actor matters: “I changed the parser.”
@@ -66,6 +66,10 @@ the surrounding prose.
 
 - Prefer common words unless a technical term is more precise.
 - Define necessary project terms on first use.
+- Use the repository's canonical term for a concept. Do not alternate synonyms for variety, pair
+  equivalent terms with “or,” or give a structural relationship a second semantic meaning.
+- Keep hierarchy separate from classification. A parent issue or subissue relationship does not
+  imply why the issue exists or what classification it has.
 - Keep internal state-machine and schema vocabulary out of operator-facing prose.
 - Replace “authority,” “source of truth,” “canonical,” and similar governance shorthand with the
   concrete rule or action when writing for the operator.
