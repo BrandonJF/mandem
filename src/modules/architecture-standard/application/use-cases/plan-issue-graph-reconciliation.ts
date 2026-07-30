@@ -45,18 +45,18 @@ export function planIssueGraphReconciliation(input: PlanReconciliationInput): Re
   const mappingByIssue = new Map(records.map((record) => [record.issueId, mapping(record, repository)]));
   const managedNumbers = new Set([...mappingByIssue.values()].map((value) => value.issueNumber));
   if (managedNumbers.size !== records.length) return fail("IGRAPH-PROVIDER-MAPPING", "provider issue mappings must be unique");
-  const snapshotByIssue = new Map(input.snapshot.issues.map((issue) => [issue.issueId, issue]));
+  const snapshotByNumber = new Map(input.snapshot.issues.map((issue) => [issue.number, issue]));
   const providerIssue = (issueId: string): ProviderIssue => {
-    const issue = snapshotByIssue.get(issueId);
     const expectedNumber = mappingByIssue.get(issueId)?.issueNumber;
-    if (!issue || issue.number !== expectedNumber) {
+    const issue = expectedNumber === undefined ? undefined : snapshotByNumber.get(expectedNumber);
+    if (!issue) {
       return fail("IGRAPH-PROVIDER-MAPPING", `provider snapshot is missing issue ${issueId}`);
     }
     return issue;
   };
 
   for (const issue of input.snapshot.issues) {
-    if (!mappingByIssue.has(issue.issueId)) continue;
+    if (!managedNumbers.has(issue.number)) continue;
     if (issue.parentNumber !== null && !managedNumbers.has(issue.parentNumber)) {
       fail("IGRAPH-PROVIDER-UNMANAGED-PARENT", `issue ${issue.issueId} has parent ${issue.parentNumber}`);
     }

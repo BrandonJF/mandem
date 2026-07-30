@@ -125,7 +125,10 @@ export function parseGraphMetadata(source: string, issueId?: string): NativeGrap
     for (const [name, label] of managedLabels) {
       if (!(label instanceof Map)) throw new IssueGraphParseError(`Managed label ${name} must be a mapping`);
       requireOnly(label as Map<string, YamlValue>, ["color", "description"]);
-      labels[name] = { color: requiredString(label as Map<string, YamlValue>, "color"), description: requiredString(label as Map<string, YamlValue>, "description") };
+      labels[name] = {
+        color: unquote(requiredString(label as Map<string, YamlValue>, "color")),
+        description: unquote(requiredString(label as Map<string, YamlValue>, "description")),
+      };
     }
     const state = unquote(requiredString(milestone as Map<string, YamlValue>, "state"));
     if (unquote(requiredString(provider as Map<string, YamlValue>, "kind")) !== "github" || (state !== "open" && state !== "closed")) throw new IssueGraphParseError("Invalid epic provider or milestone state");

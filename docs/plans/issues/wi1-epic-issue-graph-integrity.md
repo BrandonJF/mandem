@@ -768,6 +768,11 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   Evidence: The first guarded native apply performed zero writes and reported
   `native issue state or managed labels changed: 38f956c8-0f18-4d85-af1a-d908bcc54248`;
   a complete managed-label comparison found expected `incident` and actual `incident,u1a`.
+- Observation: The first live provider preview exposed quoted managed-label policy values in the
+  native epic metadata.
+  Evidence: Every proposed label definition contained escaped quote characters, such as
+  `color: "\"\\\"B60205\\\"\""`. The nested policy parser preserved YAML quotes instead of
+  decoding them; no GitHub write was attempted.
 
 ## Decision Log
 
@@ -798,7 +803,9 @@ The exact plan is authorized and implementation is in progress. The local graph 
 guarded native writer, vocabulary migration, and native migration are complete. The corrected
 approved apply created and pushed 15 metadata commits. Its immediate repeat performed zero commits
 and zero pushes, and the offline check reports `issue graph native v1 valid: 15 managed issues`.
-GitHub has not been changed.
+The first live provider preview found that the epic metadata encoded managed-label values with
+literal quotes. The parser is corrected and covered by a regression test; the corrected epic
+metadata requires a new exact native transaction. GitHub has not been changed.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -817,3 +824,6 @@ guarded pre-write check proved that its native record contains both `incident` a
 
 Revision note (2026-07-30): Recorded the successful approved native migration, its zero-write
 repeat, and the passing offline graph check.
+
+Revision note (2026-07-30): Recorded the managed-label decoding defect found by the first live
+provider preview. No provider mutation occurred.

@@ -24,6 +24,10 @@ describe("issue graph policy", () => {
 
   it("accepts the exact nested epic policy and canonicalizes its relationship lists", () => {
     const metadata = parseGraphMetadata('Mandem-Graph-Metadata: v1\nissue_key: "EPIC"\nepic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"\nplan: "docs/plans/epic.md"\nparent_issue_id: null\ndepends_on_issue_ids: []\nprovider:\n  kind: "github"\n  owner: "BrandonJF"\n  repository: "mandem"\nmilestone:\n  title: "Mandem v1"\n  description: "Tracks work."\n  state: "open"\n  due_on: null\nmanaged_labels:\n  blocked:\n    color: "B60205"\n    description: "Blocked"\n');
+    expect(metadata.epicPolicy?.managedLabels.blocked).toEqual({
+      color: "B60205",
+      description: "Blocked",
+    });
     expect(serializeGraphMetadata(metadata)).toContain('provider:\n  kind: "github"');
     expect(() => parseGraphMetadata('Mandem-Graph-Metadata: v1\nissue_key: "BAD_KEY"\nepic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"\nplan: null\nparent_issue_id: null\ndepends_on_issue_ids: []\n')).toThrow("Invalid issue key");
   });
