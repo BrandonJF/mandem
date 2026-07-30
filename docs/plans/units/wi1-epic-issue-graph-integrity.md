@@ -10,8 +10,8 @@ epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
 issue_id: 6a6a8bab-853f-4658-9bc0-38e2386b642d
 depends_on_issue_ids:
   - 745eda80-1e74-4866-bc95-2f2983b31025
-promotion: planned
-execution_authorized: false
+promotion: executable
+execution_authorized: true
 date: 2026-07-28
 ---
 
