@@ -53,6 +53,11 @@ describe("check-revision", () => {
     const root = join(parent, "repository");
     try {
       execFileSync("git", ["clone", "--no-hardlinks", mandemRoot, root], { encoding: "utf8" });
+      execFileSync(
+        "git",
+        ["fetch", mandemRoot, "+refs/issues/*:refs/issues/*"],
+        { cwd: root, encoding: "utf8" },
+      );
       git(root, "config", "user.email", "test@example.com"); git(root, "config", "user.name", "Test");
       const clean = git(root, "rev-parse", "HEAD");
       await writeFile(join(root, "README.md"), `${await readFile(join(root, "README.md"), "utf8")}\nDirty checkout text.\n`);

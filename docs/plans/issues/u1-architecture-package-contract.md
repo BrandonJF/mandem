@@ -8,7 +8,7 @@ issue_id: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
 depends_on_issue_ids:
   - da645bd0-9899-40b3-9f23-3b48d65362a4
 depends_on:
-  - U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986
+  - "U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986"
 promotion: complete
 execution_authorized: false
 date: 2026-07-25
