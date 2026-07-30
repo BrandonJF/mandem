@@ -5,3 +5,4 @@ export { analyzeDocumentation } from "./use-cases/analyze-documentation";
 export { checkAuthoredPath } from "./use-cases/check-authored-path";
 export { checkIssueGraph } from "./use-cases/check-issue-graph";
 export type { LocalIssueGraphRepository } from "./ports/issue-graph-repository";
+export { planNativeIssueGraphMetadata } from "./use-cases/set-native-issue-graph-metadata";

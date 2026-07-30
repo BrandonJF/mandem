@@ -28,6 +28,7 @@ export interface ProviderMapping {
 export interface LocalIssueRecord {
   readonly issueId: string;
   readonly state: NativeIssueState;
+  readonly labels: readonly string[];
   readonly metadata: NativeGraphMetadata | null;
   readonly providerMappings: readonly ProviderMapping[];
 }

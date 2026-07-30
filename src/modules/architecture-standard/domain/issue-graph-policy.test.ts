@@ -6,7 +6,7 @@ const epic = "abe862d6-b052-49fe-8611-bc1ab6e24253";
 const child = "6a6a8bab-853f-4658-9bc0-38e2386b642d";
 
 function record(issueId: string, parentIssueId: string | null, plan: string | null): LocalIssueRecord {
-  return { issueId, state: "open", metadata: { issueKey: issueId === epic ? "EPIC" : "WI1", epicIssueId: epic, plan, parentIssueId, dependsOnIssueIds: [] }, providerMappings: [] };
+  return { issueId, state: "open", labels: [], metadata: { issueKey: issueId === epic ? "EPIC" : "WI1", epicIssueId: epic, plan, parentIssueId, dependsOnIssueIds: [] }, providerMappings: [] };
 }
 
 describe("issue graph policy", () => {

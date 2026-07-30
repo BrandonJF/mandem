@@ -14,7 +14,7 @@ describe("check issue graph", () => {
   it("ignores native issues that do not opt into managed graph metadata", async () => {
     const repository: LocalIssueGraphRepository = {
       listIssueRefs: async () => [epic],
-      readIssue: async () => ({ issueId: epic, state: "open", metadata: null, providerMappings: [] }),
+      readIssue: async () => ({ issueId: epic, state: "open", labels: [], metadata: null, providerMappings: [] }),
       readPlan: async () => "",
     };
     await expect(checkIssueGraph(repository)).resolves.toEqual({ findings: [{ issueId: "", message: "The graph must have exactly one epic root.", path: "", ruleId: "IGRAPH-EPIC" }] });

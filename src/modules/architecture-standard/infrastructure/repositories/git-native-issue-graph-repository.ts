@@ -34,6 +34,16 @@ function stateFromMessages(messages: readonly string[]): NativeIssueState {
   return "open";
 }
 
+function labelsFromMessages(messages: readonly string[]): readonly string[] {
+  for (const message of messages) {
+    const value = /^Labels:\s*(.*)$/mu.exec(message)?.[1];
+    if (value !== undefined) {
+      return value.split(",").map((label) => label.trim()).filter(Boolean).sort();
+    }
+  }
+  return [];
+}
+
 function providerMappings(messages: readonly string[]): readonly ProviderMapping[] {
   const mappings = new Map<string, ProviderMapping>();
   for (const message of messages) {
@@ -72,7 +82,7 @@ export class GitNativeIssueGraphRepository implements LocalIssueGraphRepository 
     const messages = await Promise.all(commits.map(async (commit) => commitMessage(await git(this.root, ["cat-file", "commit", commit]))));
     const metadataCandidates = commits.map((commit, index) => ({ commit, message: messages[index] ?? "" })).filter((candidate) => candidate.message.startsWith("Mandem-Graph-Metadata:"));
     if (metadataCandidates.some((candidate) => !candidate.message.startsWith("Mandem-Graph-Metadata: v1\n"))) throw new Error("IGRAPH-NATIVE-METADATA: unsupported metadata version");
-    if (metadataCandidates.length === 0) return { issueId, state: stateFromMessages(messages), metadata: null, providerMappings: providerMappings(messages) };
+    if (metadataCandidates.length === 0) return { issueId, state: stateFromMessages(messages), labels: labelsFromMessages(messages), metadata: null, providerMappings: providerMappings(messages) };
     const maxima = [] as typeof metadataCandidates;
     for (const candidate of metadataCandidates) {
       const descendsFromAll = (await Promise.all(metadataCandidates.map(async (other) => other.commit === candidate.commit || isAncestor(this.root, other.commit, candidate.commit)))).every(Boolean);
@@ -80,7 +90,7 @@ export class GitNativeIssueGraphRepository implements LocalIssueGraphRepository 
     }
     if (maxima.length !== 1) throw new Error("IGRAPH-NATIVE-CONFLICT: no unique maximal metadata commit");
     const metadata = parseGraphMetadata(maxima[0]?.message ?? "", issueId);
-    return { issueId, state: stateFromMessages(messages), metadata, providerMappings: providerMappings(messages) };
+    return { issueId, state: stateFromMessages(messages), labels: labelsFromMessages(messages), metadata, providerMappings: providerMappings(messages) };
   }
 
   async readPlan(path: string): Promise<string> {

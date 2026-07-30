@@ -14,7 +14,7 @@ export async function mergeApprovedPullRequest(
   authorize: () => Promise<void>,
 ): Promise<void> {
   await authorize();
-  if (approval.action !== "merge-pr" || !("repository" in approval.target)) throw new Error("merge approval target is invalid");
+  if (approval.action !== "merge-pr" || !("repository" in approval.target) || !("pull_request" in approval.target) || !("head_sha" in approval.target)) throw new Error("merge approval target is invalid");
   const target = approval.target;
   const current = await gh.run([
     "pr",

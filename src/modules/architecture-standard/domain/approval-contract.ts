@@ -1,6 +1,7 @@
 /** @fileoverview Defines Mandem's canonical, fail-closed operator approval record. */
+import { createHash } from "node:crypto";
 
-export type ApprovalAction = "execute-plan" | "apply-ruleset" | "merge-pr";
+export type ApprovalAction = "execute-plan" | "apply-ruleset" | "merge-pr" | "set-issue-graph" | "sync-issue-projection";
 export type ApprovalDecision = "approved" | "denied";
 
 export interface ExecutePlanTarget {
@@ -19,8 +20,10 @@ export interface MergePullRequestTarget {
   readonly pull_request: number;
   readonly head_sha: string;
 }
+export interface SetIssueGraphTarget { readonly repository: "BrandonJF/mandem"; readonly graph_sha256: string; readonly issue_refs: Readonly<Record<string, string>>; readonly issue_refs_sha256: string; readonly implementation_sha: string; }
+export interface SyncIssueProjectionTarget { readonly repository: "BrandonJF/mandem"; readonly graph_sha256: string; readonly transaction_sha256: string; readonly provider_snapshot_sha256: string; readonly operations_sha256: string; readonly implementation_sha: string; }
 
-export type ApprovalTarget = ExecutePlanTarget | ApplyRulesetTarget | MergePullRequestTarget;
+export type ApprovalTarget = ExecutePlanTarget | ApplyRulesetTarget | MergePullRequestTarget | SetIssueGraphTarget | SyncIssueProjectionTarget;
 
 export interface ApprovalRecord {
   readonly decision: ApprovalDecision;
@@ -86,6 +89,8 @@ function targetLines(action: ApprovalAction, target: ApprovalTarget): readonly s
       `  head_sha: ${quote(target.head_sha)}`,
     ];
   }
+  if (action === "set-issue-graph" && "issue_refs" in target && "issue_refs_sha256" in target && "implementation_sha" in target) return [`  repository: ${quote(target.repository)}`, `  graph_sha256: ${quote(target.graph_sha256)}`, `  issue_refs: ${canonicalJson(target.issue_refs)}`, `  issue_refs_sha256: ${quote(target.issue_refs_sha256)}`, `  implementation_sha: ${quote(target.implementation_sha)}`];
+  if (action === "sync-issue-projection" && "transaction_sha256" in target && "provider_snapshot_sha256" in target && "operations_sha256" in target && "implementation_sha" in target) return [`  repository: ${quote(target.repository)}`, `  graph_sha256: ${quote(target.graph_sha256)}`, `  transaction_sha256: ${quote(target.transaction_sha256)}`, `  provider_snapshot_sha256: ${quote(target.provider_snapshot_sha256)}`, `  operations_sha256: ${quote(target.operations_sha256)}`, `  implementation_sha: ${quote(target.implementation_sha)}`];
   throw new ApprovalContractError(`target does not match action ${action}`);
 }
 
@@ -104,15 +109,19 @@ function validate(record: ApprovalRecord): void {
     }
   } else if (record.action === "apply-ruleset") {
     if (
-      !("implementation_sha" in target) ||
+      !("implementation_sha" in target) || !("plan_sha256" in target) || !("ruleset_sha256" in target) ||
       !digestPattern.test(target.plan_sha256) ||
       !digestPattern.test(target.ruleset_sha256) ||
       !shaPattern.test(target.implementation_sha)
     ) {
       throw new ApprovalContractError("apply-ruleset target is invalid");
     }
+  } else if (record.action === "set-issue-graph") {
+    if (!("issue_refs" in target) || target.repository !== "BrandonJF/mandem" || !digestPattern.test(target.graph_sha256) || !digestPattern.test(target.issue_refs_sha256) || !shaPattern.test(target.implementation_sha) || Object.entries(target.issue_refs).some(([issueId, head]) => !uuidPattern.test(issueId) || !shaPattern.test(head)) || canonicalJson(target.issue_refs) !== canonicalJson(Object.fromEntries(Object.entries(target.issue_refs).sort(([left], [right]) => left.localeCompare(right)))) || createHash("sha256").update(canonicalJson(target.issue_refs)).digest("hex") !== target.issue_refs_sha256) throw new ApprovalContractError("set-issue-graph target is invalid");
+  } else if (record.action === "sync-issue-projection") {
+    if (!("transaction_sha256" in target) || target.repository !== "BrandonJF/mandem" || ![target.graph_sha256, target.transaction_sha256, target.provider_snapshot_sha256, target.operations_sha256].every((value) => digestPattern.test(value)) || !shaPattern.test(target.implementation_sha)) throw new ApprovalContractError("sync-issue-projection target is invalid");
   } else if (
-    !("repository" in target) ||
+    !("repository" in target) || !("pull_request" in target) || !("head_sha" in target) ||
     target.repository !== "BrandonJF/mandem" ||
     !Number.isSafeInteger(target.pull_request) ||
     target.pull_request < 1 ||
@@ -168,7 +177,7 @@ export function parseApproval(source: string): ApprovalRecord {
   const decision = stringValue(lines[1] ?? "", "decision: ");
   const action = stringValue(lines[2] ?? "", "action: ");
   const issueId = stringValue(lines[3] ?? "", "issue_id: ");
-  if ((decision !== "approved" && decision !== "denied") || (action !== "execute-plan" && action !== "apply-ruleset" && action !== "merge-pr")) {
+  if ((decision !== "approved" && decision !== "denied") || !["execute-plan", "apply-ruleset", "merge-pr", "set-issue-graph", "sync-issue-projection"].includes(action)) {
     throw new ApprovalContractError("approval decision or action is invalid");
   }
   if (lines[4] !== "target:") throw new ApprovalContractError("target is missing");
@@ -185,6 +194,10 @@ export function parseApproval(source: string): ApprovalRecord {
       ruleset_sha256: stringValue(lines[cursor++] ?? "", "  ruleset_sha256: "),
       implementation_sha: stringValue(lines[cursor++] ?? "", "  implementation_sha: "),
     };
+  } else if (action === "set-issue-graph") {
+    const repository = stringValue(lines[cursor++] ?? "", "  repository: "); const graph_sha256 = stringValue(lines[cursor++] ?? "", "  graph_sha256: "); const refsLine = lines[cursor++] ?? ""; if (!refsLine.startsWith("  issue_refs: ")) throw new ApprovalContractError("issue_refs is missing"); let issue_refs: Record<string, string>; try { const parsed: unknown = JSON.parse(refsLine.slice("  issue_refs: ".length)); if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error(); issue_refs = parsed as Record<string, string>; } catch { throw new ApprovalContractError("issue_refs must be canonical JSON"); } target = { repository: repository as "BrandonJF/mandem", graph_sha256, issue_refs, issue_refs_sha256: stringValue(lines[cursor++] ?? "", "  issue_refs_sha256: "), implementation_sha: stringValue(lines[cursor++] ?? "", "  implementation_sha: ") };
+  } else if (action === "sync-issue-projection") {
+    target = { repository: stringValue(lines[cursor++] ?? "", "  repository: ") as "BrandonJF/mandem", graph_sha256: stringValue(lines[cursor++] ?? "", "  graph_sha256: "), transaction_sha256: stringValue(lines[cursor++] ?? "", "  transaction_sha256: "), provider_snapshot_sha256: stringValue(lines[cursor++] ?? "", "  provider_snapshot_sha256: "), operations_sha256: stringValue(lines[cursor++] ?? "", "  operations_sha256: "), implementation_sha: stringValue(lines[cursor++] ?? "", "  implementation_sha: ") };
   } else {
     const repository = stringValue(lines[cursor++] ?? "", "  repository: ");
     const pullRequestLine = lines[cursor++] ?? "";
@@ -203,7 +216,7 @@ export function parseApproval(source: string): ApprovalRecord {
   }
   const record: ApprovalRecord = {
     decision,
-    action,
+    action: action as ApprovalAction,
     issueId,
     target,
     actor: "operator",

@@ -10,6 +10,9 @@
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "architecture:check": "bun scripts/check-architecture.ts",
+    "issue-graph:check": "bun scripts/check-issue-graph.ts",
+    "issue-graph:native:apply": "bun scripts/set-native-issue-graph-metadata.ts",
+    "vocabulary:check": "bun scripts/check-vocabulary.ts",
     "docs:audit": "bun scripts/check-documentation.ts --mode full",
     "docs:check": "bun scripts/check-documentation.ts --mode changed",
     "docs:revision": "bun scripts/check-documentation.ts --mode revision",
