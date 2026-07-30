@@ -748,8 +748,9 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 - [x] (2026-07-30 15:34Z) Implemented the versioned graph parser, validator, raw native-issue
   adapter, guarded native writer, approval verifier, vocabulary checker, and focused tests.
 - [ ] Complete Steps 1-6 in order (completed: local contract, guarded native writer, vocabulary
-  and plan migration, 102-test local suite; remaining: approved live native metadata apply,
-  GitHub operation planning and adapter, remote reconciliation, documentation, and final review).
+  and plan migration, approved 15-ref native metadata apply, zero-write second apply, offline
+  15-issue graph check; remaining: GitHub operation planning and adapter, remote reconciliation,
+  documentation, and final review).
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
@@ -794,10 +795,10 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 ## Outcomes & Retrospective
 
 The exact plan is authorized and implementation is in progress. The local graph contract,
-guarded native writer, vocabulary migration, and 102-test suite are complete. The first approved
-native apply performed zero metadata writes because the incident issue also carries the managed
-`u1a` label. The desired graph now preserves both labels and requires a new exact approval because
-its digest and WI1 baseline changed. GitHub has not been changed.
+guarded native writer, vocabulary migration, and native migration are complete. The corrected
+approved apply created and pushed 15 metadata commits. Its immediate repeat performed zero commits
+and zero pushes, and the offline check reports `issue graph native v1 valid: 15 managed issues`.
+GitHub has not been changed.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -813,3 +814,6 @@ approval and idempotent multi-ref application while native issue refs remain aut
 
 Revision note (2026-07-30): Corrected the incident issue's expected managed labels after the
 guarded pre-write check proved that its native record contains both `incident` and `u1a`.
+
+Revision note (2026-07-30): Recorded the successful approved native migration, its zero-write
+repeat, and the passing offline graph check.
