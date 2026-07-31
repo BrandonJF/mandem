@@ -19,9 +19,20 @@ export async function checkIssueGraph(repository: LocalIssueGraphRepository): Pr
     if (record === null) { findings.push({ ruleId: "IGRAPH-ISSUE-MISSING", issueId, path: "", message: "Issue ref could not be read." }); continue; }
     if (record.metadata === null) continue;
     records.push(record);
-    if (record.metadata?.plan !== null && record.metadata?.plan !== undefined) {
-      try { plans.set(record.metadata.plan, parsePlanDeclaration(await repository.readPlan(record.metadata.plan))); }
-      catch (error: unknown) { findings.push({ ruleId: "IGRAPH-FRONTMATTER", issueId, path: record.metadata.plan, message: error instanceof Error ? error.message : "Plan could not be parsed." }); }
+  }
+  const planOwners = new Map<string, string>();
+  for (const path of await repository.listPlanPaths()) {
+    try {
+      const plan = parsePlanDeclaration(await repository.readPlan(path));
+      const prior = planOwners.get(plan.issueId);
+      if (prior) findings.push({ ruleId: "IGRAPH-PLAN-OWNER", issueId: plan.issueId, path, message: `Issue also owns plan ${prior}.` });
+      else planOwners.set(plan.issueId, path);
+      plans.set(path, plan);
+      const record = records.find((candidate) => candidate.issueId === plan.issueId);
+      if (!record) findings.push({ ruleId: "IGRAPH-ISSUE-MISSING", issueId: plan.issueId, path, message: "Plan has no matching native issue ref." });
+      else if (record.metadata?.plan !== path) findings.push({ ruleId: "IGRAPH-PLAN-OWNER", issueId: plan.issueId, path, message: `Native issue names ${record.metadata?.plan ?? "no plan"}.` });
+    } catch (error: unknown) {
+      findings.push({ ruleId: "IGRAPH-FRONTMATTER", issueId: "", path, message: error instanceof Error ? error.message : "Plan could not be parsed." });
     }
   }
   const graph = evaluateIssueGraph(records, plans);

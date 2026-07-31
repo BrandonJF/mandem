@@ -5,6 +5,7 @@ import type { IssueGraphProvider } from "../application/ports/issue-graph-provid
 import { planIssueGraphReconciliation } from "../application/use-cases/plan-issue-graph-reconciliation";
 import type { IssueGraphOperation, ReconciliationPlan } from "../domain/issue-graph-operations";
 import type { ProviderSnapshot } from "../domain/issue-graph-operations";
+import { managedProviderSnapshot } from "../domain/issue-graph-operations";
 import type { LocalIssueRecord } from "../domain/issue-graph-types";
 import { graphDigestFromRecords } from "../domain/issue-graph-manifest";
 import { GitNativeIssueGraphRepository } from "../infrastructure/repositories/git-native-issue-graph-repository";
@@ -47,12 +48,13 @@ export async function runIssueGraphRemoteCheck(
   const mappings = records.flatMap((record) => record.providerMappings);
   const snapshot = await provider.readSnapshot(repositoryName, mappings);
   const plan = planIssueGraphReconciliation({ records, snapshot });
+  const managedSnapshot = managedProviderSnapshot(records, snapshot);
   return {
     ...plan,
     graphSha256: graphDigestFromRecords(records),
-    providerSnapshotSha256: createHash("sha256").update(canonicalJson(snapshot)).digest("hex"),
+    providerSnapshotSha256: createHash("sha256").update(canonicalJson(managedSnapshot)).digest("hex"),
     operationsSha256: digestOperations(plan.operations),
-    snapshot,
+    snapshot: managedSnapshot,
     records,
   };
 }
@@ -95,7 +97,8 @@ export async function runApplyIssueGraphProjection(input: {
   readonly implementationSha: string;
   readonly provider?: IssueGraphProvider;
 }): Promise<{ readonly writes: number; readonly completedOperations: number }> {
-  const approval = await new ProjectionApprovalReader(input.root).authorize({
+  const approvalReader = new ProjectionApprovalReader(input.root);
+  const approval = await approvalReader.authorize({
     approvalIssueId: input.approvalIssueId,
     implementationSha: input.implementationSha,
   });
@@ -110,5 +113,6 @@ export async function runApplyIssueGraphProjection(input: {
     records,
     transaction: approval.transaction,
     provider: input.provider ?? new GitHubIssueGraphProvider(),
+    beforeWrite: async () => approvalReader.assertCurrent(input.approvalIssueId, approval.approvalCommit),
   });
 }

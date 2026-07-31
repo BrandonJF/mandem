@@ -1,6 +1,6 @@
 # Plan reviews
 
-This directory records independent reviews of Mandem's program and issue ExecPlans.
+This directory records independent reviews of Mandem's epic and issue ExecPlans.
 
 - [Mandem epic review](./2026-07-24-mandem-epic-clean-room.md) reviews the epic plan.
 - [U1 review](./2026-07-24-u1-clean-room.md) reviews the bootstrap plan.

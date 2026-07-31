@@ -9,5 +9,6 @@ export type { IssueGraphFinding, IssueGraphResult, IssuePromotion, LocalIssueRec
 export { graphDigest, graphDigestFromRecords, parseNativeIssueGraphManifest } from "./issue-graph-manifest";
 export type { NativeIssueGraphEntry, NativeIssueGraphManifest } from "./issue-graph-manifest";
 export type { IssueGraphOperation, ProviderIssue, ProviderLabel, ProviderMilestone, ProviderSnapshot, ReconciliationPlan } from "./issue-graph-operations";
+export { managedProviderSnapshot, providerSnapshotDigest } from "./issue-graph-operations";
 export { parseProjectionTransaction, projectionTransactionDigest, serializeProjectionTransaction } from "./projection-transaction";
 export type { ProjectionTransaction } from "./projection-transaction";

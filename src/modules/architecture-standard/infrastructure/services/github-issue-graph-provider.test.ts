@@ -33,16 +33,14 @@ describe("GitHubIssueGraphProvider", () => {
     });
   });
 
-  it("uses the singular delete endpoint and database id payload for a move", async () => {
+  it("uses separate singular delete and add operations for a recoverable move", async () => {
     const requests: { endpoint: string; method: string; fields?: Readonly<Record<string, string | number | null>> }[] = [];
     const runner: GhApiRunner = async (request) => { requests.push(request); return {}; };
     const operation: IssueGraphOperation = {
-      kind: "move-subissue",
+      kind: "remove-subissue",
       key: "06:child:parent",
       issueId: "child",
-      currentParentNumber: 20,
-      desiredParentIssueId: "parent",
-      desiredParentNumber: 29,
+      parentNumber: 20,
       subissueDatabaseId: 2200,
     };
     await new GitHubIssueGraphProvider(runner, "BrandonJF/mandem").apply(operation);
@@ -50,11 +48,6 @@ describe("GitHubIssueGraphProvider", () => {
       {
         endpoint: "repos/BrandonJF/mandem/issues/20/sub_issue",
         method: "DELETE",
-        fields: { sub_issue_id: 2200 },
-      },
-      {
-        endpoint: "repos/BrandonJF/mandem/issues/29/sub_issues",
-        method: "POST",
         fields: { sub_issue_id: 2200 },
       },
     ]);

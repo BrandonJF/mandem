@@ -26,7 +26,7 @@ execution_authorized: false
 ## Purpose
 
 Expand this scaffold into a self-contained U9 issue ExecPlan that incorporates every applicable
-master-program constraint. Use the master program to sequence work; do not treat it as a worker's
+epic constraint. Use the epic ExecPlan to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
@@ -37,7 +37,7 @@ implementation instruction.
 
 - Installed SBP control plane
 - All provider, lifecycle, architecture, and operator surfaces
-- Master acceptance examples AE1-AE12
+- Epic acceptance examples AE1-AE12
 
 ### Produces
 
@@ -53,10 +53,10 @@ implementation instruction.
 
 ## Architecture Constraint
 
-Authors must place all source code added for this unit in Mandem's Nucleus-derived clean
+Authors must place all source code added for this issue in Mandem's Nucleus-derived clean
 architecture. The detailed plan must identify module ownership, layer placement, public API
 boundaries, composition roots, and deterministic architecture checks for each behavior implemented
-by the unit.
+by the issue.
 
 ## Decisions Required Before Promotion
 
@@ -70,7 +70,7 @@ by the unit.
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:
 
-- goal capsule and traced master requirements;
+- goal capsule and traced epic requirements;
 - current repository state and the patterns the plan author inspected;
 - concrete technical decisions and rejected alternatives;
 - repo-relative files and module/layer ownership;
@@ -83,7 +83,7 @@ ExecPlan that includes:
 
 ## Promotion Checklist
 
-- [ ] Expanded using the current repository and complete master ExecPlan
+- [ ] Expanded using the current repository and complete epic ExecPlan
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable

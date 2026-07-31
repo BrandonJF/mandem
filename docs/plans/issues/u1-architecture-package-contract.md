@@ -147,7 +147,7 @@ implementation changes and pass only after the checker detects the intended viol
 
 ## Decision Log
 
-- Decision: Make U1C a separate corrective child rather than reopen completed U1.
+- Decision: Make U1C a separate subissue rather than reopen completed U1.
   Rationale: The U1 merge is durable history. The issue identifies newly validated gaps, and a
   separate plan preserves the exact review and approval record for the correction.
   Date/Author: 2026-07-25 / Codex
@@ -350,7 +350,7 @@ U1C corrects only these validated findings from issue `5717221b-f9e6-4c8f-abca-7
 
 Do not add documentation navigation, Git hooks, provider hooks, a server, Docker files, SQLite,
 runtime lifecycle behavior, or consumer installation. U1A owns documentation and hook work. U2
-and later units remain blocked. Do not change stable meanings of existing `ARCH-*` IDs. Add only
+and later issues remain blocked. Do not change stable meanings of existing `ARCH-*` IDs. Add only
 the narrowly necessary `ARCH-UNSCOPED-TYPESCRIPT` ID and document it in the architecture standard.
 
 ## Exact Architecture Rule Matrix

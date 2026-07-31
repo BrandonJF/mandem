@@ -1,6 +1,6 @@
 /** @fileoverview Raw Git adapter for the local native issue graph. */
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { parseGraphMetadata, type LocalIssueRecord, type NativeIssueState, type ProviderMapping } from "../../domain/issue-graph-policy";
@@ -72,6 +72,19 @@ export class GitNativeIssueGraphRepository implements LocalIssueGraphRepository 
   async listIssueRefs(): Promise<readonly string[]> {
     const output = await git(this.root, ["for-each-ref", "--format=%(refname)", ISSUE_REF_PREFIX]);
     return output.split("\n").filter(Boolean).map((reference) => reference.slice(ISSUE_REF_PREFIX.length)).sort((left, right) => left.localeCompare(right));
+  }
+
+  async listPlanPaths(): Promise<readonly string[]> {
+    const paths: string[] = [];
+    for (const directory of ["docs/plans", "docs/plans/issues"]) {
+      const entries = await readdir(resolve(this.root, directory), { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md") {
+          paths.push(`${directory}/${entry.name}`);
+        }
+      }
+    }
+    return paths.sort((left, right) => left.localeCompare(right));
   }
 
   async readIssue(issueId: string): Promise<LocalIssueRecord | null> {

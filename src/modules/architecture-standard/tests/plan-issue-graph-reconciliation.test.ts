@@ -104,6 +104,46 @@ describe("planIssueGraphReconciliation", () => {
     expect(planIssueGraphReconciliation({ records: records(), snapshot: aligned }).operations).toEqual([]);
   });
 
+  it("keeps the add-operation key stable after a parent removal", () => {
+    const parentId = "6c83cd29-a33e-44f7-9bbc-59ba529fe592";
+    const managedRecords: readonly LocalIssueRecord[] = [
+      ...records(),
+      {
+        issueId: parentId,
+        state: "open",
+        labels: [],
+        providerMappings: [{ provider: "github", owner: "BrandonJF", repository: "mandem", issueNumber: 30 }],
+        metadata: { issueKey: "U1", epicIssueId: epicId, plan: "docs/plans/u1.md", parentIssueId: epicId, dependsOnIssueIds: [] },
+      },
+    ];
+    const aligned = snapshot();
+    const baseIssues = [
+      { issueId: epicId, databaseId: 2900, number: 29, state: "open" as const, labels: ["in-progress"], milestoneNumber: 1, parentNumber: null, subissueNumbers: [30] },
+      { issueId, databaseId: 2200, number: 22, state: "closed" as const, labels: ["blocked", "feature"], milestoneNumber: 1, parentNumber: 30, subissueNumbers: [] },
+      { issueId: parentId, databaseId: 3000, number: 30, state: "open" as const, labels: [], milestoneNumber: 1, parentNumber: 29, subissueNumbers: [22] },
+    ];
+    const providerBase = {
+      repository: aligned.repository,
+      labels: [
+        { name: "blocked", color: "B60205", description: "Blocked" },
+        { name: "in-progress", color: "EDEDED", description: "" },
+      ],
+      milestones: [{ number: 1, title: "Mandem v1", description: "Release", state: "open" as const, dueOn: null }],
+    };
+    const before = planIssueGraphReconciliation({ records: managedRecords, snapshot: { ...providerBase, issues: baseIssues } });
+    const afterRemoval = planIssueGraphReconciliation({
+      records: managedRecords,
+      snapshot: {
+        ...providerBase,
+        issues: baseIssues.map((issue) => issue.issueId === issueId
+          ? { ...issue, parentNumber: null }
+          : issue.issueId === parentId ? { ...issue, subissueNumbers: [] } : issue),
+      },
+    });
+    expect(before.operations.slice(-2).map((operation) => operation.kind)).toEqual(["remove-subissue", "add-subissue"]);
+    expect(afterRemoval.operations).toEqual([before.operations.at(-1)]);
+  });
+
   it("fails before planning for unsafe or ambiguous provider state", () => {
     const missingMapping = records().map((record) => record.issueId === issueId ? { ...record, providerMappings: [] } : record);
     expect(() => planIssueGraphReconciliation({ records: missingMapping, snapshot: snapshot() }))

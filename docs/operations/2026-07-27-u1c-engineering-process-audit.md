@@ -110,7 +110,7 @@ The root agent treated `Approved` as approval of:
 - planning PR #12 head `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0`; and
 - U1C plan SHA-256 `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
 
-It did not treat the message as general approval of U1A or later program units.
+It did not treat the message as general approval of U1A or later issues.
 
 The agent recorded the approval in git-native issue `5717221`, changed only authorization metadata
 and living records, ran an independent verification, committed the authorization as `b71a2e3`, and

@@ -45,8 +45,11 @@ describe("ProjectionTransactionWriter", () => {
       };
       const writer = new ProjectionTransactionWriter(root);
       const first = await writer.prepare(issueId, transaction);
+      execFileSync("git", ["--git-dir", remote, "update-ref", reference, baseline, first.commit]);
+      const retry = await writer.prepare(issueId, transaction);
       const second = await writer.prepare(issueId, transaction);
       expect(first).toMatchObject({ created: true, pushed: true });
+      expect(retry).toMatchObject({ commit: first.commit, created: false, pushed: true });
       expect(second).toMatchObject({ commit: first.commit, created: false, pushed: false });
       expect(git(root, ["ls-remote", "origin", reference]).split(/\s+/u)[0]).toBe(first.commit);
     } finally {

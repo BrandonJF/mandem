@@ -4,6 +4,14 @@ export interface NativeGraphWrite { readonly issueId: string; readonly baseline:
 export interface NativeRefRecoveryState { readonly baseline: string; readonly result: string; readonly local: string; readonly remote: string; }
 export type NativeRefRecoveryAction = "create-result" | "push-result" | "adopt-result" | "complete";
 
+export function nativeMetadataRequiresWrite(
+  metadataAlreadyCurrent: boolean,
+  state: NativeRefRecoveryState,
+): boolean {
+  if (!metadataAlreadyCurrent) return true;
+  return state.local !== state.baseline || state.remote !== state.baseline;
+}
+
 /** Fails closed unless both local and remote are an approved baseline/result state. */
 export function classifyNativeRef(state: NativeRefRecoveryState): NativeRefRecoveryAction {
   const allowed = new Set([state.baseline, state.result]);

@@ -96,11 +96,11 @@ conformance.
   supported hook.
 - Mandem's standing architecture requires Bun-only commands, clean module boundaries, no `any`,
   meaningful test-first development, concise output, and vendor-neutral core behavior.
-- Master requirements R58-R64 require a prescriptive self-conforming architecture and deterministic
+- Epic requirements R58-R64 require a prescriptive self-conforming architecture and deterministic
   analysis down to naming and file placement.
-- Master KTD14 and repository `CLAUDE.md` require a reviewed, exactly approved issue ExecPlan before
+- Epic KTD14 and repository `CLAUDE.md` require a reviewed, exactly approved issue ExecPlan before
   implementation dispatch.
-- issue `745eda8` is the durable ledger entry for this unit. issue `5717221` supplies the
+- issue `745eda8` is the durable ledger entry for this issue. issue `5717221` supplies the
   corrected U1 architecture/package baseline it consumes.
 
 ## Key Technical Decisions
@@ -636,11 +636,11 @@ non-approved case asserts zero GitHub writes.
 Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
 insufficient permission, the worker records the command, exit status, and secret-free API response
 in `Progress`, comments the same concise blocker
-on issue `745eda8`, marks the unit `Needs you`, and stops before claiming completion.
+on issue `745eda8`, marks the issue `Needs you`, and stops before claiming completion.
 
 ## Normative Interfaces
 
-The file and export names below are fixed for this unit. If an implementer changes a file or export
+The file and export names below are fixed for this issue. If an implementer changes a file or export
 name, they must update this plan and obtain another clean-room review before continuing.
 
 Extend `src/modules/architecture-standard/domain/types.ts` with:
@@ -1289,10 +1289,10 @@ external sources.
   checks, versioned pre-push behavior, and hook integration tests.
 - [x] (2026-07-25 18:05Z) Created and pushed issues `5717221` and `745eda8`.
 - [x] (2026-07-25 18:05Z) Authored this self-contained U1A issue ExecPlan.
-- [x] (2026-07-25 18:30Z) Updated the master plan, child registry, and U2 dependency status.
+- [x] (2026-07-25 18:30Z) Updated the epic ExecPlan, issue registry, and U2 dependency status.
 - [x] (2026-07-25 18:30Z) Ran the first clean-room review at `93c2c6b`; it rejected underspecified
   scope, interfaces, Git/provider hook contracts, link grammar, and focused test evidence.
-- [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the program
+- [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the epic
   dependency model but rejected incomplete revision-snapshot, provider event, and remote-authority
   contracts.
 - [x] (2026-07-25 19:20Z) Ran a third clean-room review at `e597967`; it found the remaining linked
@@ -1550,7 +1550,7 @@ external sources.
   Date/Author: 2026-07-25 / Codex orchestrator
 
 - Decision: Require the corrected U1 baseline before U1A implementation and block U2 on both.
-  Rationale: Both units touch the architecture kernel and package gate; ordering avoids parallel
+  Rationale: Both issues touch the architecture kernel and package gate; ordering avoids parallel
   policy implementations and merge conflict-driven design.
   Date/Author: 2026-07-25 / Codex orchestrator
 
@@ -1735,12 +1735,12 @@ the current native approval matches the exact live action target.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
-foundational unit rather than an informal addition to U2.
+foundational issue rather than an informal addition to U2.
 
 Clean-room repair note (2026-07-25): After the first independent review, replaced inferred
 documentation/source scopes with exact manifests; specified Markdown parsing, public interfaces,
 package commands, staged/pre-push Git semantics, Claude/Codex event contracts, focused red/green
-tests, provider failure behavior, source provenance, and the master/registry dependency update.
+tests, provider failure behavior, source provenance, and the epic/registry dependency update.
 
 Second clean-room repair note (2026-07-25): Added revision-backed changed and pre-push evaluation,
 complete root-resolving Claude/Codex hook configurations, typed delete/move events, nested-launch

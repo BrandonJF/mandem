@@ -21,9 +21,9 @@ author must expand the issue scaffold into a nearly self-contained ExecPlan that
 validate it against the actual outputs of completed dependencies, obtain a clean-room review,
 address review findings, and obtain approval for an exact revision.
 
-The epic orchestrator reads the master and registry. An implementation worker receives only the
+The epic orchestrator reads the epic ExecPlan and registry. An implementation worker receives only the
 complete approved ExecPlan for its issue, which must include every applicable epic constraint and
-dependency interface. A dispatch is invalid if it directs the worker to treat the master plan as a
+dependency interface. A dispatch is invalid if it directs the worker to treat the epic ExecPlan as a
 second implementation instruction. Use summaries and bounded packets only for navigation.
 
 ## Architecture invariant

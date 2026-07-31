@@ -24,6 +24,18 @@ function message(rawCommit: string): string {
 export class ProjectionApprovalReader {
   constructor(private readonly root: string, private readonly remote = "origin") {}
 
+  async assertCurrent(approvalIssueId: string, approvalCommit: string): Promise<void> {
+    const reference = `refs/issues/${approvalIssueId}`;
+    const [local, remoteLine] = await Promise.all([
+      git(this.root, ["rev-parse", reference]),
+      git(this.root, ["ls-remote", this.remote, reference]),
+    ]);
+    const remote = remoteLine.split(/\s+/u)[0];
+    if (local !== approvalCommit || remote !== approvalCommit) {
+      throw new Error("projection approval issue ref changed before provider write");
+    }
+  }
+
   async authorize(input: { readonly approvalIssueId: string; readonly implementationSha: string }): Promise<{
     readonly approvalCommit: string;
     readonly target: SyncIssueProjectionTarget;

@@ -2,10 +2,16 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyNativeRef,
+  nativeMetadataRequiresWrite,
   planNativeIssueGraphMetadata,
 } from "../application/use-cases/set-native-issue-graph-metadata";
 
 describe("set native issue graph metadata", () => {
+  it("does not let matching local metadata hide a lost push or remote drift", () => {
+    expect(nativeMetadataRequiresWrite(true, { baseline: "base", result: "result", local: "base", remote: "base" })).toBe(false);
+    expect(nativeMetadataRequiresWrite(true, { baseline: "base", result: "result", local: "result", remote: "base" })).toBe(true);
+    expect(nativeMetadataRequiresWrite(true, { baseline: "base", result: "result", local: "base", remote: "other" })).toBe(true);
+  });
   it("does not create writes when the approved graph is already current", () => {
     expect(planNativeIssueGraphMetadata([], [])).toEqual([]);
   });

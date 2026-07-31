@@ -41,9 +41,9 @@ execution.
 developers and product owners are secondary users.
 
 **Current boundary:** U1 merged, but post-merge verification opened corrective issue `5717221`.
-U1C is the planned corrective child at
+U1C is the planned subissue at
 `docs/plans/issues/u1-architecture-package-contract.md`. U1A is a newly planned
-foundational unit for documentation discoverability and continuous authoring-quality gates. U2-U10
+foundational issue for documentation discoverability and continuous authoring-quality gates. U2-U10
 remain unauthorized, and U2 is blocked until U1C and U1A complete. The first consumer target is
 Strategy Builder Pro on Brandon's Linux agent host.
 
@@ -56,7 +56,7 @@ but no accepted implementation. Strategy Builder Pro is the first consumer repos
 the definitive source for the target clean architecture, and Pier Infra supplies aligned examples
 of self-contained operational plans. A “epic ExecPlan” is the durable, restartable plan for the
 whole Mandem build. A “issue ExecPlan” is the self-contained implementation authority for exactly
-one program unit. A “clean-room review” is a review by an agent that receives the plan and current
+one issue. A “clean-room review” is a review by an agent that receives the plan and current
 repository but no private planning conversation, exposing assumptions a fresh executor could not
 recover.
 
@@ -220,7 +220,7 @@ resident host mode
 - R15. Agent roles must define purpose, inputs, outputs, permissions, mutation boundaries, required evidence, and completion conditions rather than relying on personality prompts alone.
 - R16. Mandem must inject the effective role and doctrine context into workers through each provider's supported instruction surfaces.
 - R17. Projects may override permitted role and engineering settings deliberately, but configuration cannot change the protected safety and workflow kernel.
-- R18. Mandem must show which default and override policies governed a work unit and preserve that provenance with its outcome.
+- R18. Mandem must show which default and override policies governed an issue and preserve that provenance with its outcome.
 - R19. Composable source documents must live under committed `.mandem/operating-docs/`, organized as `principles/`, `roles/`, `workflows/`, `project/`, and `learnings/`.
 - R19a. Mandem must deterministically compile those sources into committed, generated `AGENTS.md` and `CLAUDE.md` entry files and bounded runtime prompts, with selection and content hashes recorded in session provenance.
 
@@ -241,7 +241,7 @@ resident host mode
 
 **Observability and provenance**
 
-- R29. Every command and resulting control-plane action must emit a structured event containing its work unit, actor, provider, lifecycle stage, outcome, and relevant artifact references.
+- R29. Every command and resulting control-plane action must emit a structured event containing its issue, actor, provider, lifecycle stage, outcome, and relevant artifact references.
 - R30. Long-running work must emit progress and heartbeats so inactivity is distinguishable from a stalled or dead worker.
 - R31. Operators and agents must be able to inspect current state, recent activity, failures, and provenance through bounded AXI output without scraping terminal panes.
 - R32. Live session attachment must provide witnessability while the event ledger remains the authoritative historical record.
@@ -406,7 +406,7 @@ resident host mode
 - [First Mate `stow`](https://github.com/kunchenguid/firstmate/blob/main/skills/stow/SKILL.md) — local-first durable knowledge routing, explicit external publication, and safe-to-reset closure.
 - [Lavish AXI](https://github.com/kunchenguid/lavish-axi) — precise artifact-centered human review and durable feedback.
 - [CLI Agent Orchestrator](https://github.com/awslabs/cli-agent-orchestrator) — native CLI workers, provider profiles, visible tmux sessions, orchestration primitives, and event plugins.
-- [Compound Engineering](https://every.to/guides/compound-engineering) — `Plan -> Work -> Review -> Compound -> Repeat` and the requirement that each work unit improve the system that produces future work.
+- [Compound Engineering](https://every.to/guides/compound-engineering) — `Plan -> Work -> Review -> Compound -> Repeat` and the requirement that each issue improve the system that produces future work.
 - [GNHF](https://github.com/kunchenguid/gnhf) — unattended bounded iterations, incremental commits, failure handling, durable notes, resume, and subscription-backed agent adapters.
 - [git-native-issue](https://github.com/remenoscodes/git-native-issue) — project-local issue event chains stored under Git refs and projected to hosting providers; consume as a pinned external dependency subject to license review.
 - [Obra Superpowers TDD](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md) — strict red-green-refactor behavior and expected-failure proof.
@@ -419,53 +419,53 @@ resident host mode
 
 ## Plan of Work
 
-Complete the program by promoting and executing U1 through U10 in dependency order. For each unit,
+Complete the epic by promoting and executing U1 through U10 in dependency order. For each issue,
 first deepen its scaffold into a self-contained issue ExecPlan that follows `PLANS.md`; then run a
 fresh clean-room review, repair the plan, obtain operator approval of the exact revision, and only
 then set that issue plan’s `execution_authorized` field to `true`. Dispatch workers from the full
-issue plan, not from this program summary or an extracted milestone. After the unit’s pull request
-is reviewed, verified, learned from, and merged, update both plans before promoting the next unit.
+issue plan, not from this epic summary or an extracted milestone. After the issue’s pull request
+is reviewed, verified, learned from, and merged, update both plans before promoting the next issue.
 
-The master plan may be resumed at any time to determine which child should be planned or executed
+The epic ExecPlan may be resumed at any time to determine which issue should be planned or executed
 next. Its role is to sequence dependencies, preserve the product contract, and ensure downstream
 plans are revalidated when an upstream interface changes.
 
-**Target repository:** a new standalone `mandem` repository. Paths in the implementation units are relative to that repository unless explicitly prefixed `Strategy Builder Pro consumer`.
+**Target repository:** a new standalone `mandem` repository. Paths in the issues are relative to that repository unless explicitly prefixed `Strategy Builder Pro consumer`.
 
 The technical design clarifies R65-R70 without changing their behavior. The persistent host mode
 is an internal mode of the single `mandem` client, not a third product. R71 remains the release
 acceptance criterion.
 
-### Program Decomposition Contract
+### Epic Issue Decomposition Contract
 
-This document is the program-level ExecPlan. U1-U10 define the dependency graph and integration contracts; they are not directly dispatchable engineer tasks.
+This document is the epic-level ExecPlan. U1-U10 define the dependency graph and integration contracts; they are not directly dispatchable engineer tasks.
 
 `PLANS.md` permits one checked-in ExecPlan to incorporate another checked-in ExecPlan by reference.
-This program uses that rule deliberately: it is self-contained for program sequencing and names
-every child path through `docs/plans/issues/README.md`; each child is separately self-contained for
+This epic uses that rule deliberately: it is self-contained for epic sequencing and names
+every subissue path through `docs/plans/issues/README.md`; each subissue is separately self-contained for
 implementation. A fresh epic orchestrator needs only this file and the current working tree to
-discover and complete the whole program.
+discover and complete the whole epic.
 
-Each U-ID owns one issue ExecPlan under `docs/plans/issues/`. Every child begins as a scaffold so the entire program can be reasoned about together. A child becomes executable only after it:
+Each U-ID owns one issue ExecPlan under `docs/plans/issues/`. Every subissue begins as a scaffold so the entire epic can be reasoned about together. A subissue becomes executable only after it:
 
 1. is expanded into a nearly self-contained ExecPlan using the repository's `PLANS.md` contract;
-2. resolves its planning-time decisions against the master plan and the real outputs of completed dependencies;
+2. resolves its planning-time decisions against the epic ExecPlan and the real outputs of completed dependencies;
 3. names its consumed and produced artifacts, module boundaries, tests, failure behavior, and downstream handoff;
 4. passes clean-room review and any repair rounds;
 5. receives exact operator approval for that reviewed revision.
 
-A issue plan has these promotion states:
+An issue ExecPlan has these promotion states:
 `scaffolded -> planned -> clean-room approved -> operator approved -> executable -> complete`. A
-downstream child may be refined early, but dependency completion invalidates any assumption
+downstream issue may be refined early, but dependency completion invalidates any assumption
 contradicted by the produced artifacts and requires review refresh before promotion.
 
-The epic orchestrator reads this master and the child registry. An implementation worker
-receives only the complete approved issue ExecPlan, which must embed every program constraint and
+The epic orchestrator reads this epic ExecPlan and the issue registry. An implementation worker
+receives only the complete approved issue ExecPlan, which must embed every epic constraint and
 dependency interface it needs. Keeping the epic plan with the orchestrator and providing
-workers only the approved issue ExecPlan prevents competing execution authorities. A bounded unit
+workers only the approved issue ExecPlan prevents competing execution authorities. A bounded issue
 packet may aid navigation but can never replace the issue ExecPlan.
 
-The program must apply Mandem's architecture standard to Mandem itself. Its source modules,
+The epic must apply Mandem's architecture standard to Mandem itself. Its source modules,
 composition roots, tests, and entrypoints must obey the same Nucleus-derived architecture standard
 that Mandem enforces in installed projects. No tooling, bootstrap code, or internal control-plane
 code may bypass the architecture checker.
@@ -648,11 +648,11 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ---
 
-## Implementation Units
+## Implementation Issues
 
 ### U1. Bootstrap the standalone repository and architecture contract
 
-- **Goal:** Establish the publishable Bun project, clean module skeleton, product documentation, licensing, pins, and deterministic developer gates that every later unit uses.
+- **Goal:** Establish the publishable Bun project, clean module skeleton, product documentation, licensing, pins, and deterministic developer gates that every later issue uses.
 - **Requirements:** R7-R9, R13-R19a, R43-R46, R58-R64, R68
 - **Dependencies:** None
 - **Files:** `package.json`, `.bun-version`, `bun.lock`, `tsconfig.json`, `eslint.config.ts`, `vitest.config.ts`, `PLANS.md`, `README.md`, `LICENSE`, `docs/architecture/mandem-system.md`, `docs/architecture/architecture-standard-v1.md`, `docs/sources/doctrine-source-manifest.yaml`, `docs/operations/provider-capability-baseline.md`, `assets/architecture-standard/**`, `src/modules/*/{domain,application,infrastructure,api}/**`, `scripts/check-architecture.ts`, `scripts/check-architecture.test.ts`, `tests/contract/provider-capability-baseline.test.ts`
@@ -767,8 +767,8 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Failed/cancelled dependencies visibly block dependants; explicit ordering remains operator-controlled.
   - Conflicting GitHub edits never overwrite canonical state silently.
   - Primitive CLI commands and TOON envelopes drive the same server transitions without direct database, Git, or tracker mutation.
-  - Dispatch rejects a worker packet that presents the program master as a second implementation
-    authority; the approved child is the only execution contract.
+  - Dispatch rejects a worker packet that presents the epic ExecPlan as a second implementation
+    authority; the approved issue ExecPlan is the only execution contract.
   - A Mandem report remains local until approval, then creates or updates the configured upstream issue and records provenance.
   - Credential-like canaries and environment dumps are rejected from report drafts, while an
     ordinary non-secret reproduction remains actionable.
@@ -848,7 +848,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Requirements:** R13-R19a, R43-R46, R58-R64, R71; AE7, AE10-AE11
 - **Dependencies:** U1-U7
 - **Files:** `src/modules/architecture-standard/**`, `src/cli/commands/init.ts`, `src/cli/commands/architecture.ts`, `assets/architecture-standard/**`, `tests/e2e/init-existing-repo.test.ts`; **Strategy Builder Pro consumer:** `.mandem/config.*`, `.mandem/operating-docs/**`, `AGENTS.md`, `CLAUDE.md`, `package.json`, `scripts/agents/{resume-state,dispatch-task,gate-and-merge}.ts`, `docs/architecture/mandem-baseline.*`
-- **Approach:** Make init reversible: preflight repository/tool/provider/Docker state, back up replaced instructions, generate into staging, validate config and compiled prompts, then activate atomically. Analyze SBP against the Nucleus-derived standard using stable violation fingerprints and commit the standard version plus baseline. Fail new or worsened violations while allowing unchanged debt. Group remediation candidates for operator approval rather than flooding the queue. Replace only chosen package aliases/scripts with thin Mandem shims; a issue belongs to exactly one control plane.
+- **Approach:** Make init reversible: preflight repository/tool/provider/Docker state, back up replaced instructions, generate into staging, validate config and compiled prompts, then activate atomically. Analyze SBP against the Nucleus-derived standard using stable violation fingerprints and commit the standard version plus baseline. Fail new or worsened violations while allowing unchanged debt. Group remediation candidates for operator approval rather than flooding the queue. Replace only chosen package aliases/scripts with thin Mandem shims; an issue belongs to exactly one control plane.
 - **Execution note:** Begin with read-only baseline generation and fixture snapshots. Do not redirect any live SBP workflow until parity tests prove the corresponding Mandem command.
 - **Patterns to follow:** The supplied SBP architecture consistency report; Nucleus boundary script and module generator tests; SBP command/coherence checks and project migration lessons.
 - **Test scenarios:**
@@ -891,7 +891,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   metrics while SQLite remains the durable event ledger. Provision dashboards for queue health,
   phase duration, worker activity, provider failure and fallback, retries, gates, merge latency,
   architecture debt, and unresolved `Needs you` states. Publish the pinned executable and server
-  image only after this unit and the complete Definition of Done pass.
+  image only after this issue and the complete Definition of Done pass.
 - **Execution note:** Start with fixture lifecycle data and prove local-only service bindings before wiring ingestion.
 - **Patterns to follow:** Mandem's finalized event schema from U2/U9 and Grafana provisioning conventions; SBP command-observability classification as the initial signal taxonomy.
 - **Test scenarios:**
@@ -907,7 +907,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 ## Concrete Steps
 
-Work from the Mandem repository root. At the beginning of every fresh program session, run:
+Work from the Mandem repository root. At the beginning of every fresh orchestration session, run:
 
     pwd
     git status --short
@@ -917,13 +917,13 @@ Work from the Mandem repository root. At the beginning of every fresh program se
     sed -n '1,$p' docs/plans/2026-07-21-001-feat-mandem-plan.md
     sed -n '1,$p' docs/plans/issues/README.md
 
-The working directory must be the Mandem checkout. Read the complete canonical master before
-inspecting `Progress` in this file and the child
-registry to find the earliest dependency-ready incomplete unit. If its issue plan is still a
+The working directory must be the Mandem checkout. Read the complete epic ExecPlan before
+inspecting `Progress` in this file and the issue ExecPlan
+registry to find the earliest dependency-ready incomplete issue. If its issue plan is still a
 scaffold or has `execution_authorized: false`, continue planning or review only. Never start
 implementation.
 
-Before promoting a issue plan, read the complete child file and confirm that it names `PLANS.md`,
+Before promoting an issue ExecPlan, read the complete issue ExecPlan and confirm that it names `PLANS.md`,
 contains every required living section, defines its terms, gives repository-relative files and
 exact commands, states observable acceptance, and ends with a revision note. Run its clean-room
 review, apply accepted repairs, record the review in both Decision Logs, and ask the operator to
@@ -948,21 +948,21 @@ The staged-name output must contain only the explicitly named configuration, ins
 planning paths. Any `src/`, `tests/`, package, build, Docker, runtime, generated, or quarantined
 prototype path aborts the commit. The root SHA is the immutable planning-baseline identifier and is
 recorded in the U1 git-native issue before implementation. Operator approval applies to the exact
-master and U1 content in that baseline. Activating `execution_authorized` after approval is an
+epic ExecPlan and U1 content in that baseline. Activating `execution_authorized` after approval is an
 approval-state transition; it may update only that metadata field and the append-only living
 records, never plan instructions.
 
-When a child is authorized, give the executor the complete issue plan. The epic orchestrator
-retains this master for sequencing and ensures the child already contains every applicable program
+When an issue ExecPlan is authorized, give the executor the complete issue plan. The epic orchestrator
+retains this epic ExecPlan for sequencing and ensures the issue ExecPlan already contains every applicable epic
 constraint. The executor proceeds through every milestone without routine “next step” questions,
-updates the child’s living sections at each stopping point, commits frequently in an isolated
+updates the issue ExecPlan’s living sections at each stopping point, commits frequently in an isolated
 worktree, and opens a pull request. Review, repair, Learn, merge, and any plan-defined post-merge
-verification must complete before the unit is marked complete here.
+verification must complete before the issue is marked complete here.
 
-After each unit merges, run the verification commands named by that issue plan at the merged
+After each issue merges, run the verification commands named by that issue plan at the merged
 commit. Record concise evidence and the merge SHA in both plans. Re-read all downstream scaffolds
-and revise any assumption or interface invalidated by the completed unit before promoting the next
-child.
+and revise any assumption or interface invalidated by the completed issue before promoting the next
+subissue.
 
 ---
 
@@ -1000,7 +1000,7 @@ child.
 
 ### Deferred Implementation Notes
 
-- Exact SQLite schema/index names, local transport and message encoding, OpenTUI component hierarchy, and Linux user-service unit content should be settled while implementing their owning unit and captured in that unit's tests and architecture docs.
+- Exact SQLite schema/index names, local transport and message encoding, OpenTUI component hierarchy, and Linux user-service unit content should be settled while implementing their owning issue and captured in that issue's tests and architecture docs.
 - The `git-native-issue` executable version and distribution method depend on the pre-implementation GPL boundary review; replacing it would be a product-scope change because the user selected it explicitly.
 - Live Claude/Codex flags must be verified against the installed subscription-backed CLIs during U5. Capability semantics belong in adapters; no domain behavior may depend on undocumented flags.
 - macOS service installation is a post-v1 compatibility follow-on and should reuse the Linux-proven resident-mode application contract.
@@ -1009,9 +1009,9 @@ child.
 
 ## Validation and Acceptance
 
-Program acceptance is observable only when every issue ExecPlan has independently passed its
+Epic acceptance is observable only when every issue ExecPlan has independently passed its
 approval, implementation, review, Learn, merge, and verification contract. A green build alone is
-not program completion. From a clean Strategy Builder Pro checkout, an operator must be able to
+not epic completion. From a clean Strategy Builder Pro checkout, an operator must be able to
 install Mandem and complete the restart-proof vertical slice described by R71, then reconstruct
 the outcome after every agent conversation and process has closed.
 
@@ -1019,10 +1019,10 @@ the outcome after every agent conversation and process has closed.
 
 | Gate | Applies to | Required outcome |
 | --- | --- | --- |
-| `bun run typecheck` | Every unit | No TypeScript errors or undocumented casts |
-| `bun run lint` | Every unit | No lint or architecture-boundary violations |
-| `bun run test:run` | Every unit | Unit and contract suites pass with red-green evidence for behavior changes |
-| `bun run check` | Every unit after U1 | Composite deterministic gate passes, including commit ordering, generated operating-doc drift, architecture rules, and protocol schemas |
+| `bun run typecheck` | every issue | No TypeScript errors or undocumented casts |
+| `bun run lint` | every issue | No lint or architecture-boundary violations |
+| `bun run test:run` | every issue | Unit and contract suites pass with red-green evidence for behavior changes |
+| `bun run check` | every issue after U1 | Composite deterministic gate passes, including commit ordering, generated operating-doc drift, architecture rules, and protocol schemas |
 | Server/SQLite integration suite | U2-U4 | Real temporary SQLite, selected local transport, replay, migration, and reconciliation behavior pass |
 | Provider conformance suite | U5-U9 | Claude, Codex, and fake adapters satisfy the same capability and handoff contract |
 | Lifecycle E2E | U6-U9 | Local Git remotes, worktrees, PR fixtures, review/repair/Learn, merge serialization, and cleanup pass |
@@ -1044,7 +1044,7 @@ approval-sensitive content invalidates it. An interrupted worker resumes from th
 worktree, commits, issue, pull request, and Mandem event state rather than from a transcript.
 
 Never delete an incomplete worktree, overwrite an unreviewed plan, or infer completion from a
-missing process. Preserve partial work and record the stopping point. If an upstream unit changes
+missing process. Preserve partial work and record the stopping point. If an upstream issue changes
 an interface consumed downstream, return affected issue plans to a non-executable state, revise
 them, and repeat clean-room review and approval. If durable sources disagree and precedence cannot
 resolve the contradiction, stop in a visible operator-decision state rather than choosing silently.
@@ -1066,7 +1066,7 @@ failure that led to the issue plan promotion contract, not approved implementati
 
 ## Interfaces and Dependencies
 
-The program-level dependency order is U1, U2, U3, U4, U5, U6, U7, U8, U9, then U10. A child may
+The epic-level dependency order is U1, U2, U3, U4, U5, U6, U7, U8, U9, then U10. An issue may
 declare narrower parallel work only after proving that its inputs and merge boundaries are
 independent. `docs/plans/issues/README.md` is the human-readable registry; each issue plan must name
 the exact upstream artifacts it consumes and downstream artifacts it produces.
@@ -1075,7 +1075,7 @@ Mandem exposes two executable surfaces from one Bun/TypeScript package: `mandem`
 CLI/TUI and resident host capability process, while `mandem-server` is the Docker-hosted durable
 control plane. Provider CLIs, tmux, Git worktrees, GitHub projection, git-native issues, SQLite,
 TOON output, OpenTUI, and the later Grafana stack stay behind the boundaries described in the
-relevant issue plans. No child may silently redefine a epic requirement or another unit’s
+relevant issue plans. No subissue may silently redefine an epic requirement or another issue’s
 published interface.
 
 ---
@@ -1104,8 +1104,8 @@ published interface.
 - [x] (2026-07-24) Created the public standalone `BrandonJF/mandem` repository.
 - [x] (2026-07-24) Installed `PLANS.md`, Codex/Claude discovery guidance, the epic plan, and U1-U10 issue plan registry.
 - [x] (2026-07-24) Quarantined the premature unreviewed U1 prototype and added the issue plan promotion contract.
-- [x] (2026-07-24) Repaired the first program clean-room findings, including unit ownership,
-  sole child-worker authority, empty-repository bootstrap, recovery coverage, and pinned external
+- [x] (2026-07-24) Repaired the first epic clean-room findings, including issue ownership,
+  sole issue-worker authority, empty-repository bootstrap, recovery coverage, and pinned external
   AXI/TOON provenance.
 - [x] (2026-07-24) Final independent verification of the epic ExecPlan and registry returned no
   unresolved P0-P2 findings.
@@ -1137,17 +1137,17 @@ published interface.
   Evidence: `src/lib/pipeline-graph/pipeline-state.server.ts` models `dispatched`, `started`, `complete`, `synced`, `gated`, `harvested`, and `merged`, omitting Plan, approval, Review, Learn, pause/cancel, and verification.
 - Observation: Bun natively supports server and client HTTP over Unix domain sockets plus server WebSockets, making an event-driven local protocol possible without a public or loopback TCP port.
   Evidence: Bun's official HTTP server and fetch documentation expose `unix` socket options; its WebSocket server exposes open/message/close/drain lifecycle handlers.
-- Observation: The merged SBP artifact had strong product and implementation-unit content but was not a `PLANS.md`-compliant epic ExecPlan.
+- Observation: The merged SBP artifact had strong product and issue content but was not a `PLANS.md`-compliant epic ExecPlan.
   Evidence: It lacked the required `PLANS.md` opening reference, `Context and Orientation`, `Concrete Steps`, `Idempotence and Recovery`, `Artifacts and Notes`, `Interfaces and Dependencies`, and bottom revision note.
-- Observation: Running Mandem's program from the SBP checkout creates ambiguous authority and prevents fresh Mandem worktrees from discovering their governing plan.
+- Observation: Running Mandem.s epic from the SBP checkout creates ambiguous authority and prevents fresh Mandem worktrees from discovering their governing plan.
   Evidence: The standalone repository initially had no committed `PLANS.md` or agent entry guidance even though the SBP copy of the plan had already merged.
 - Observation: The first clean-room pass found overlapping U1/U3 Docker ownership and no
   bootstrap path for R6's work ledger.
-  Evidence: Both units named `Dockerfile` and `compose.yaml`, while the git-native issue
+  Evidence: Both issues named `Dockerfile` and `compose.yaml`, while the git-native issue
   capability itself does not arrive until U4.
-- Observation: A self-contained issue plan should not compete with the master for worker authority.
+- Observation: A self-contained issue plan should not compete with the epic ExecPlan for worker authority.
   Evidence: The first clean-room pass flagged the instruction to give workers both plans even
-  though each child is required to embed all applicable program constraints.
+  though each subissue is required to embed all applicable epic constraints.
 
 ## Decision Log
 
@@ -1167,17 +1167,17 @@ published interface.
   Rationale: Push delivery, reconnection, backpressure, host/container operation, no polling, and no public service are product constraints; Unix sockets, WebSockets, protobuf, or another implementation may satisfy them.
   Date/Author: 2026-07-22 / Brandon and Codex document review
 - Decision: Make the Mandem copy of this document the canonical living epic ExecPlan and retain the SBP copy only as historical provenance.
-  Rationale: A fresh Codex session must be able to enter the Mandem repository, discover the full program, and continue without depending on SBP chat or files.
+  Rationale: A fresh Codex session must be able to enter the Mandem repository, discover the full epic, and continue without depending on SBP chat or files.
   Date/Author: 2026-07-24 / Brandon and Codex
-- Decision: Separate epic coordination authority from child implementation authority.
+- Decision: Separate epic coordination authority from issue implementation authority.
   Rationale: The epic plan must be resumable and capable of coordinating the whole build, while
   its generic `execution_authorized` flag remains false so it cannot be mistaken for a worker
   prompt. `epic_coordination_authorized` permits sequencing; each implementation worker still
-  needs one reviewed, self-contained child with `execution_authorized: true`.
+  needs one reviewed, self-contained issue ExecPlan with `execution_authorized: true`.
   Date/Author: 2026-07-24 / Brandon and Codex
 - Decision: Make the approved issue ExecPlan the sole implementation-worker authority.
-  Rationale: The master owns program sequencing; duplicating it in each worker context creates
-  conflict and unnecessary tokens after the child has incorporated its relevant constraints.
+  Rationale: The epic ExecPlan owns epic sequencing; duplicating it in each worker context creates
+  conflict and unnecessary tokens after the issue ExecPlan has incorporated its relevant constraints.
   Date/Author: 2026-07-24 / Codex after clean-room scope review
 - Decision: Move Docker image, Compose, and health behavior wholly to U3.
   Rationale: U3 owns the server and Docker lifecycle; U1 only needs package artifacts and the
@@ -1196,9 +1196,9 @@ published interface.
 ## Outcomes & Retrospective
 
 Current planning outcome: Mandem has a dependency-ordered epic ExecPlan in its own repository,
-plus issue plan boundaries for U1, U1C, U1A, and U2-U10. The program is restartable from durable
+plus issue ExecPlan boundaries for U1, U1C, U1A, and U2-U10. The epic is restartable from durable
 artifacts and no longer depends on the SBP orchestrator conversation. U1 merged at
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`, but planned corrective child U1C for item `5717221`
+`88b9533ab840c9d357a1d09d2341709e2cbdd986`, but planned subissue U1C for item `5717221`
 and U1A item `745eda8` must complete before U2 dependency revalidation can run again.
 
 ## Deferred / Open Questions
@@ -1212,10 +1212,10 @@ and U1A item `745eda8` must complete before U2 dependency revalidation can run a
 Revision note (2026-07-24): Converted the Mandem copy from a unified product/technical artifact
 into the canonical `PLANS.md`-governed epic ExecPlan, then repaired its clean-room findings.
 Added the missing orientation, plan-of-work, concrete-step, validation, recovery, artifact,
-interface, living-document, empty-repository bootstrap, child-authority, and phase-recovery
+interface, living-document, empty-repository bootstrap, issue-authority, and phase-recovery
 contracts. Recorded Mandem as the sole living home and identified AXI and TOON as pinned,
-licensed external sources rather than Mandem inventions. Program coordination and child execution
-authority are separate: the master remains non-executable, U1 is now authorized, and U2-U10 remain
+licensed external sources rather than Mandem inventions. Epic coordination and issue execution
+authority are separate: the epic ExecPlan remains non-executable, U1 is now authorized, and U2-U10 remain
 blocked behind their own plan gates. The product contract, stable requirements, and U1-U10
 technical design were preserved.
 
@@ -1228,13 +1228,13 @@ closed git-native issue `da645bd`, and U2 dependency revalidation. U2 remains a 
 scaffold.
 
 U1 post-merge correction update (2026-07-25): Recorded corrective issue `5717221`, added U1A
-documentation/authoring-quality issue `745eda8`, and blocked U2 until both foundational units
-complete. The change keeps the master non-executable and moves implementation detail into the U1A
+documentation/authoring-quality issue `745eda8`, and blocked U2 until both foundational issues
+complete. The change keeps the epic ExecPlan non-executable and moves implementation detail into the U1A
 issue ExecPlan.
 
 U1C planning update (2026-07-25): Added the non-executable corrective issue ExecPlan at
 `docs/plans/issues/u1-architecture-package-contract.md` for all six validated
-architecture and package silent-pass findings. U1C is planned only. U1A, U2, and later units remain
+architecture and package silent-pass findings. U1C is planned only. U1A, U2, and later issues remain
 blocked until U1C merges and post-merge verification passes.
 
 U1C authorization update (2026-07-27): Recorded exact operator approval of planning PR #12 head

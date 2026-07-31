@@ -192,9 +192,8 @@ export class GitHubIssueGraphProvider implements IssueGraphProvider {
       await this.runner({ endpoint: `${base}/issues/${operation.issueNumber}`, method: "PATCH", fields: { milestone: number } });
     } else if (operation.kind === "add-subissue") {
       await this.runner({ endpoint: `${base}/issues/${operation.parentNumber}/sub_issues`, method: "POST", fields: { sub_issue_id: operation.subissueDatabaseId } });
-    } else if (operation.kind === "move-subissue") {
-      await this.runner({ endpoint: `${base}/issues/${operation.currentParentNumber}/sub_issue`, method: "DELETE", fields: { sub_issue_id: operation.subissueDatabaseId } });
-      await this.runner({ endpoint: `${base}/issues/${operation.desiredParentNumber}/sub_issues`, method: "POST", fields: { sub_issue_id: operation.subissueDatabaseId } });
+    } else if (operation.kind === "remove-subissue") {
+      await this.runner({ endpoint: `${base}/issues/${operation.parentNumber}/sub_issue`, method: "DELETE", fields: { sub_issue_id: operation.subissueDatabaseId } });
     } else {
       throw new Error(`GitHub operation is not implemented: ${operation.kind}`);
     }

@@ -36,6 +36,10 @@ export interface NativeIssueGraphWriteResult {
   readonly result: string;
 }
 
+export interface NativeIssueGraphInspection extends NativeRefRecoveryState {
+  readonly action: ReturnType<typeof classifyNativeRef>;
+}
+
 /** Accepts only an approved baseline or its one deterministic metadata result. */
 export class NativeIssueGraphWriter {
   constructor(private readonly root: string, private readonly remote = "origin") {}
@@ -69,7 +73,7 @@ export class NativeIssueGraphWriter {
     );
   }
 
-  async apply(request: NativeIssueGraphWriteRequest): Promise<NativeIssueGraphWriteResult> {
+  async inspect(request: NativeIssueGraphWriteRequest): Promise<NativeIssueGraphInspection> {
     const reference = `refs/issues/${request.issueId}`;
     const remoteReference = `refs/mandem/remote/${request.issueId}`;
     await git(this.root, ["fetch", this.remote, `+${reference}:${remoteReference}`]);
@@ -85,6 +89,14 @@ export class NativeIssueGraphWriter {
       local,
       remote,
     } satisfies NativeRefRecoveryState);
+    return { baseline: acceptedBaseline, result, local, remote, action };
+  }
+
+  async apply(request: NativeIssueGraphWriteRequest): Promise<NativeIssueGraphWriteResult> {
+    const reference = `refs/issues/${request.issueId}`;
+    const state = await this.inspect(request);
+    const { action, result } = state;
+    const acceptedBaseline = state.baseline;
 
     if (action === "complete") return { action: "complete", result };
     if (action === "adopt-result") {

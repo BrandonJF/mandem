@@ -9,7 +9,7 @@ Reviewed commit: `bbddf1949cd8a3d7d78551bb00129e871a094c63`
 Reviewed SHA-256: `24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c`
 
 A fresh reviewer read the repository instructions, complete `PLANS.md`, the write-clearly skill and
-style guide, epic plan, child registry, durable issue, current implementation and tests, and the
+style guide, epic plan, issue registry, durable issue, current implementation and tests, and the
 U1C plan without relying on the planning conversation.
 
 The first repair round added the per-rule applicability matrix, repository-wide TypeScript

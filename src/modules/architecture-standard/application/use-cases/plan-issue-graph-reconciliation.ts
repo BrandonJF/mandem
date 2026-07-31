@@ -162,7 +162,7 @@ export function planIssueGraphReconciliation(input: PlanReconciliationInput): Re
     if (issue.parentNumber === null) {
       operations.push({
         kind: "add-subissue",
-        key: operationKey(6, record.issueId, "parent"),
+        key: operationKey(7, record.issueId, "parent"),
         issueId: record.issueId,
         parentIssueId: desiredParentId,
         parentNumber: desiredParent.number,
@@ -170,12 +170,18 @@ export function planIssueGraphReconciliation(input: PlanReconciliationInput): Re
       });
     } else {
       operations.push({
-        kind: "move-subissue",
+        kind: "remove-subissue",
         key: operationKey(6, record.issueId, "parent"),
         issueId: record.issueId,
-        currentParentNumber: issue.parentNumber,
-        desiredParentIssueId: desiredParentId,
-        desiredParentNumber: desiredParent.number,
+        parentNumber: issue.parentNumber,
+        subissueDatabaseId: issue.databaseId,
+      });
+      operations.push({
+        kind: "add-subissue",
+        key: operationKey(7, record.issueId, "parent"),
+        issueId: record.issueId,
+        parentIssueId: desiredParentId,
+        parentNumber: desiredParent.number,
         subissueDatabaseId: issue.databaseId,
       });
     }

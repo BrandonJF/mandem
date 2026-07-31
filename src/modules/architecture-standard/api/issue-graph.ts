@@ -10,6 +10,8 @@ import { checkIssueGraph } from "../application/use-cases/check-issue-graph";
 import { GitNativeIssueGraphRepository } from "../infrastructure/repositories/git-native-issue-graph-repository";
 import { NativeIssueGraphApprovalReader } from "../infrastructure/services/native-issue-graph-approval";
 import { NativeIssueGraphWriter } from "../infrastructure/services/native-issue-graph-writer";
+import type { NativeIssueGraphWriteRequest, NativeIssueGraphInspection } from "../infrastructure/services/native-issue-graph-writer";
+import { nativeMetadataRequiresWrite } from "../application/use-cases/set-native-issue-graph-metadata";
 
 export async function runLocalIssueGraphCheck(root: string) {
   return checkIssueGraph(new GitNativeIssueGraphRepository(root));
@@ -83,22 +85,35 @@ export async function runApplyNativeIssueGraph(input: {
   const records = await Promise.all(expectedIds.map(async (issueId) => repository.readIssue(issueId)));
   assertExpectedNativeState(input.manifest, records);
   const writer = new NativeIssueGraphWriter(input.root);
-  let commits = 0;
-  let pushes = 0;
+  const prepared: {
+    readonly current: boolean;
+    readonly request: NativeIssueGraphWriteRequest;
+    readonly inspection: NativeIssueGraphInspection;
+  }[] = [];
   for (const [index, entry] of input.manifest.issues.entries()) {
-    const current = records[index]?.metadata;
-    const payload = serializeGraphMetadata(entry.metadata);
-    if (current && serializeGraphMetadata(current) === payload) continue;
     const baseline = approval.target.issue_refs[entry.issueId];
     if (!baseline) throw new Error(`approved baseline is missing: ${entry.issueId}`);
-    const result = await writer.apply({
+    const payload = serializeGraphMetadata(entry.metadata);
+    const current = records[index]?.metadata;
+    const request = {
       issueId: entry.issueId,
       approvedBaseline: baseline,
       payload,
       approvalCommit: approval.commit,
       approvalIssueId: input.approvalIssueId,
       approvalTimestamp: approval.timestamp,
+    };
+    prepared.push({
+      current: current !== null && current !== undefined && serializeGraphMetadata(current) === payload,
+      request,
+      inspection: await writer.inspect(request),
     });
+  }
+  let commits = 0;
+  let pushes = 0;
+  for (const entry of prepared) {
+    if (!nativeMetadataRequiresWrite(entry.current, entry.inspection)) continue;
+    const result = await writer.apply(entry.request);
     if (result.action === "created") {
       commits += 1;
       pushes += 1;

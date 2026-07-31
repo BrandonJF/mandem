@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { IssueGraphProvider } from "../application/ports/issue-graph-provider";
 import { reconcileIssueGraph } from "../application/use-cases/reconcile-issue-graph";
 import { canonicalJson } from "../domain/approval-contract";
-import type { IssueGraphOperation, ProviderSnapshot } from "../domain/issue-graph-operations";
+import { managedProviderSnapshot, type IssueGraphOperation, type ProviderSnapshot } from "../domain/issue-graph-operations";
 import type { ProjectionTransaction } from "../domain/projection-transaction";
 import type { LocalIssueRecord } from "../domain/issue-graph-types";
 
@@ -31,9 +31,12 @@ const record: LocalIssueRecord = {
 function snapshot(state: "open" | "closed"): ProviderSnapshot {
   return {
     repository: "BrandonJF/mandem",
-    labels: [{ name: "in-progress", color: "EDEDED", description: "" }],
+    labels: [
+      { name: "in-progress", color: "EDEDED", description: "" },
+      { name: "unmanaged", color: "000000", description: "outside Mandem's policy" },
+    ],
     milestones: [{ number: 1, title: "Mandem v1", description: "Release", state: "open", dueOn: null }],
-    issues: [{ issueId: "BrandonJF/mandem#29", databaseId: 2900, number: 29, state, labels: ["in-progress"], milestoneNumber: 1, parentNumber: null, subissueNumbers: [] }],
+    issues: [{ issueId: "BrandonJF/mandem#29", databaseId: 2900, number: 29, state, labels: ["in-progress", "unmanaged"], milestoneNumber: 1, parentNumber: null, subissueNumbers: [] }],
   };
 }
 
@@ -42,7 +45,7 @@ function digest(value: unknown): string {
 }
 
 function transaction(operation: IssueGraphOperation): ProjectionTransaction {
-  const initial = snapshot("closed");
+  const initial = managedProviderSnapshot([record], snapshot("closed"));
   return {
     repository: "BrandonJF/mandem",
     graphSha256: "1".repeat(64),
@@ -71,15 +74,18 @@ describe("reconcileIssueGraph", () => {
 
   it("applies once and then proves a zero-write retry", async () => {
     const provider = new FakeProvider();
-    expect(await reconcileIssueGraph({ records: [record], transaction: transaction(operation), provider })).toEqual({ writes: 1, completedOperations: 1 });
+    let approvalChecks = 0;
+    const beforeWrite = async () => { approvalChecks += 1; };
+    expect(await reconcileIssueGraph({ records: [record], transaction: transaction(operation), provider, beforeWrite })).toEqual({ writes: 1, completedOperations: 1 });
     expect(await reconcileIssueGraph({ records: [record], transaction: transaction(operation), provider })).toEqual({ writes: 0, completedOperations: 1 });
     expect(provider.writes).toBe(1);
+    expect(approvalChecks).toBe(1);
   });
 
   it("accepts a lost response only after the provider proves the write", async () => {
     const provider = new FakeProvider();
     provider.loseResponse = true;
-    expect(await reconcileIssueGraph({ records: [record], transaction: transaction(operation), provider })).toEqual({ writes: 0, completedOperations: 1 });
+    expect(await reconcileIssueGraph({ records: [record], transaction: transaction(operation), provider })).toEqual({ writes: 1, completedOperations: 1 });
     expect(provider.writes).toBe(1);
   });
 

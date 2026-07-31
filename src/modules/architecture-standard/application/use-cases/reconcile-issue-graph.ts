@@ -2,6 +2,7 @@
 import { canonicalJson } from "../../domain/approval-contract";
 import type { ProjectionTransaction } from "../../domain/projection-transaction";
 import type { LocalIssueRecord } from "../../domain/issue-graph-types";
+import { managedProviderSnapshot, providerSnapshotDigest } from "../../domain/issue-graph-operations";
 import type { IssueGraphProvider } from "../ports/issue-graph-provider";
 import { planIssueGraphReconciliation } from "./plan-issue-graph-reconciliation";
 
@@ -20,17 +21,23 @@ export async function reconcileIssueGraph(input: {
   readonly records: readonly LocalIssueRecord[];
   readonly transaction: ProjectionTransaction;
   readonly provider: IssueGraphProvider;
+  readonly beforeWrite?: () => Promise<void>;
 }): Promise<{ readonly writes: number; readonly completedOperations: number }> {
   let snapshot = await input.provider.readSnapshot(input.transaction.repository, mappings(input.records));
   let plan = planIssueGraphReconciliation({ records: input.records, snapshot });
   let completedOperations = suffixIndex(input.transaction, plan);
+  const snapshotDigest = providerSnapshotDigest(managedProviderSnapshot(input.records, snapshot));
+  if (completedOperations === 0 && snapshotDigest !== input.transaction.providerSnapshotSha256) {
+    throw new Error("IGRAPH-PROVIDER-SNAPSHOT: current managed snapshot differs from approval");
+  }
   let writes = 0;
   while (plan.operations.length > 0) {
     const operation = plan.operations[0];
     if (!operation) break;
+    await input.beforeWrite?.();
+    writes += 1;
     try {
       await input.provider.apply(operation);
-      writes += 1;
     } catch (error: unknown) {
       snapshot = await input.provider.readSnapshot(input.transaction.repository, mappings(input.records));
       plan = planIssueGraphReconciliation({ records: input.records, snapshot });

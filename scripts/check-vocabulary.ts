@@ -2,7 +2,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-const prohibited = /\b(program (?:ExecPlan|issue|graph|plan|orchestrator|membership)|work[ -]item|child (?:ExecPlan|plan|scaffold|issue|item)|corrective (?:item|work)|support (?:item|issue|incident)|unit (?:(?:issue|plan|scaffold|hierarchy|key)))\b/giu;
+const prohibited = /\b(program-level|program (?:ExecPlan|issue|graph|plan|orchestrator|membership|unit)|master[ -](?:program|plan)|master (?:requirements?|acceptance|lifecycle|epic|r\d+|ktd\d+)|work[ -]item|child (?:ExecPlan|plan|scaffold|issue|item|registry)|corrective (?:item|work)|support (?:item|issue|incident)|implementation units|unit (?:(?:issue|plan|scaffold|hierarchy|key)))\b/giu;
 const directive = /^<!-- vocabulary-check: allow-next-line reason="([^"]*)" -->$/u;
 
 async function files(root: string): Promise<string[]> {

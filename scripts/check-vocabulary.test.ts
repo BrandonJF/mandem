@@ -17,11 +17,18 @@ async function check(source: string): Promise<readonly string[]> {
 
 describe("vocabulary check", () => {
   it("finds canonical deprecated contexts in prose and code fences", async () => {
-    const findings = await check("A program issue and work-item.\n```\nchild issue\n```\n");
+    const findings = await check("A program issue and work-item.\nThe master plan has implementation units.\nMaster R18, Master KTD14, and Master acceptance remain.\nMaster lifecycle and Master requirements remain.\n```\nchild issue\n```\n");
     expect(findings).toEqual([
       "README.md:1: program issue",
       "README.md:1: work-item",
-      "README.md:3: child issue",
+      "README.md:2: implementation units",
+      "README.md:2: master plan",
+      "README.md:3: Master KTD14",
+      "README.md:3: Master R18",
+      "README.md:3: Master acceptance",
+      "README.md:4: Master lifecycle",
+      "README.md:4: Master requirements",
+      "README.md:6: child issue",
     ]);
   });
 

@@ -476,7 +476,7 @@ writes.
   when those words classify hierarchy, and update all links and native plan paths.
 
 <!-- vocabulary-check: allow-next-line reason="Documents the checker’s exact prohibited literal list." -->
-  The vocabulary checker rejects the phrases `program ExecPlan`, `program issue`, `program graph`, `program plan`, `program orchestrator`, `program membership`, `work item`, `work-item`, `child ExecPlan`, `child plan`, `child scaffold`, `child issue`, `child item`, `corrective item`, `corrective work`, `support item`, `support issue`, and `support incident`, plus `unit` when it modifies issue, plan, scaffold, hierarchy, or key. Matching is case-insensitive and includes inline code and fenced code. This finite list automates common violations; authors and reviewers still enforce the operating contract's general prohibition on using any synonym as a substitute.
+  The vocabulary checker rejects the phrases `program-level`, `program ExecPlan`, `program issue`, `program graph`, `program plan`, `program orchestrator`, `program membership`, `program unit`, `master program`, `master-program`, `master plan`, `master requirements`, `master acceptance`, `master lifecycle`, `master R<number>`, `master KTD<number>`, `work item`, `work-item`, `child ExecPlan`, `child plan`, `child scaffold`, `child issue`, `child item`, `child registry`, `corrective item`, `corrective work`, `support item`, `support issue`, `support incident`, and `implementation units`, plus `unit` when it modifies issue, plan, scaffold, hierarchy, or key. Matching is case-insensitive and includes inline code and fenced code. This finite list automates common violations; authors and reviewers still enforce the operating contract's general prohibition on using any synonym as a substitute.
 
   An exceptional physical line must be preceded immediately by the required one-line exemption
   comment with a non-empty reason. The directive applies to exactly the next physical line,
@@ -751,7 +751,8 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   and plan migration, approved 15-ref native metadata apply, zero-write second apply, offline
   15-issue graph check, corrected epic label policy, deterministic GitHub operation planning,
   provider adapter, immutable transaction record, exact-suffix retry executor, approved five-write
-  GitHub reconciliation, zero-write repeat, and operator documentation; remaining: final review).
+  GitHub reconciliation, zero-write repeat, operator documentation, and first review repairs;
+  remaining: review confirmation).
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
@@ -774,6 +775,15 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   Evidence: Every proposed label definition contained escaped quote characters, such as
   `color: "\"\\\"B60205\\\"\""`. The nested policy parser preserved YAML quotes instead of
   decoding them; no GitHub write was attempted.
+- Observation: The first implementation review found that local metadata equality could conceal a
+  lost native-ref push and that a GitHub parent change was represented as one non-atomic operation.
+  Evidence: Regression tests now require native local and remote heads to equal the accepted
+  baseline before skipping a write, and require separate remove-subissue and add-subissue
+  operations so a retry can resume from the exact remaining suffix.
+- Observation: A checked-in ExecPlan could previously disappear from the native graph without an
+  offline finding because discovery began only from native refs.
+  Evidence: The repository adapter now lists every direct issue ExecPlan independently, and the
+  missing-ref regression test reports `IGRAPH-PLAN-ISSUE`.
 
 ## Decision Log
 
@@ -797,6 +807,11 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   multi-ref transaction reviewable, hashable, repeatable, and safe to retry without making GitHub
   or plan prose authoritative.
   Date/Author: 2026-07-30 / Codex
+- Decision: Recheck the exact projection approval ref before every GitHub write and compare only
+  provider fields managed by the epic policy when validating the approved initial snapshot.
+  Rationale: Approval can be withdrawn or replaced during a multi-write run, while unrelated
+  provider labels must not invalidate an otherwise exact approved transaction.
+  Date/Author: 2026-07-31 / Codex after implementation review
 
 ## Outcomes & Retrospective
 
@@ -837,3 +852,14 @@ write requires its own exact approval.
 
 Revision note (2026-07-31): Recorded the approved five-operation GitHub reconciliation, zero-write
 repeat, zero-drift comparison, and completed operator documentation.
+
+Revision note (2026-07-31): Recorded first-review repairs. Native writes now preflight the full
+batch and recover a lost push, provider parent changes use two retryable operations, each provider
+write rechecks approval, initial snapshot validation excludes unmanaged fields, lost responses
+report attempted writes, transaction preparation recovers a lost push, offline checks discover
+orphaned ExecPlans, and maintained hierarchy prose uses epic, issue, and subissue consistently.
+
+Revision note (2026-07-31): Repaired follow-up review findings. The add-subissue operation now has
+one stable key before and after parent removal, with a regression test that proves the remaining
+approved suffix is unchanged. The vocabulary check now detects active `Master R`, `Master KTD`,
+acceptance, lifecycle, and requirements aliases, and maintained issue plans use epic terminology.

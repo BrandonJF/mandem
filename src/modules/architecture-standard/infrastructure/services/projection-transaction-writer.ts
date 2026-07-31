@@ -61,6 +61,13 @@ export class ProjectionTransactionWriter {
         await this.message(parent) === payload
       ) return { commit: parent, created: false, pushed: false, transactionSha256 };
     }
+    if (local !== remote && localMessage === payload) {
+      const parent = await git(this.root, ["rev-parse", `${local}^`]);
+      if (parent === remote) {
+        await git(this.root, ["push", `--force-with-lease=${reference}:${remote}`, this.remote, reference]);
+        return { commit: local, created: false, pushed: true, transactionSha256 };
+      }
+    }
     if (local !== remote) throw new Error("local and remote approval issue refs differ");
     const [tree, date] = await Promise.all([
       git(this.root, ["rev-parse", `${local}^{tree}`]),
