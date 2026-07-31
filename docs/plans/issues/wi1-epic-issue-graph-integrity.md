@@ -750,8 +750,8 @@ Remote comparison requires authenticated `gh`, network access, and permission to
 - [ ] Complete Steps 1-6 in order (completed: local contract, guarded native writer, vocabulary
   and plan migration, approved 15-ref native metadata apply, zero-write second apply, offline
   15-issue graph check, corrected epic label policy, deterministic GitHub operation planning,
-  provider adapter, immutable transaction record, and exact-suffix retry executor; remaining: live
-  approved GitHub reconciliation, documentation, and final review).
+  provider adapter, immutable transaction record, exact-suffix retry executor, approved five-write
+  GitHub reconciliation, zero-write repeat, and operator documentation; remaining: final review).
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
@@ -805,9 +805,10 @@ guarded native writer, vocabulary migration, and native migration are complete. 
 approved apply created and pushed 15 metadata commits. Its immediate repeat performed zero commits
 and zero pushes, and the offline check reports `issue graph native v1 valid: 15 managed issues`.
 The later approved correction changed one epic metadata commit and its repeat performed zero
-writes. The read-only GitHub comparison reports five managed operations. The projection planner,
-`gh api` adapter, native transaction writer, approval reader, and exact-suffix retry executor are
-implemented and covered by focused tests. GitHub has not been changed.
+writes. The approved provider transaction applied five GitHub writes and verified the exact
+remaining suffix after each one. Its repeat performed zero writes, and the independent comparison
+reports `issue graph remote valid: 15 managed issues, 0 operations`. Final review and the
+implementation pull request remain.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -833,3 +834,6 @@ provider preview. No provider mutation occurred.
 Revision note (2026-07-31): Recorded the approved epic metadata correction and completion of the
 provider planning, transaction, adapter, and retry implementation. The remaining live projection
 write requires its own exact approval.
+
+Revision note (2026-07-31): Recorded the approved five-operation GitHub reconciliation, zero-write
+repeat, zero-drift comparison, and completed operator documentation.
