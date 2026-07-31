@@ -2,7 +2,7 @@
 
 Date: 2026-07-28
 
-Plan: `docs/plans/units/wi1-epic-issue-graph-integrity.md`
+Plan: `docs/plans/issues/wi1-epic-issue-graph-integrity.md`
 
 Reviewed plan SHA-256: `33dbed40661bcaa65ba41723c3d8307dad5f97e8063334bd4efc6f635d900869`
 

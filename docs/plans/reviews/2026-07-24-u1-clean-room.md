@@ -2,12 +2,12 @@
 
 Date: 2026-07-24
 
-Reviewed artifact: `docs/plans/units/u1-bootstrap-repository-architecture-contract.md`
+Reviewed artifact: `docs/plans/issues/u1-bootstrap-repository-architecture-contract.md`
 
 Reviewed SHA-256: `0b3a72463737aea2760fde0e9593dfbaaf1f1439f91147b241bf4d85763de682`
 
 The reviewers read the repository-root `PLANS.md` and assessed whether a novice executor could
-complete U1 using only this child plan and the checked-in repository.
+complete U1 using only this issue plan and the checked-in repository.
 
 The review repaired the package/test bootstrap order, meaningful red-green-refactor seam,
 architecture thresholds and complete stable rule catalog, Nucleus normalization procedure,

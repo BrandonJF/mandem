@@ -2,7 +2,7 @@
 
 Date: 2026-07-29
 
-Plan: `docs/plans/units/wi1-epic-issue-graph-integrity.md`
+Plan: `docs/plans/issues/wi1-epic-issue-graph-integrity.md`
 
 Reviewed plan commit: `81d91b4608ddffbb4d4fbe2de1d22ca1f394a7cd`
 

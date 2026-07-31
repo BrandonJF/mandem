@@ -4,13 +4,13 @@ Date: 2026-07-25
 
 Status: superseded by later language and documentation-policy changes
 
-Reviewed artifact: `docs/plans/units/u1a-documentation-authoring-quality-gates.md`
+Reviewed artifact: `docs/plans/issues/u1a-documentation-authoring-quality-gates.md`
 
 Reviewed commit: `a4a5c11c627a9cde5316fc9adbf79f8620aa895f`
 
 Reviewed SHA-256: `378cf11ff6f27d50d4c789a67a9e3cf135ec7f3a4d5e08cceec9bf12ef7a7bc6`
 
-Fresh Terra reviewers read the repository-root `PLANS.md`, master plan, child registry, current
+Fresh Terra reviewers read the repository-root `PLANS.md`, epic ExecPlan, issue registry, current
 architecture kernel, and U1A plan without the planning conversation. The required headless
 document review also applied one safe correction to a stale outcome summary.
 

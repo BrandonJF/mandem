@@ -14,7 +14,7 @@ This is a retrospective of one harness session. It draws from:
 - git-native issues `5717221` and `745eda8`;
 - planning PR #12 and implementation PR #13;
 - merge commits `3ac5c4` and `27d4abe`;
-- the U1C and U1A child ExecPlans;
+- the U1C and U1A issue ExecPlans;
 - commits and test evidence recorded in those plans and issues.
 
 The command lists identify each consequential command family and show representative commands
@@ -43,10 +43,10 @@ Each source constrained a different part of the work.
 | Source | How the root agent used it |
 | --- | --- |
 | Harness system and developer instructions | Use commentary updates, preserve user changes, prefer `rg`, use `apply_patch`, avoid destructive actions, verify work, and use available skills when their descriptions match the task. |
-| Repository `AGENTS.md` | Read `CLAUDE.md`; use a repository-root `PLANS.md` ExecPlan for significant work; execute only a self-contained child plan with `execution_authorized: true`. |
+| Repository `AGENTS.md` | Read `CLAUDE.md`; use a repository-root `PLANS.md` ExecPlan for significant work; execute only a self-contained issue plan with `execution_authorized: true`. |
 | Repository `CLAUDE.md` | Read the writing skill before prose; use Bun; avoid `any`; use behavior-first tests; keep ExecPlan living sections current; use isolated worktrees; have workers commit, push, and open PRs without merging. |
-| Repository `PLANS.md` | Bind implementation to the complete approved child ExecPlan, record exact approval, maintain living records, use clean-room review, and treat the program plan as context rather than implementation authority. |
-| Approved U1C child ExecPlan | Specified the permitted correction, milestones, red-green tests, validation, review, Learn step, PR handoff, and completion evidence. |
+| Repository `PLANS.md` | Bind implementation to the complete approved issue ExecPlan, record exact approval, maintain living records, use clean-room review, and treat the epic plan as context rather than implementation authority. |
+| Approved U1C issue ExecPlan | Specified the permitted correction, milestones, red-green tests, validation, review, Learn step, PR handoff, and completion evidence. |
 | Compound Engineering skills | Provided detailed operating procedures for worktrees, execution, simplification, code review, PR work, and the optional Learn artifact decision. |
 | GitHub plugin skill | Provided GitHub orientation and connector guidance. The root agent used `gh` for most mutations because the required operations were available locally. |
 | Codex orchestration judgment | Chose which matching skills to load, divided work among agents, ordered review and repair loops, selected focused validation commands, and decided when evidence was sufficient to merge. |
@@ -63,7 +63,7 @@ process even though Mandem did not explicitly name Compound Engineering.
 | Skill | Why the root agent selected it | Effect on the work |
 | --- | --- | --- |
 | `write-clearly` | `CLAUDE.md` requires it for all repository prose. | Controlled chat updates, plan edits, issue comments, commit messages, and PR descriptions. |
-| `compound-engineering:ce-work` | The operator approved execution of a concrete, self-contained child ExecPlan. | Supplied the end-to-end implementation workflow and shipping tail. |
+| `compound-engineering:ce-work` | The operator approved execution of a concrete, self-contained issue ExecPlan. | Supplied the end-to-end implementation workflow and shipping tail. |
 | `compound-engineering:ce-worktree` | Both repository rules and the skill require isolated implementation work. | Led to separate U1C implementation and U1A revalidation worktrees. |
 | `compound-engineering:ce-simplify-code` | The full tests had passed, and the worker needed a behavior-preserving cleanup pass. | The worker made three small simplifications before final review. |
 | `compound-engineering:ce-code-review` | The approved plan required independent correctness and maintainability review. | The reviewers completed two structured review rounds, and the worker made test-first repairs. |
@@ -92,12 +92,12 @@ post-merge verification, issue state, and U1A revalidation.
 | Agent | Harness identity | Assignment | Result |
 | --- | --- | --- | --- |
 | Root orchestrator | `/root` | Bind approval, authorize the plan, dispatch work, manage reviews, merge exact heads, validate `main`, update issues, and revalidate U1A. | Completed the workflow and preserved the U1A authorization boundary. |
-| U1C implementation worker | `/root/implement_u1c` (`Helmholtz`) | Execute the complete authorized U1C child ExecPlan in the implementation worktree using TDD; commit, push, and open PR #13 without merging. | Implemented U1C and returned final head `686d4e2`. |
+| U1C implementation worker | `/root/implement_u1c` (`Helmholtz`) | Execute the complete authorized U1C issue ExecPlan in the implementation worktree using TDD; commit, push, and open PR #13 without merging. | Implemented U1C and returned final head `686d4e2`. |
 | U1C review worker | `/root/review_u1c_final` (`Boyle`) | Review the implementation independently. | Performed an independent U1C review; the U1C plan records its findings and the subsequent repairs. |
 | U1C exact-head verifier | `/root/verify_u1c_clean` (`Dalton`) | Verify the exact final PR head, including the living-record-only final commit. | Reported CLEAN at `686d4e2`; confirmed code, tests, package metadata, and instructions had not changed since the reviewed code head. |
 | U1A revalidation reviewer | `/root/review_u1a_revalidation` | Perform read-only clean-room review of the revised U1A plan against corrected U1C. | Found four specification defects across successive rounds; reported CLEAN after repair. |
 
-The root agent gave the implementation worker the complete authorized child ExecPlan as its only
+The root agent gave the implementation worker the complete authorized issue ExecPlan as its only
 implementation instructions. The review agents received read-only, bounded assignments. No agent
 received permission to merge.
 
@@ -110,13 +110,13 @@ The root agent treated `Approved` as approval of:
 - planning PR #12 head `75817d04b68cc29323ab1eaa6d9fdcec00d47fa0`; and
 - U1C plan SHA-256 `1f87f07a4976ba8266cc707a5e9a7930501545137bd8336e8993303590a81231`.
 
-It did not treat the message as general approval of U1A or later program units.
+It did not treat the message as general approval of U1A or later issues.
 
 The agent recorded the approval in git-native issue `5717221`, changed only authorization metadata
 and living records, ran an independent verification, committed the authorization as `b71a2e3`, and
 merged PR #12 as `3ac5c4`.
 
-This sequence came from `PLANS.md`, the U1C child plan, and the issue's restart handoff.
+This sequence came from `PLANS.md`, the U1C issue plan, and the issue's restart handoff.
 
 ### 2. Created isolated implementation state
 
@@ -360,7 +360,7 @@ operator's exact approval
 repository instructions: AGENTS.md -> CLAUDE.md -> PLANS.md
         |
         v
-authorized child ExecPlan
+authorized issue ExecPlan
         |
         v
 matching skill procedures
@@ -378,7 +378,7 @@ worker could implement. Likewise, the root agent did not use `lfg` to ship unrel
 ### Strong alignment
 
 - The root agent bound approval to an exact commit and plan hash.
-- The worker received one complete, authorized child plan.
+- The worker received one complete, authorized issue plan.
 - The root agent and worker used isolated worktrees.
 - The worker implemented through red-green testing.
 - Independent reviewers found defects that ordinary green tests had missed.

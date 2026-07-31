@@ -1,11 +1,14 @@
 ---
 title: "U1A: Documentation discoverability and continuous authoring quality gates"
-plan_kind: mandem-child-execplan
-program_unit: U1A
+plan_kind: mandem-issue-execplan
+issue_key: U1A
 parent: ../2026-07-21-001-feat-mandem-plan.md
-work_item: 745eda8
-promotion: executable
-execution_authorized: true
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 745eda80-1e74-4866-bc95-2f2983b31025
+depends_on_issue_ids:
+  - 5717221b-f9e6-4c8f-abca-77a1ad3811bf
+promotion: complete
+execution_authorized: false
 date: 2026-07-25
 ---
 
@@ -48,7 +51,7 @@ indexes; code modules continue to use one module-root README as defined by the a
 standard. Generated output, vendored dependencies, Git internals, build output, disposable
 fixtures, and hidden provider configuration are excluded through one explicit policy.
 
-The correction tracked in work item `5717221` is a dependency because it changes the same
+The correction tracked in issue `5717221` is a dependency because it changes the same
 architecture kernel and package contract. Complete the correction or rebase onto it before
 implementing U1A. Do not promote U2 until `5717221` and U1A are complete.
 
@@ -93,11 +96,11 @@ conformance.
   supported hook.
 - Mandem's standing architecture requires Bun-only commands, clean module boundaries, no `any`,
   meaningful test-first development, concise output, and vendor-neutral core behavior.
-- Master requirements R58-R64 require a prescriptive self-conforming architecture and deterministic
+- Epic requirements R58-R64 require a prescriptive self-conforming architecture and deterministic
   analysis down to naming and file placement.
-- Master KTD14 and repository `CLAUDE.md` require a reviewed, exactly approved child ExecPlan before
+- Epic KTD14 and repository `CLAUDE.md` require a reviewed, exactly approved issue ExecPlan before
   implementation dispatch.
-- Work item `745eda8` is the durable ledger entry for this unit. Work item `5717221` supplies the
+- issue `745eda8` is the durable ledger entry for this issue. issue `5717221` supplies the
   corrected U1 architecture/package baseline it consumes.
 
 ## Key Technical Decisions
@@ -633,11 +636,11 @@ non-approved case asserts zero GitHub writes.
 Milestone 7 runs `gh auth status`, then apply and check. If `gh` reports missing authentication or
 insufficient permission, the worker records the command, exit status, and secret-free API response
 in `Progress`, comments the same concise blocker
-on work item `745eda8`, marks the unit `Needs you`, and stops before claiming completion.
+on issue `745eda8`, marks the issue `Needs you`, and stops before claiming completion.
 
 ## Normative Interfaces
 
-The file and export names below are fixed for this unit. If an implementer changes a file or export
+The file and export names below are fixed for this issue. If an implementer changes a file or export
 name, they must update this plan and obtain another clean-room review before continuing.
 
 Extend `src/modules/architecture-standard/domain/types.ts` with:
@@ -903,7 +906,7 @@ entrypoints.
 
 ### Milestone 1: Revalidate the corrected U1 baseline and capture red tests
 
-Begin from a worktree based on the merged resolution of work item `5717221`. Record its commit in
+Begin from a worktree based on the merged resolution of issue `5717221`. Record its commit in
 this plan and compare its architecture rule catalog, package scripts, and tests with this plan. If
 the correction changes any consumed interface, update this ExecPlan and repeat clean-room review
 before implementation.
@@ -1137,7 +1140,7 @@ After the policy and adapters exist, exercise:
     bun run hooks:check
     bun run test:hooks
     bun run authoring:check -- src/modules/runtime/domain/types.ts
-    bun run approval:check -- --issue 745eda80-1e74-4866-bc95-2f2983b31025 --action apply-ruleset --plan docs/plans/units/u1a-documentation-authoring-quality-gates.md
+    bun run approval:check -- --issue 745eda80-1e74-4866-bc95-2f2983b31025 --action apply-ruleset --plan docs/plans/issues/u1a-documentation-authoring-quality-gates.md
     bun run repository-ruleset:check
     bun run revision-worktrees:reconcile
     bun run check:revision -- "$(git rev-parse HEAD)"
@@ -1234,7 +1237,7 @@ installed provider's behavior contradicts the documented PostToolUse contract, s
 evidence, revise this plan's adapter scope, and repeat clean-room review. Do not silently omit an
 adapter from an approved revision.
 
-If implementing work item `5717221` changes the architecture kernel after this plan is reviewed,
+If implementing issue `5717221` changes the architecture kernel after this plan is reviewed,
 stop before implementation, rebase the planning branch, revise the consumed interfaces and tests
 here, and repeat clean-room review. If hook execution leaves the worktree changed, treat that as a defect,
 restore the disposable fixture, add a regression test, and do not continue to PR handoff until the
@@ -1284,12 +1287,12 @@ external sources.
   and root navigation patterns.
 - [x] (2026-07-25 18:05Z) Researched Nucleus fileoverview pre-commit behavior, Claude post-write
   checks, versioned pre-push behavior, and hook integration tests.
-- [x] (2026-07-25 18:05Z) Created and pushed work items `5717221` and `745eda8`.
-- [x] (2026-07-25 18:05Z) Authored this self-contained U1A child ExecPlan.
-- [x] (2026-07-25 18:30Z) Updated the master plan, child registry, and U2 dependency status.
+- [x] (2026-07-25 18:05Z) Created and pushed issues `5717221` and `745eda8`.
+- [x] (2026-07-25 18:05Z) Authored this self-contained U1A issue ExecPlan.
+- [x] (2026-07-25 18:30Z) Updated the epic ExecPlan, issue registry, and U2 dependency status.
 - [x] (2026-07-25 18:30Z) Ran the first clean-room review at `93c2c6b`; it rejected underspecified
   scope, interfaces, Git/provider hook contracts, link grammar, and focused test evidence.
-- [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the program
+- [x] (2026-07-25 18:55Z) Ran a second clean-room review at `aa5d030`; it accepted the epic
   dependency model but rejected incomplete revision-snapshot, provider event, and remote-authority
   contracts.
 - [x] (2026-07-25 19:20Z) Ran a third clean-room review at `e597967`; it found the remaining linked
@@ -1302,7 +1305,7 @@ external sources.
 - [x] (2026-07-25 20:50Z) A fresh Terra reviewer approved commit `b73e960` and plan SHA-256
   `2a2d1dd72869bdde93d5318626e56084ac12ff890da61eccfadf5390d1b48339` with no P0/P1
   blockers.
-- [x] (2026-07-27) Completed work item `5717221` in merge
+- [x] (2026-07-27) Completed issue `5717221` in merge
   `27d4abe1a2815bfef1bec56c71bc6d90880ef035` and revalidated U1A against the corrected kernel.
   Updated the plan to extend, rather than recreate, the authored-source policy and added focused
   regression gates for the corrected architecture and package contracts. This edit supersedes the
@@ -1547,7 +1550,7 @@ external sources.
   Date/Author: 2026-07-25 / Codex orchestrator
 
 - Decision: Require the corrected U1 baseline before U1A implementation and block U2 on both.
-  Rationale: Both units touch the architecture kernel and package gate; ordering avoids parallel
+  Rationale: Both issues touch the architecture kernel and package gate; ordering avoids parallel
   policy implementations and merge conflict-driven design.
   Date/Author: 2026-07-25 / Codex orchestrator
 
@@ -1668,7 +1671,7 @@ Milestone 5 is complete. Versioned hooks evaluate the staged snapshot before com
 commit snapshots before pushes. The installer confines `.githooks` to the selected worktree while
 preserving a prior common hook path in sibling worktrees.
 
-Work item `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
+issue `5717221` is resolved, the post-U1C clean-room review passed, and the operator approved the
 conversation-native approval revision. The approval is stored in the authoritative native issue,
 and the implemented validator has verified that real record from raw Git history.
 
@@ -1732,12 +1735,12 @@ the current native approval matches the exact live action target.
 
 Revision note (2026-07-25): Created the first planned U1A revision after post-U1 verification showed
 that documentation discoverability and continuous authoring feedback needed a dedicated
-foundational unit rather than an informal addition to U2.
+foundational issue rather than an informal addition to U2.
 
 Clean-room repair note (2026-07-25): After the first independent review, replaced inferred
 documentation/source scopes with exact manifests; specified Markdown parsing, public interfaces,
 package commands, staged/pre-push Git semantics, Claude/Codex event contracts, focused red/green
-tests, provider failure behavior, source provenance, and the master/registry dependency update.
+tests, provider failure behavior, source provenance, and the epic/registry dependency update.
 
 Second clean-room repair note (2026-07-25): Added revision-backed changed and pre-push evaluation,
 complete root-resolving Claude/Codex hook configurations, typed delete/move events, nested-launch

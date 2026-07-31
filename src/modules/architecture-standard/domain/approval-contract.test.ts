@@ -69,6 +69,41 @@ describe("approval contract", () => {
     expect(createHash("sha256").update(json).digest("hex")).toHaveLength(64);
   });
 
+  it("round-trips native graph and projection approval targets", () => {
+    const issueRefs = {
+      "6a6a8bab-853f-4658-9bc0-38e2386b642d": "a".repeat(40),
+      "abe862d6-b052-49fe-8611-bc1ab6e24253": "b".repeat(40),
+    };
+    const issueRefsDigest = createHash("sha256").update(canonicalJson(issueRefs)).digest("hex");
+    const native: ApprovalRecord = {
+      ...executeApproval,
+      action: "set-issue-graph",
+      issueId: "6a6a8bab-853f-4658-9bc0-38e2386b642d",
+      target: {
+        repository: "BrandonJF/mandem",
+        graph_sha256: "c".repeat(64),
+        issue_refs: issueRefs,
+        issue_refs_sha256: issueRefsDigest,
+        implementation_sha: "d".repeat(40),
+      },
+    };
+    const projection: ApprovalRecord = {
+      ...executeApproval,
+      action: "sync-issue-projection",
+      issueId: "6a6a8bab-853f-4658-9bc0-38e2386b642d",
+      target: {
+        repository: "BrandonJF/mandem",
+        graph_sha256: "a".repeat(64),
+        transaction_sha256: "b".repeat(64),
+        provider_snapshot_sha256: "c".repeat(64),
+        operations_sha256: "d".repeat(64),
+        implementation_sha: "e".repeat(40),
+      },
+    };
+    expect(parseApproval(serializeApproval(native))).toEqual(native);
+    expect(parseApproval(serializeApproval(projection))).toEqual(projection);
+  });
+
   it("selects the unique descendant and lets a later denial revoke approval", async () => {
     const denied: ApprovalRecord = { ...executeApproval, decision: "denied", response: "DENIED" };
     const selected = await selectApproval(

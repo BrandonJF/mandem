@@ -1,21 +1,26 @@
 ---
-title: "U4: Work items, ExecPlans, queue, gates, primitive CLI, and projections"
-plan_kind: mandem-child-execplan
-program_unit: U4
+title: "U4: Issues, ExecPlans, queue, gates, primitive CLI, and projections"
+plan_kind: mandem-issue-execplan
+issue_key: U4
 parent: ../2026-07-21-001-feat-mandem-plan.md
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 11538b56-bd63-42c2-8242-87ac7a76d35d
+depends_on_issue_ids:
+  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - d946e066-84d5-4651-b3b4-30a18e80008c
 promotion: scaffolded
 execution_authorized: false
 ---
 
-# U4: Work items, ExecPlans, queue, gates, primitive CLI, and projections
+# U4: Issues, ExecPlans, queue, gates, primitive CLI, and projections
 
 > This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
 > plan author must expand it, obtain a clean-room review, and obtain operator approval.
 
 ## Purpose
 
-Expand this scaffold into a self-contained U4 child ExecPlan that incorporates every applicable
-master-program constraint. Use the master program to sequence work; do not treat it as a worker's
+Expand this scaffold into a self-contained U4 issue ExecPlan that incorporates every applicable
+epic constraint. Use the epic ExecPlan to sequence work; do not treat it as a worker's
 implementation instruction.
 
 ## Dependency Contract
@@ -30,8 +35,8 @@ implementation instruction.
 
 ### Produces
 
-- Git-native work-item adapter
-- Child ExecPlan validation and promotion workflow
+- Git-native issue adapter
+- issue ExecPlan validation and promotion workflow
 - Services for queue and dependency management and clean-room review
 - Approvals bound to hashes and typed gates
 - Minimal AXI CLI and TOON envelopes
@@ -46,10 +51,10 @@ implementation instruction.
 
 ## Architecture Constraint
 
-Authors must place all source code added for this unit in Mandem's Nucleus-derived clean
+Authors must place all source code added for this issue in Mandem's Nucleus-derived clean
 architecture. The detailed plan must identify module ownership, layer placement, public API
 boundaries, composition roots, and deterministic architecture checks for each behavior implemented
-by the unit.
+by the issue.
 
 ## Decisions Required Before Promotion
 
@@ -59,12 +64,12 @@ by the unit.
 - GitHub conflict/import policy
 - Report publication boundary
 
-## Required Child ExecPlan Content
+## Required issue ExecPlan Content
 
 Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
 ExecPlan that includes:
 
-- goal capsule and traced master requirements;
+- goal capsule and traced epic requirements;
 - current repository state and the patterns the plan author inspected;
 - concrete technical decisions and rejected alternatives;
 - repo-relative files and module/layer ownership;
@@ -77,7 +82,7 @@ ExecPlan that includes:
 
 ## Promotion Checklist
 
-- [ ] Expanded using the current repository and complete master ExecPlan
+- [ ] Expanded using the current repository and complete epic ExecPlan
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable

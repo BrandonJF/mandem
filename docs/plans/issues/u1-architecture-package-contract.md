@@ -1,19 +1,22 @@
 ---
 title: "U1C: Correct the architecture checker and package contract"
-plan_kind: mandem-child-execplan
-program_unit: U1C
+plan_kind: mandem-issue-execplan
+issue_key: U1C
 parent: ../2026-07-21-001-feat-mandem-plan.md
-work_item: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
+epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
+issue_id: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
+depends_on_issue_ids:
+  - da645bd0-9899-40b3-9f23-3b48d65362a4
 depends_on:
-  - U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986
-promotion: executable
-execution_authorized: true
+  - "U1 merged at 88b9533ab840c9d357a1d09d2341709e2cbdd986"
+promotion: complete
+execution_authorized: false
 date: 2026-07-25
 ---
 
 # U1C: Correct the Architecture Checker and Package Contract
 
-This child ExecPlan is a living document governed by the repository-root `PLANS.md`. Read that
+This issue ExecPlan is a living document governed by the repository-root `PLANS.md`. Read that
 file in full before executing this plan. Keep `Progress`, `Surprises & Discoveries`, `Decision
 Log`, and `Outcomes & Retrospective` current. This authorization revision permits implementation
 after it merges. The clean-room reviewer and operator approved the preceding exact revision, and
@@ -35,7 +38,7 @@ implementation changes and pass only after the checker detects the intended viol
 
 - [x] (2026-07-25 14:20Z) Read the durable Git-native issue and reproduced its implementation
   context from the merged repository state.
-- [x] (2026-07-25 14:20Z) Authored this non-executable corrective child ExecPlan.
+- [x] (2026-07-25 14:20Z) Authored this non-executable corrective issue ExecPlan.
 - [x] (2026-07-25 21:15Z) Clean-room review approved plan commit
   `bbddf1949cd8a3d7d78551bb00129e871a094c63` with SHA-256
   `24b1455c458afb9b913bfbc9a12ff38e573530b3da453e278ded6283420c6a7c`; see
@@ -144,7 +147,7 @@ implementation changes and pass only after the checker detects the intended viol
 
 ## Decision Log
 
-- Decision: Make U1C a separate corrective child rather than reopen completed U1.
+- Decision: Make U1C a separate subissue rather than reopen completed U1.
   Rationale: The U1 merge is durable history. The issue identifies newly validated gaps, and a
   separate plan preserves the exact review and approval record for the correction.
   Date/Author: 2026-07-25 / Codex
@@ -335,7 +338,7 @@ to cover, beginning with `@octokit/rest`, the Node built-ins already listed by U
 
 ## Scope and Boundaries
 
-U1C corrects only these validated findings from work item `5717221b-f9e6-4c8f-abca-77a1ad3811bf`:
+U1C corrects only these validated findings from issue `5717221b-f9e6-4c8f-abca-77a1ad3811bf`:
 
 1. A packed Mandem archive omits declared executable files.
 2. Alias infrastructure re-exports evade `ARCH-INFRASTRUCTURE-ROOT-EXPORT`.
@@ -347,7 +350,7 @@ U1C corrects only these validated findings from work item `5717221b-f9e6-4c8f-ab
 
 Do not add documentation navigation, Git hooks, provider hooks, a server, Docker files, SQLite,
 runtime lifecycle behavior, or consumer installation. U1A owns documentation and hook work. U2
-and later units remain blocked. Do not change stable meanings of existing `ARCH-*` IDs. Add only
+and later issues remain blocked. Do not change stable meanings of existing `ARCH-*` IDs. Add only
 the narrowly necessary `ARCH-UNSCOPED-TYPESCRIPT` ID and document it in the architecture standard.
 
 ## Exact Architecture Rule Matrix
@@ -515,7 +518,7 @@ changes to an isolated branch, pushes it, and opens a pull request. The worker d
 An independent reviewer checks the diff and repeats the full verification from the PR head. The
 worker repairs actionable findings test-first, obtains a final clean review, records a short Learn
 artifact if the silent-pass pattern offers reusable guidance, and refreshes exact-head evidence.
-The program orchestrator merges only the reviewed exact head, then reruns post-merge verification
+The epic orchestrator merges only the reviewed exact head, then reruns post-merge verification
 on `main`, closes issue `5717221b-f9e6-4c8f-abca-77a1ad3811bf`, and updates U1C's living sections.
 
 Only after the correction has merged and post-merge verification passes may the orchestrator
@@ -636,7 +639,7 @@ state.
 
 The executor must add concise evidence here as work proceeds. The initial durable evidence is:
 
-    Work item: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
+    issue: 5717221b-f9e6-4c8f-abca-77a1ad3811bf
     State: open
     Required correction: architecture/package silent-pass paths
     Current package bins: dist/mandem and dist/mandem-server

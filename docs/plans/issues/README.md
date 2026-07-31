@@ -2,6 +2,10 @@
 
 This directory decomposes the epic-level ExecPlan at `../2026-07-21-001-feat-mandem-plan.md`.
 
+The checked-in [Mandem v1 issue graph manifest](./mandem-v1-issue-graph.yaml) is the reviewed
+desired input for deterministic native-issue metadata reconciliation. After apply, native issue
+refs own the graph. GitHub receives a one-way projection of the managed fields.
+
 The epic ExecPlan defines product intent, architecture, the U1-U10 issue sequence, and epic
 acceptance. Each issue ExecPlan begins as a non-executable scaffold. The scaffold lists
 dependencies and handoffs before detailed planning begins.
@@ -17,9 +21,9 @@ author must expand the issue scaffold into a nearly self-contained ExecPlan that
 validate it against the actual outputs of completed dependencies, obtain a clean-room review,
 address review findings, and obtain approval for an exact revision.
 
-The epic orchestrator reads the master and registry. An implementation worker receives only the
+The epic orchestrator reads the epic ExecPlan and registry. An implementation worker receives only the
 complete approved ExecPlan for its issue, which must include every applicable epic constraint and
-dependency interface. A dispatch is invalid if it directs the worker to treat the master plan as a
+dependency interface. A dispatch is invalid if it directs the worker to treat the epic ExecPlan as a
 second implementation instruction. Use summaries and bounded packets only for navigation.
 
 ## Architecture invariant
@@ -57,12 +61,12 @@ must revalidate those scaffolds after dependencies complete.
 | Issue | ExecPlan | Depends on | Promotion |
 | --- | --- | --- | --- |
 | U1 | [Bootstrap repository and architecture contract](./u1-bootstrap-repository-architecture-contract.md) | None | complete; follow-up issue U1C recorded separately |
-| U1C | [Correct architecture checker and package contract](./u1-corrective-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | executable; implementation begins after authorization PR #12 merges |
-| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | blocked until U1C completes; clean-room approval must be refreshed for its exact revision |
-| WI1 | [Deterministic epic issue graph checks and idempotent GitHub reconciliation](./wi1-epic-issue-graph-integrity.md) | U1A | planned; requires clean-room review and exact operator approval |
-| U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | scaffolded; dependency revalidation invalidated |
+| U1C | [Correct architecture checker and package contract](./u1-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | complete |
+| U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | complete |
+| WI1 | [Deterministic epic issue graph checks and idempotent GitHub reconciliation](./wi1-epic-issue-graph-integrity.md) | U1A | implementation and live projection complete; final review and merge remain |
+| U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | scaffolded; revalidate after WI1 merges |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
-| U4 | [Issues, ExecPlans, queue, gates, primitive CLI, and projections](./u4-work-items-plans-queue-gates-cli.md) | U2, U3 | scaffolded |
+| U4 | [Issues, ExecPlans, queue, gates, primitive CLI, and projections](./u4-issues-plans-queue-gates-cli.md) | U2, U3 | scaffolded |
 | U5 | [Operating docs and bounded Claude/Codex sessions](./u5-operating-docs-provider-sessions.md) | U3, U4 | scaffolded |
 | U6 | [Unattended worktree delivery through Review, Learn, and merge](./u6-unattended-work-review-learn-merge.md) | U2, U3, U4, U5 | scaffolded |
 | U7 | [Complete AXI CLI, TOON output, OpenTUI, and worker witnessability](./u7-complete-cli-toon-opentui.md) | U2, U3, U4, U5, U6 | scaffolded |

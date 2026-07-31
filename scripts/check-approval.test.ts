@@ -64,6 +64,29 @@ describe("check approval", () => {
     } finally { await rm(directory, { recursive: true, force: true }); }
   });
 
+  it("parses the complete projection approval target without dropping a digest", async () => {
+    const request = await requestFromArguments([
+      "--issue", issueId,
+      "--action", "sync-issue-projection",
+      "--repository", "BrandonJF/mandem",
+      "--graph-sha", "3".repeat(64),
+      "--transaction-sha", "4".repeat(64),
+      "--provider-snapshot-sha", "5".repeat(64),
+      "--operations-sha", "6".repeat(64),
+      "--implementation-sha", head,
+    ]);
+    expect(request).toMatchObject({
+      action: "sync-issue-projection",
+      target: {
+        graph_sha256: "3".repeat(64),
+        transaction_sha256: "4".repeat(64),
+        provider_snapshot_sha256: "5".repeat(64),
+        operations_sha256: "6".repeat(64),
+        implementation_sha: head,
+      },
+    });
+  });
+
   it("accepts an exact approved target at a clean implementation head", async () => {
     await expect(assertApproval(record, client(), { requireCleanHead: true })).resolves.toEqual({
       approvalCommit,

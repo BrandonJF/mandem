@@ -168,13 +168,42 @@ export async function requestFromArguments(arguments_: readonly string[], git: G
       head_sha: valueAfter(arguments_, "--head"),
     });
   }
-  throw new ApprovalContractError("action must be execute-plan, apply-ruleset, or merge-pr");
+  if (action === "set-issue-graph") {
+    assertExactFlags(arguments_, ["--issue", "--action", "--repository", "--graph-sha", "--issue-refs", "--issue-refs-sha", "--implementation-sha"]);
+    let issueRefs: unknown;
+    try { issueRefs = JSON.parse(valueAfter(arguments_, "--issue-refs")); }
+    catch { throw new ApprovalContractError("--issue-refs must be canonical JSON"); }
+    if (typeof issueRefs !== "object" || issueRefs === null || Array.isArray(issueRefs)) {
+      throw new ApprovalContractError("--issue-refs must be a JSON object");
+    }
+    return approvalRequest(issueId, action, {
+      repository: valueAfter(arguments_, "--repository") as "BrandonJF/mandem",
+      graph_sha256: valueAfter(arguments_, "--graph-sha"),
+      issue_refs: issueRefs as Readonly<Record<string, string>>,
+      issue_refs_sha256: valueAfter(arguments_, "--issue-refs-sha"),
+      implementation_sha: valueAfter(arguments_, "--implementation-sha"),
+    });
+  }
+  if (action === "sync-issue-projection") {
+    assertExactFlags(arguments_, ["--issue", "--action", "--repository", "--graph-sha", "--transaction-sha", "--provider-snapshot-sha", "--operations-sha", "--implementation-sha"]);
+    return approvalRequest(issueId, action, {
+      repository: valueAfter(arguments_, "--repository") as "BrandonJF/mandem",
+      graph_sha256: valueAfter(arguments_, "--graph-sha"),
+      transaction_sha256: valueAfter(arguments_, "--transaction-sha"),
+      provider_snapshot_sha256: valueAfter(arguments_, "--provider-snapshot-sha"),
+      operations_sha256: valueAfter(arguments_, "--operations-sha"),
+      implementation_sha: valueAfter(arguments_, "--implementation-sha"),
+    });
+  }
+  throw new ApprovalContractError("unsupported approval action");
 }
 
 if (import.meta.main) {
   try {
     const request = await requestFromArguments(Bun.argv.slice(2), gitClient);
-    const result = await assertApproval(request, gitClient, { requireCleanHead: request.action === "apply-ruleset" });
+    const result = await assertApproval(request, gitClient, {
+      requireCleanHead: ["apply-ruleset", "set-issue-graph", "sync-issue-projection"].includes(request.action),
+    });
     console.log(`Approval verified at native issue commit ${result.approvalCommit}.`);
   } catch (error: unknown) {
     console.error(`approval check failed: ${error instanceof Error ? error.message : "unexpected error"}`);

@@ -46,7 +46,7 @@ Use one term for each issue concept. Do not introduce synonyms for variety.
   one.
 - A `milestone` groups issues toward a release or dated outcome. It is not a parent issue.
 
-Do not use `program`, `work item`, `unit`, `child item`, or `corrective item` as substitutes for
+Do not use `program`, `unit`, or legacy hierarchy terms as substitutes for
 epic, issue, or subissue. Use `parent issue` and `subissue` when describing a relationship. Preserve
 an external system's official term only when describing that system, and state the mapping to
 Mandem's vocabulary once.

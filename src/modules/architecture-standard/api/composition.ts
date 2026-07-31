@@ -22,7 +22,7 @@ export function analyzeRepositoryFiles(files: readonly RepositoryFile[]): Analys
 }
 
 export async function analyzeDirectory(root: string): Promise<AnalysisResult> { return analyzeRepository(new FileSystemTree(), root); }
-
+/** Checks only local filesystem and native Git refs; it never contacts a provider. */
 export async function analyzeDocumentationDirectory(root: string): Promise<AnalysisResult> { return analyzeDocumentation(new FileSystemSnapshot(), { root, mode: "working" }); }
 export async function analyzeAuthoredSourceDirectory(root: string): Promise<AnalysisResult> { return analyzeAuthoredSources(new FileSystemSnapshot(), { root, mode: "working" }); }
 export async function analyzeStagedRepository(root: string): Promise<{ documentation: AnalysisResult; authoredSources: AnalysisResult }> {
