@@ -5,3 +5,5 @@ export { NativeIssueGraphApprovalReader } from "./services/native-issue-graph-ap
 export { NativeIssueGraphWriter } from "./services/native-issue-graph-writer";
 export { GitHubIssueGraphProvider } from "./services/github-issue-graph-provider";
 export type { GhApiRequest, GhApiRunner } from "./services/github-issue-graph-provider";
+export { ProjectionTransactionWriter } from "./services/projection-transaction-writer";
+export { ProjectionApprovalReader } from "./services/projection-approval";

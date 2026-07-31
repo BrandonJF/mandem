@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { canonicalJson } from "./approval-contract";
 import { parseGraphMetadata, serializeGraphMetadata } from "./issue-graph-policy";
 import type { NativeGraphMetadata } from "./issue-graph-types";
+import type { LocalIssueRecord } from "./issue-graph-types";
 
 export interface NativeIssueGraphEntry {
   readonly issueId: string;
@@ -146,4 +147,19 @@ function canonicalManifest(manifest: NativeIssueGraphManifest): unknown {
 
 export function graphDigest(manifest: NativeIssueGraphManifest): string {
   return createHash("sha256").update(canonicalJson(canonicalManifest(manifest))).digest("hex");
+}
+
+export function graphDigestFromRecords(records: readonly LocalIssueRecord[]): string {
+  const epic = records.find((record) => record.metadata?.epicPolicy !== undefined);
+  const managedLabels = new Set(Object.keys(epic?.metadata?.epicPolicy?.managedLabels ?? {}));
+  const issues = [...records]
+    .filter((record): record is LocalIssueRecord & { readonly metadata: NativeGraphMetadata } => record.metadata !== null)
+    .sort((left, right) => left.issueId.localeCompare(right.issueId))
+    .map((record) => ({
+      issue_id: record.issueId,
+      metadata: serializeGraphMetadata(record.metadata),
+      expected_native_state: record.state,
+      expected_native_labels: record.labels.filter((label) => managedLabels.has(label)).sort(),
+    }));
+  return createHash("sha256").update(canonicalJson({ version: 1, issues })).digest("hex");
 }

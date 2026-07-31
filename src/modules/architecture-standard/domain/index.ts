@@ -6,6 +6,8 @@ export { ApprovalContractError, canonicalJson, parseApproval, selectApproval, se
 export type { ApprovalAction, ApprovalCommit, ApprovalDecision, ApprovalRecord, ApprovalTarget, ApplyRulesetTarget, ExecutePlanTarget, MergePullRequestTarget, SetIssueGraphTarget, SyncIssueProjectionTarget } from "./approval-contract";
 export { evaluateIssueGraph, parseGraphMetadata, parsePlanDeclaration, serializeGraphMetadata } from "./issue-graph-policy";
 export type { IssueGraphFinding, IssueGraphResult, IssuePromotion, LocalIssueRecord, NativeGraphMetadata, NativeIssueState, PlanDeclaration, ProviderMapping } from "./issue-graph-types";
-export { graphDigest, parseNativeIssueGraphManifest } from "./issue-graph-manifest";
+export { graphDigest, graphDigestFromRecords, parseNativeIssueGraphManifest } from "./issue-graph-manifest";
 export type { NativeIssueGraphEntry, NativeIssueGraphManifest } from "./issue-graph-manifest";
 export type { IssueGraphOperation, ProviderIssue, ProviderLabel, ProviderMilestone, ProviderSnapshot, ReconciliationPlan } from "./issue-graph-operations";
+export { parseProjectionTransaction, projectionTransactionDigest, serializeProjectionTransaction } from "./projection-transaction";
+export type { ProjectionTransaction } from "./projection-transaction";

@@ -749,8 +749,9 @@ Remote comparison requires authenticated `gh`, network access, and permission to
   adapter, guarded native writer, approval verifier, vocabulary checker, and focused tests.
 - [ ] Complete Steps 1-6 in order (completed: local contract, guarded native writer, vocabulary
   and plan migration, approved 15-ref native metadata apply, zero-write second apply, offline
-  15-issue graph check; remaining: GitHub operation planning and adapter, remote reconciliation,
-  documentation, and final review).
+  15-issue graph check, corrected epic label policy, deterministic GitHub operation planning,
+  provider adapter, immutable transaction record, and exact-suffix retry executor; remaining: live
+  approved GitHub reconciliation, documentation, and final review).
 - [ ] Open the implementation pull request and record verification evidence.
 
 ## Surprises & Discoveries
@@ -803,9 +804,10 @@ The exact plan is authorized and implementation is in progress. The local graph 
 guarded native writer, vocabulary migration, and native migration are complete. The corrected
 approved apply created and pushed 15 metadata commits. Its immediate repeat performed zero commits
 and zero pushes, and the offline check reports `issue graph native v1 valid: 15 managed issues`.
-The first live provider preview found that the epic metadata encoded managed-label values with
-literal quotes. The parser is corrected and covered by a regression test; the corrected epic
-metadata requires a new exact native transaction. GitHub has not been changed.
+The later approved correction changed one epic metadata commit and its repeat performed zero
+writes. The read-only GitHub comparison reports five managed operations. The projection planner,
+`gh api` adapter, native transaction writer, approval reader, and exact-suffix retry executor are
+implemented and covered by focused tests. GitHub has not been changed.
 
 Revision note (2026-07-28): Created WI1 after the initial manual Mandem v1 GitHub projection exposed bridge gaps. The plan makes local relationships machine-readable, defines a deterministic offline check, and specifies an explicit idempotent reconciliation command with retry and provider-ownership boundaries.
 
@@ -827,3 +829,7 @@ repeat, and the passing offline graph check.
 
 Revision note (2026-07-30): Recorded the managed-label decoding defect found by the first live
 provider preview. No provider mutation occurred.
+
+Revision note (2026-07-31): Recorded the approved epic metadata correction and completion of the
+provider planning, transaction, adapter, and retry implementation. The remaining live projection
+write requires its own exact approval.

@@ -9,3 +9,4 @@ export { planNativeIssueGraphMetadata } from "./use-cases/set-native-issue-graph
 export { planIssueGraphReconciliation } from "./use-cases/plan-issue-graph-reconciliation";
 export type { PlanReconciliationInput } from "./use-cases/plan-issue-graph-reconciliation";
 export type { IssueGraphProvider } from "./ports/issue-graph-provider";
+export { reconcileIssueGraph } from "./use-cases/reconcile-issue-graph";
