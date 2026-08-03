@@ -77,7 +77,7 @@ SQLite cannot commit atomically with Git, a git-native issue ref, or an ExecPlan
 - R10. A lease must have one owner, session, resource, acquisition time, expiry, and fencing token. A stale owner must never mutate after expiry, takeover, cancellation, or accepted handoff.
 - R11. An accepted phase handoff must bind the active lease and session, input artifact revisions, outcome, decisions, blockers, mutations, evidence, and next allowed transition. Acceptance atomically revokes the prior mutation lease.
 - R12. Routed findings must use stable identities and exactly one current terminal disposition before `Done`. Superseding or reopening a disposition must append a linked event rather than erase history.
-- R12a. Plan review must begin only after the initial plan revision is committed, its branch is pushed, and a planning pull request projects that branch for operator visibility. Each review round must store its exact prompt, reviewed commit and plan digest, findings, disposition, and reviewer identity as committed repository artifacts. Git remains sufficient to reconstruct the review if the hosting provider is unavailable; the pull request presents the same history but does not own it.
+- R12a. Plan review must begin only after the initial plan revision is committed, its branch is pushed, and a planning pull request projects that branch for operator visibility. Each review manifest must store the complete sanitized prompt, reviewer role, reviewed plan path, commit, and digest, and governing `PLANS.md` path, commit, and digest. The fresh reviewer must use the complete bound `PLANS.md` as the primary contract and specialist lenses only as supplements. Each round stores findings, dispositions, verdict, and reviewer identity as committed repository artifacts. A change to either bound input makes the verdict stale. Git remains sufficient to reconstruct the review if the hosting provider is unavailable; the pull request presents the same history but does not own it.
 - R12b. A process finding is a routed finding created from an operator correction, agent error, review finding, interruption, or unexpected delay that may reveal an orchestration gap. It must record a stable identity, typed origin, affected phase, bounded evidence and artifact references, and exactly one current disposition: `execution-deviation`, `issue-contract-gap`, `product-contract-gap`, `operating-contract-gap`, or `no-reusable-change`. No phase-completion transition may succeed while a process finding is unresolved. A disposition that changes approved intent must route to `NeedsPlanning` and invalidate dependent review, approval, and gate evidence.
 
 **Durability and reconstruction**
@@ -137,6 +137,7 @@ SQLite cannot commit atomically with Git, a git-native issue ref, or an ExecPlan
 - AE8. Given every agent conversation and process is closed, when a fresh client reads context, then it receives the same issue, plan revision, workspace, authority, gate, checkpoint, lifecycle, and next-action facts without transcript data.
 - AE9. Given one routed finding has no current terminal disposition, when closure is requested, then `Done` is rejected. After one valid disposition is appended, closure may proceed if every other guard passes.
 - AE10. Given the operator corrects an attempted plan review that lacks its required PR, when the correction is recorded twice, then one process finding exists with the same stable identity. `accept-plan-review` remains blocked until the finding is dispositioned; a `product-contract-gap` disposition links the epic, affected issue plans, and enforcement scope, returns changed approved intent to `NeedsPlanning`, and replays identically after restart.
+- AE11. Given a committed review manifest binds one `PLANS.md` digest, when the governing file changes before verdict acceptance, then review dispatch or acceptance returns a stable stale-artifact error and appends no accepted-review event. A new manifest binding the current complete file permits a fresh reviewer to prove every applicable requirement before supplemental lenses run.
 
 ### Scope Boundaries
 
@@ -202,7 +203,7 @@ An **event** is an immutable fact that already happened. A **projection** is dis
 - KTD12. **Treat events and replay anchors as durable and projections as replaceable.** The append ledger includes event identity and digest plus the reducer and projection schema versions and expected post-append aggregate checksum. Rebuild validates every sequence and digest, reduces into isolated staging projections, compares the durable anchor, and atomically swaps only a valid complete rebuild.
 - KTD13. **Define source precedence per fact class.** The architecture document must list each portable intent, approval, checkpoint, operational event, commit, pull request, check, merge, lease, and process-observation fact with its authoritative recorder, acceptable evidence, freshness key, conflict rule, and `NeedsYou` action. SQLite may record observations and references but may not repair Git-, issue-, plan-, or approval-owned facts. Safe source disagreement may append a bounded reconciliation event only after ledger integrity passes; storage or event-integrity failure is read-only and preserves the database for recovery.
 - KTD14. **Store bounded context, never conversational content.** Events reference artifact paths, commits, digests, provider/session IDs, and evidence summaries. Credentials, raw prompts, transcripts, terminal logs, and arbitrary stdout are rejected from durable envelope schemas.
-- KTD15. **Open the planning pull request before review and keep the review record in Git.** The planning branch contains the ExecPlan plus one committed artifact per review round under `docs/plans/reviews/`. Each artifact records the complete reviewer prompt, exact reviewed plan commit and digest, findings, dispositions, and verdict. GitHub renders the branch, discussion, and checks for the operator, but Mandem reconstructs review state from Git and the git-native issue. A provider outage may delay projection updates; it cannot erase or redefine the review.
+- KTD15. **Open the planning pull request before review and keep the review record in Git.** The planning branch contains the ExecPlan plus committed review manifests and results under `docs/plans/reviews/`. Each manifest records the complete reviewer prompt and role, exact reviewed plan commit and digest, and exact governing `PLANS.md` commit and digest; each result records findings, dispositions, reviewer identity, and verdict. Review policy compares both bound inputs for freshness. GitHub renders the branch, discussion, and checks for the operator, but Mandem reconstructs review state from Git and the git-native issue. A provider outage may delay projection updates; it cannot erase or redefine the review.
 - KTD16. **Represent Mandem process feedback through routed items.** Add `process-finding` as a routed-item kind with the five closed dispositions from R12b. Creation and disposition append events; correction never rewrites the original evidence. Phase-completion guards require every current process finding to have one terminal disposition. U2 defines the protocol and policy only; U4 captures findings and links contract changes, while U6 drives repair and Learn behavior.
 
 ### High-Level Technical Design
@@ -349,9 +350,9 @@ Every row below is part of protocol v1. `portable` means the transition commits 
 
 | From | Command | Role | Lease rule | Required fresh inputs | To | Events and result | Checkpoint |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `NeedsPlanning` | `submit-plan-review` | phase agent | Matching planning session; no worker lease | Canonical plan path, commit, digest, self-check evidence, pushed planning branch, planning PR identity and exact head, and committed review-round prompt | `PlanReview` | Plan submitted; accepted | portable plan revision and review-round manifest |
+| `NeedsPlanning` | `submit-plan-review` | phase agent | Matching planning session; no worker lease | Canonical plan path, commit, digest, self-check evidence, pushed planning branch, planning PR identity and exact head, and committed review manifest binding the full prompt, reviewer role, plan target, and governing `PLANS.md` commit and digest | `PlanReview` | Plan submitted; accepted | portable plan revision and review-round manifest |
 | `PlanReview` | `reject-plan-review` | phase agent | Matching review session | Typed blockers and reviewed plan target | `NeedsPlanning` | Review rejected; completed | portable review verdict |
-| `PlanReview` | `accept-plan-review` | phase agent | Matching review session | Executor-safe verdict for exact plan commit and digest; every process finding has one terminal disposition | `NeedsApproval` | Review accepted; completed | portable review verdict |
+| `PlanReview` | `accept-plan-review` | phase agent | Matching review session | Full `PLANS.md` conformance and executor-safe verdict for the exact plan and governing-contract targets; neither target changed; every process finding has one terminal disposition | `NeedsApproval` | Review accepted; completed | portable review verdict |
 | `NeedsApproval` | `record-plan-decision` with denial | operator | No worker lease | Canonical denied `execute-plan` record | `NeedsYou` | Approval denied; accepted | portable approval decision |
 | `NeedsApproval` | `queue-approved-plan` | operator or control plane | No worker lease | Canonical approved `execute-plan` record matching plan and review | `Queued` | Plan approved and queued; accepted | portable approval and queue checkpoint |
 | `Queued` | `acquire-work-lease` | control plane | No active work lease; dependency guards pass | Queue order, dependency completion, workspace identity | `Working` | Lease acquired and work dispatched; accepted | portable dispatch checkpoint |
@@ -470,9 +471,9 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
 
 ---
 
-## Implementation Units
+## Implementation Milestones
 
-### U1. Define canonical runtime protocol and serialization
+### Milestone 1. Define canonical runtime protocol and serialization
 
 - **Goal:** Create versioned command, result, error, event, actor-context, correlation, idempotency, and checkpoint values with fail-closed canonical serialization.
 - **Requirements:** R1-R4, R16, R21-R23.
@@ -489,11 +490,11 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   5. Credential, transcript, prompt, and unbounded log fields cannot be represented by the closed event types.
 - **Verification:** The protocol suite proves exact serialized fixtures and the public runtime barrel exports no infrastructure.
 
-### U2. Implement lifecycle, lease, handoff, freshness, and disposition policy
+### Milestone 2. Implement lifecycle, lease, handoff, freshness, and disposition policy
 
 - **Goal:** Create the `execution` module and pure policy that derives allowed events or typed rejection from current state and one command.
-- **Requirements:** R5-R12b, R21-R23; AE4, AE5, AE9, AE10.
-- **Dependencies:** U1.
+- **Requirements:** R5-R12b, R21-R23; AE4, AE5, AE9-AE11.
+- **Dependencies:** Milestone 1.
 - **Files:** `src/modules/execution/domain/types.ts`, `src/modules/execution/domain/lifecycle.ts`, `src/modules/execution/domain/lifecycle.test.ts`, `src/modules/execution/domain/leases.ts`, `src/modules/execution/domain/leases.test.ts`, `src/modules/execution/domain/freshness.ts`, `src/modules/execution/domain/freshness.test.ts`, `src/modules/execution/domain/handoffs.ts`, `src/modules/execution/domain/handoffs.test.ts`, `src/modules/execution/domain/routed-items.ts`, `src/modules/execution/domain/routed-items.test.ts`, `src/modules/execution/domain/index.ts`, `src/modules/execution/application/index.ts`, `src/modules/execution/infrastructure/index.ts`, `src/modules/execution/api/composition.ts`, `src/modules/execution/api/index.ts`, `src/modules/execution/tests/fakes/clock.ts`, `src/modules/execution/tests/fakes/index.ts`, `src/modules/execution/index.ts`, `src/modules/execution/README.md`.
 - **Approach:** Represent transitions and their guards as a finite catalog, then apply them through a pure reducer. Model approval and gate freshness as value comparisons, leases with monotonically increasing fencing tokens, handoffs as lease-ending events, and routed-item changes as append-only disposition or supersession events. The execution module imports runtime only through `@/modules/runtime`; runtime never imports execution or its subpaths.
 - **Execution note:** Start with one failing fixture for every catalog row and guard category. Pair each invalid fixture with an allowed-boundary control so missing policy cannot silently pass.
@@ -507,15 +508,16 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   6. Paused, cancelled, `NeedsYou`, and interrupted merge paths follow the stated recovery constraints and preserve workspace references.
   7. Every phase-completion transition rejects an unresolved process finding. Each of the five process-finding dispositions appends one current result; a later supersession preserves the prior event, and duplicate delivery is idempotent.
   8. An execution deviation preserves the existing contracts, issue-, product-, and operating-contract gaps require their typed linked artifacts, and no-reusable-change requires a bounded reason. Any disposition that changes approved intent returns to `NeedsPlanning` and invalidates dependent review, approval, and gates.
-  9. `Done` rejects zero, duplicate-current, unresolved, or conflicting dispositions and accepts exactly one current terminal disposition per routed item.
-  10. The transition-fixture inventory has exact row and deterministic-order parity with the catalog.
+  9. Review dispatch and acceptance compare both the plan and `PLANS.md` commits and digests. A change to either rejects the verdict, while an exact current pair plus complete governing-contract conformance permits the transition.
+  10. `Done` rejects zero, duplicate-current, unresolved, or conflicting dispositions and accepts exactly one current terminal disposition per routed item.
+  11. The transition-fixture inventory has exact row and deterministic-order parity with the catalog.
 - **Verification:** A pure deterministic suite covers every transition row, guard category, lease boundary, and terminal-state invariant without SQLite or I/O.
 
-### U3. Add command handling, event-store ports, and checkpoint orchestration
+### Milestone 3. Add command handling, event-store ports, and checkpoint orchestration
 
 - **Goal:** Coordinate protocol validation, lifecycle policy, idempotent command execution, pending checkpoints, and replay through application ports.
 - **Requirements:** R2, R11-R18, R21-R23; AE1-AE6, AE8.
-- **Dependencies:** U1, U2.
+- **Dependencies:** Milestones 1 and 2.
 - **Files:** `src/modules/runtime/application/ports/event-store.ts`, `src/modules/runtime/application/ports/portable-checkpoint.ts`, `src/modules/runtime/application/ports/plan-content.ts`, `src/modules/runtime/application/ports/command-principal.ts`, `src/modules/runtime/application/ports/database-supervisor.ts`, `src/modules/runtime/application/ports/clock.ts`, `src/modules/runtime/application/index.ts`, `src/modules/runtime/tests/fakes/event-store.ts`, `src/modules/runtime/tests/fakes/portable-checkpoint.ts`, `src/modules/runtime/tests/fakes/plan-content.ts`, `src/modules/runtime/tests/fakes/command-principal.ts`, `src/modules/runtime/tests/fakes/database-supervisor.ts`, `src/modules/runtime/tests/fakes/clock.ts`, `src/modules/runtime/tests/fakes/index.ts`, `src/modules/execution/application/use-cases/execute-command.ts`, `src/modules/execution/application/use-cases/execute-command.test.ts`, `src/modules/execution/application/use-cases/complete-checkpoint.ts`, `src/modules/execution/application/use-cases/complete-checkpoint.test.ts`, `src/modules/execution/application/use-cases/rebuild-projections.ts`, `src/modules/execution/application/use-cases/rebuild-projections.test.ts`, `src/modules/execution/application/index.ts`.
 - **Approach:** Execution application use cases consume runtime's public protocol and ports. The command use case obtains a trusted principal from transport context, compares its role and authority scopes with requested attribution, enforces protocol limits, then checks an existing receipt before invoking execution policy and commits through one port. A required checkpoint remains pending until a separate completion command observes the deterministic external identity and verifies read-back evidence. Replay validates event integrity, reduces into staging projections, compares the append-ledger checksum anchor, and atomically replaces live projections. Exact plan bytes come from the approved Git commit through a port, never from an ambient working tree.
 - **Execution note:** Prove lost-response retry, pending-checkpoint interruption, and replay with in-memory fakes before building SQLite.
@@ -531,15 +533,15 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   8. Replay from a valid stream yields byte-equivalent staging projections, matches the append-ledger anchor, atomically replaces live lifecycle, lease, gate, routed-item, and checkpoint projections, and exposes one next permitted action.
 - **Verification:** Port-contract tests prove orchestration and recovery independently of a database or Git implementation.
 
-### U4. Implement the SQLite ledger, migrations, receipts, outbox, and projections
+### Milestone 4. Implement the SQLite ledger, migrations, receipts, outbox, and projections
 
 - **Goal:** Implement the runtime event-store port with real `bun:sqlite` transactions and safe schema lifecycle behavior.
 - **Requirements:** R13-R20, R22-R23; AE1-AE3, AE6, AE7.
-- **Dependencies:** U1, U3.
+- **Dependencies:** Milestones 1 and 3.
 - **Files:** `src/modules/runtime/infrastructure/sqlite/database.ts`, `src/modules/runtime/infrastructure/sqlite/schema.ts`, `src/modules/runtime/infrastructure/sqlite/migrations.ts`, `src/modules/runtime/infrastructure/sqlite/event-store.ts`, `src/modules/runtime/infrastructure/sqlite/projections.ts`, `src/modules/runtime/infrastructure/sqlite/backup.ts`, `src/modules/runtime/infrastructure/services/flock-database-supervisor.ts`, `src/modules/runtime/infrastructure/repositories/runtime-files.ts`, `src/modules/runtime/infrastructure/sqlite/index.ts`, `src/modules/runtime/infrastructure/index.ts`, `src/modules/runtime/tests/sqlite/event-store.test.ts`, `src/modules/runtime/tests/sqlite/migrations.test.ts`, `src/modules/runtime/tests/sqlite/replay.test.ts`, `src/modules/runtime/tests/sqlite/database-supervisor.test.ts`, `src/modules/runtime/tests/fixtures/database-lock-worker.ts`, `src/modules/runtime/api/composition.ts`.
 - **Approach:** Open strict, safe-integer connections; set foreign keys, WAL, and busy timeout; prepare statements once per adapter; and use one immediate write transaction per command. Allocate per-issue sequences inside that transaction. Use the idempotency key as the only receipt uniqueness key. Hold the cross-process migration lock before reading version or snapshotting; use a SQLite-consistent backup mechanism, validate it in a separate connection, compare authoritative applied-history checksums with `user_version`, and run transactional validation before commit. Rebuild into staging projections and swap only after the append-ledger checksum matches.
 - **Execution note:** Start with real temporary database tests that fail against an unimplemented port. Do not substitute mocks for transaction, WAL, concurrency, migration, or replay proof.
-- **Patterns to follow:** The runtime port contract from U3 and Bun 1.3.14's official `bun:sqlite` transaction and WAL behavior.
+- **Patterns to follow:** The runtime port contract from Milestone 3 and Bun 1.3.14's official `bun:sqlite` transaction and WAL behavior.
 - **Test scenarios:**
   1. A new temporary database opens with the expected schema version, foreign keys enabled, WAL active, strict binding, and safe integer round-trips.
   2. First delivery atomically writes receipt, ordered events, projections, outbox, and stored result; an injected failure rolls back every record.
@@ -553,14 +555,14 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   10. Oversized, free-text, personal, credential-like, path-content, transcript, prompt, log, and unknown nested fields are rejected before persistence. After storage-integrity failure, attempted recovery appends nothing to the untrusted ledger.
 - **Verification:** Real temporary-file suites prove atomicity, concurrency, reopen retry, backup-first migration, integrity checks, and projection rebuild under Bun 1.3.14.
 
-### U5. Document the control protocol and complete repository integration
+### Milestone 5. Document the control protocol and complete repository integration
 
 - **Goal:** Publish the U2 contracts for downstream issues and verify that the full repository remains conformant.
 - **Requirements:** R24 and all prior requirements through their documented handoff.
-- **Dependencies:** U1-U4.
+- **Dependencies:** Milestones 1-4.
 - **Files:** `docs/architecture/control-protocol.md`, `docs/architecture/README.md`, `src/modules/README.md`, `src/modules/runtime/README.md`, `src/modules/execution/README.md`, `docs/plans/issues/README.md`, `docs/plans/issues/u2-protocol-lifecycle-sqlite.md`.
 - **Approach:** Document versioning, primitive command catalog, state and guard table, error catalog, attribution fields, source precedence, SQLite transaction and replay boundaries, checkpoint outbox recovery, migration policy, privacy exclusions, and the public module surfaces U3-U7 must consume. Update maintained indexes and the issue registry.
-- **Execution note:** Documentation follows the strongest available checks; behavior-bearing source remains test-first in U1-U4.
+- **Execution note:** Documentation follows the strongest available checks; behavior-bearing source remains test-first in Milestones 1-4.
 - **Patterns to follow:** `docs/architecture/architecture-standard-v1.md`, `docs/architecture/mandem-system.md`, and the indexed documentation rules established by U1A.
 - **Test scenarios:** Test expectation: none for prose itself because repository documentation and vocabulary checks provide deterministic validation. Existing protocol and integration tests remain the behavioral evidence.
 - **Verification:** `docs:audit`, authored-source checks, architecture checks, typecheck, lint, the full test suite, and the composite repository gate pass from the implementation commit.
@@ -573,15 +575,15 @@ Run every command from the repository root with Bun 1.3.14. Record the implement
 
 | Gate | Applies to | Required outcome |
 | --- | --- | --- |
-| Focused protocol and execution domain tests | U1-U2 | New red-first fixtures fail for the intended missing behavior, then every protocol variant, transition row, and guard category passes deterministically. |
-| Runtime application port-contract tests | U3 | Lost-response retry, checkpoint interruption, exact plan freshness, and projection replay pass without infrastructure. |
-| Real SQLite integration tests | U4 | Temporary-file WAL, atomic append, concurrent sequence allocation, reopen retry, migration rollback, integrity validation, and replay pass under Bun 1.3.14. |
-| `bun run docs:audit` | U5 | Every maintained document is indexed and valid. |
-| `bun run authored-files:check` | U1-U5 | Every authored TypeScript file has a meaningful file overview and no prohibited source form. |
-| `bun run architecture:check` | U1-U5 | Both modules conform, cross-module imports use public barrels, and infrastructure is not exported. |
-| `bun run typecheck` | U1-U5 | Strict TypeScript passes without `any` or undocumented casts. |
-| `bun run lint` | U1-U5 | ESLint passes. |
-| `bun run test:run` | U1-U5 | The complete Vitest suite passes. |
+| Focused protocol and execution domain tests | Milestones 1-2 | New red-first fixtures fail for the intended missing behavior, then every protocol variant, transition row, and guard category passes deterministically. |
+| Runtime application port-contract tests | Milestone 3 | Lost-response retry, checkpoint interruption, exact plan freshness, and projection replay pass without infrastructure. |
+| Real SQLite integration tests | Milestone 4 | Temporary-file WAL, atomic append, concurrent sequence allocation, reopen retry, migration rollback, integrity validation, and replay pass under Bun 1.3.14. |
+| `bun run docs:audit` | Milestone 5 | Every maintained document is indexed and valid. |
+| `bun run authored-files:check` | Milestones 1-5 | Every authored TypeScript file has a meaningful file overview and no prohibited source form. |
+| `bun run architecture:check` | Milestones 1-5 | Both modules conform, cross-module imports use public barrels, and infrastructure is not exported. |
+| `bun run typecheck` | Milestones 1-5 | Strict TypeScript passes without `any` or undocumented casts. |
+| `bun run lint` | Milestones 1-5 | ESLint passes. |
+| `bun run test:run` | Milestones 1-5 | The complete Vitest suite passes. |
 | `bun run check` | Final implementation commit | The composite repository gate passes from a clean committed revision. |
 
 Behavioral acceptance additionally requires a test transcript showing this scenario: open a temporary database, deliver a guarded transition, simulate a lost response, close every connection, reopen, retry, delete projections, rebuild, and observe the same stored result, one event sequence, the same projection checksum, and one next permitted action.
@@ -615,10 +617,12 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - [x] (2026-07-31 21:33Z) Deepened module dependency, immutable receipt, checkpoint observation, migration lock, replay anchor, fact ownership, privacy, and corruption-recovery contracts through independent architecture and data-integrity review.
 - [x] (2026-07-31) Required a pushed planning branch and planning PR before clean-room review, with prompts, findings, dispositions, and verdicts stored as local-first committed artifacts.
 - [x] (2026-08-03) Added stable process findings, five scoped dispositions, phase-completion blocking, and return-to-Plan invalidation so Mandem's own workflow failures become enforceable product evidence.
+- [x] (2026-08-03) Replaced internal `U1`-`U5` implementation labels with Milestones 1-5 after the planning PR vocabulary check rejected the ambiguous hierarchy term; epic issue keys such as U2 remain external identifiers only.
+- [x] (2026-08-03) Bound clean-room freshness to both the exact plan and current `PLANS.md`, and required reviewers to prove complete governing-contract conformance before supplemental lenses.
 - [ ] Run clean-room review of the exact plan revision, address every finding, and re-review until executor-safe.
 - [ ] State the immutable `execute-plan` approval target and obtain standalone operator `APPROVED` or `DENIED`.
 - [ ] Record and push the exact approval in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`; set `execution_authorized: true` only after verified approval.
-- [ ] Implement U1-U5 in an isolated worktree using the red-first and verification contracts above.
+- [ ] Implement Milestones 1-5 in an isolated worktree using the red-first and verification contracts above.
 
 ---
 
@@ -667,6 +671,12 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - Decision: Model discrepancies found while building Mandem as a routed-item kind with five closed dispositions.
   Rationale: Reusing stable finding identity and append-only disposition semantics makes the feedback loop replayable and enforceable. A general Learn note would miss planning-stage failures and could not block an unsafe phase transition.
   Date/Author: 2026-08-03 / Brandon John-Freso and Codex
+- Decision: Name the issue's internal delivery sequence Milestones 1-5.
+  Rationale: `U2` identifies the epic subissue. Reusing `U1`-`U5` for steps inside that issue conflicts with the repository's epic, issue, and subissue vocabulary and makes references ambiguous.
+  Date/Author: 2026-08-03 / Codex after planning PR validation
+- Decision: Treat the complete bound `PLANS.md` as the primary clean-room review rubric.
+  Rationale: A copied checklist can drift from the repository's plan contract. Binding the governing commit and digest makes the reviewer role reproducible while allowing security, feasibility, and product checks to supplement it.
+  Date/Author: 2026-08-03 / Brandon John-Freso and Codex
 
 ---
 
@@ -695,3 +705,7 @@ Revision note (2026-07-31): Replaced the dependency scaffold with a self-contain
 Review-trace revision note (2026-07-31): Required the planning pull request to exist before plan review begins and made every review prompt, exact target, finding, disposition, and verdict a committed local artifact. This gives the operator one visible PR timeline without making GitHub the only durable record or the workflow authority.
 
 Continuous-product-feedback revision note (2026-08-03): Added `process-finding` as a routed-item kind for operator corrections, agent errors, review findings, interruptions, and unexpected delays. The lifecycle now blocks phase completion until each finding has one scoped terminal disposition, and intent-changing repairs return to Plan and invalidate stale evidence. U4 and U6 own later capture and repair behavior.
+
+Vocabulary-check revision note (2026-08-03): Renamed the five internal implementation steps from units with `U` identifiers to milestones. This preserves U2 as the issue key, removes ambiguous hierarchy language, and satisfies the repository vocabulary contract without changing implementation order or scope.
+
+Governing-review-contract revision note (2026-08-03): Bound each clean-room review to the exact plan and current `PLANS.md` commits and digests. The reviewer must prove complete governing-contract conformance before applying supplemental lenses, and any change to either input requires a fresh manifest and reviewer.

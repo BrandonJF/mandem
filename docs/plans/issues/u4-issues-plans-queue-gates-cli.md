@@ -61,6 +61,7 @@ by the issue.
 
 - Canonical issue/plan mapping
 - Plan promotion and invalidation rules
+- Review-manifest binding, complete `PLANS.md` conformance evidence, and dual-input verdict freshness
 - Queue mutation and dependency failure behavior
 - GitHub conflict/import policy
 - Report publication boundary
@@ -82,6 +83,9 @@ ExecPlan that includes:
 - test scenarios proving operator corrections and other process discrepancies create one stable
   finding, require a terminal disposition, and link every required issue, epic, operating-contract,
   or enforcement repair;
+- test scenarios proving review dispatch binds exact plan and `PLANS.md` commits and digests,
+  requires complete governing-contract conformance before supplemental lenses, and invalidates the
+  verdict when either input changes;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 

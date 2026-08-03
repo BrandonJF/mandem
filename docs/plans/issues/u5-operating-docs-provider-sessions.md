@@ -63,6 +63,7 @@ by the issue.
 - Remote-control exposure
 - Session interruption and accepted-handoff semantics
 - Process-finding instructions, structured handoff fields, and protection against provider-specific omission
+- Clean-room reviewer role compilation from the current bound `PLANS.md` rather than copied or provider-specific checklist text
 
 ## Required issue ExecPlan Content
 

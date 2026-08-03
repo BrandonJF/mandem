@@ -70,6 +70,15 @@ Implementation requires a self-contained issue ExecPlan that has passed clean-ro
 exact operator approval, and has `execution_authorized: true`. Do not infer permission from a
 scaffold, epic summary, chat summary, issue, or partial plan.
 
+A clean-room plan reviewer uses the complete current `PLANS.md` as the primary review contract, not
+a copied checklist or remembered convention. Before dispatch, commit a review manifest that binds
+the plan path, plan commit and digest, `PLANS.md` path, governing commit and digest, complete
+sanitized prompt, and reviewer role. The reviewer must inspect those exact bytes, verify every
+applicable `PLANS.md` requirement, and determine whether a fresh novice can execute the plan from
+the repository and plan alone. Additional security, feasibility, or product lenses supplement that
+contract. They do not replace it. A change to either the plan or governing `PLANS.md` invalidates
+the verdict and requires a fresh manifest and reviewer.
+
 Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
 conversation. Before requesting it, state one consent-boundary action and its immutable target:
 `execute-plan` for a reviewed plan commit and digest, `apply-ruleset` for a plan digest, ruleset
