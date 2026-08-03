@@ -13,3 +13,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   issue, and subissue terminology.
 - [WI1 approval and recovery review](./2026-07-29-wi1-approval-and-recovery-clean-room.md) approves
   the guarded native graph and GitHub projection transaction contract.
+- [U2 clean-room round 1 prompt](./2026-08-03-u2-clean-room-round-1-prompt.md) records the complete
+  read-only review instructions and immutable target for planning PR #37.
