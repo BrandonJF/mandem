@@ -157,6 +157,13 @@ not define workflow state.
 
 **Learning completes the lifecycle.** Mandem uses `Plan -> Work -> Review -> Learn -> Repeat`. Work is not fully closed until reusable lessons have been captured, routed, or explicitly dismissed.
 
+**Independent review is a required control.** The intelligence that produced an artifact has a
+predictable incentive and cognitive bias toward accepting it. Mandem therefore gives the verdict to
+a different, fresh session. That reviewer receives the exact artifact and governing contract without
+the originating conversation, actively searches for counterexamples and unsafe assumptions, and
+writes the complete review itself. The author may repair findings or write a separate synthesis
+afterward but cannot replace the reviewer's verdict with its own interpretation.
+
 **Primary user first.** Mandem optimizes first for Brandon's work across projects. Making the system approachable to other developers and non-technical product owners is important but subordinate to preserving the engineering doctrine.
 
 ### Actors
@@ -270,8 +277,8 @@ resident host mode
 **Bounded phases, autonomy, and integration**
 
 - R47. `Plan`, `Work`, `Review`, and `Learn` must each begin in a fresh agent session. A phase may contain multiple exchanges, but crossing a phase boundary requires a durable handoff.
-- R48. The Plan phase must create or update the issue's complete ExecPlan, commit and push its planning branch, and open a draft planning PR before review begins. Every clean-room review manifest must bind the exact plan path, commit, and digest plus the current governing `PLANS.md` path, commit, and digest, complete sanitized prompt, reviewer role, and one repo-relative output path. The fresh reviewer uses all of `PLANS.md` as the primary contract, adds named specialist lenses only as supplements, remains read-only except for the named file, and writes the complete review there directly. Mandem hashes and commits those exact bytes unchanged. Terminal output and orchestrator transcription cannot satisfy review. Any synthesis is a separate derived artifact linked to the immutable reviewer file and digest. A change to a governed input or reviewer output invalidates the verdict. Review repeats until both `PLANS.md` conformance and executor safety pass, then Mandem requires explicit operator approval of the exact reviewed plan revision before Work.
-- R49. Clean-room review must check missing prerequisites, hidden judgment, unsafe instructions, ambiguous authority, secret handling, and observable proof. After three failed repair/review rounds, Mandem must escalate a concise decision list.
+- R48. The Plan phase must create or update the issue's complete ExecPlan, commit and push its planning branch, and open a draft planning PR before review begins. Every clean-room review manifest must bind the exact plan path, commit, and digest plus the current governing `PLANS.md` path, commit, and digest, complete sanitized prompt, reviewer role, and one repo-relative output path. The fresh reviewer uses all of `PLANS.md` as the primary contract, adds named specialist lenses only as supplements, remains read-only except for the named file, and writes the complete review there directly. Mandem hashes and commits those exact bytes unchanged. Terminal output and text copied by the orchestrator cannot satisfy review. The orchestrator may write a separate synthesis that links the immutable reviewer file and digest. A change to a governed input or reviewer output invalidates the verdict. Review repeats until the plan follows `PLANS.md` and a novice can execute it safely, then Mandem requires explicit operator approval of the exact reviewed plan revision before Work.
+- R49. A fresh session that did not author or revise the governed artifact and does not receive the originating conversation must perform clean-room review. The manifest names every session that authored or revised the artifact, the reviewer session, the provider and model when available, and the review lens. The prompt tells the reviewer to challenge assumptions and seek falsifying cases, including missing prerequisites, hidden judgment, unsafe instructions, ambiguous authority, secret handling, and observable proof. High-risk work should use another provider or model when available. If no independent reviewer is available, Mandem blocks instead of accepting self-review. After three failed repair/review rounds, Mandem escalates a concise decision list.
 - R50. Plan approval authorizes unattended `Work -> Review -> repair -> Learn -> merge -> configured verification` until completion or a typed authority boundary.
 - R51. Each execution iteration must use a fresh worker, read the complete living ExecPlan, choose the next safe incomplete action, validate it, create a focused conventional commit, and update the ExecPlan.
 - R52. Independent issues may run concurrently in isolated worktrees; milestones within one plan are sequential unless the plan explicitly proves independence. Final sync, gate, and merge are serialized per project.
@@ -366,6 +373,7 @@ resident host mode
   approval or rejection, Mandem returns a concise verified outcome and next action.
 - AE14. **Covers R34-R42a.** Given the operator corrects Mandem for beginning review before the required PR exists, when the process finding is handled, then Mandem records the evidence once, classifies it as a product-contract gap, updates the epic and affected issue contracts, links the enforcement work, invalidates stale review or approval, and refuses phase completion until the disposition is complete. A later equivalent run is rejected before review dispatch without relying on the prior conversation or GitHub availability.
 - AE15. **Covers R48-R49.** Given `PLANS.md` changes after a plan review manifest is committed, when Mandem evaluates or dispatches review, then it rejects the stale manifest and requires a new manifest that binds the current governing commit and digest. The fresh reviewer uses the complete bound file as the primary rubric, reports every applicable requirement's conformance directly into the manifest's sole output file, and applies specialist lenses only afterward. Mandem rejects missing output, writes outside that path, terminal-only results, or an orchestrator-authored substitute.
+- AE16. **Covers R49.** Given the plan author submits a verdict for its own artifact or the reviewer received the authoring conversation, when Mandem checks the manifest, then it rejects the review. A fresh session that did not author the artifact may review under a challenge-oriented prompt. For high-risk work, Mandem selects another provider or model when available and records why it could not when unavailable.
 
 ### Success Criteria
 
@@ -514,6 +522,7 @@ code may bypass the architecture checker.
 - KTD14. **epic plan plus reviewed issue ExecPlans.** U1-U10 are issue boundaries. Implementation dispatch is forbidden until the owning issue ExecPlan is self-contained, clean-room approved, operator approved, and validated against the actual outputs of its dependencies.
 - KTD15. **PR-visible, Git-owned review history.** Open a draft planning PR before clean-room review and a draft implementation PR before implementation Review. Each manifest names one output file that only the reviewer may author. Commit the exact reviewer-written bytes and digest beside the complete prompt, reviewer role and identity, exact target, and governing contract snapshot. The plan-review snapshot binds both the plan and `PLANS.md`; either change invalidates the verdict. Derived synthesis is optional, separate, source-linked, and never substitutes for the reviewer artifact. The hosting provider gives the operator a convenient timeline, while Git and the git-native issue retain enough information to reconstruct state without that provider.
 - KTD16. **Stable process findings with scoped dispositions.** Reuse the routed-item model for process findings rather than creating an informal retrospective list. Each finding has a stable identity, typed origin, bounded evidence, affected phase, scope classification, artifact links, and append-only disposition history. Lifecycle policy blocks phase completion while a current finding lacks one terminal disposition. U4 owns capture and contract-routing behavior; U6 owns automatic Learn and repair routing; U9 proves the loop while Mandem operates on a real repository.
+- KTD17. **Give the verdict to a fresh non-author session.** A review manifest names every session that authored or revised the artifact and proves that the reviewer did neither and did not inherit the authoring conversation. When risk policy requires it, Mandem selects another provider or model if one is available. Every reviewer receives instructions to seek counterexamples, and only the file that reviewer writes can carry the verdict.
 
 ### High-Level Technical Design
 
@@ -769,7 +778,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 ### U4. Implement issues, ExecPlans, queueing, gates, and GitHub projection
 
 - **Goal:** Give every workflow one authoritative git-native issue, one canonical self-contained ExecPlan, explicit dependencies, clean-room review, immutable approval, and a visible queue.
-- **Requirements:** R1-R6a, R34-R42a, R47-R50, R56-R57; F1, F3-F5, AE8-AE9, AE14-AE15
+- **Requirements:** R1-R6a, R34-R42a, R47-R50, R56-R57; F1, F3-F5, AE8-AE9, AE14-AE16
 - **Dependencies:** U2, U3
 - **Files:** `src/modules/issues/**`, `src/modules/execution/application/plan-*.ts`, `src/modules/execution/application/queue-*.ts`, `src/modules/execution/application/gate-*.ts`, `src/modules/issues/infrastructure/git-native-issue/**`, `src/modules/issues/infrastructure/github/**`, `src/modules/issues/application/report-*.ts`, `src/cli/commands/{work,plan,gate,run,worker,events,report,reconcile}/**`, `src/modules/runtime/api/result-renderers/**`, `assets/operating-docs/workflows/plan/**`, `tests/e2e/plan-approval.test.ts`, `tests/contract/primitive-cli.test.ts`, `tests/contract/dispatch-authority.test.ts`
 - **Approach:** Keep workflow decisions in the server while typed resident-host capabilities execute filesystem, Git, `git issue`, and authenticated GitHub operations and return attributable results. Store issue identity, conventional type, plan path, dependencies, queue position, projection links, and portable checkpoints in the issue event chain. Implement configurable plan directory and naming, PLANS.md validation, and hash-bound approval. After the initial plan commit, push the planning branch and open a draft planning PR before dispatching review. For every clean-room round, commit a review artifact containing the complete sanitized prompt, reviewer identity, exact reviewed commit and plan digest, findings, dispositions, and verdict; repairs and later rounds continue on the same PR. Deliver the minimal AXI command families and versioned TOON envelopes here so skills and later presentation layers consume a stable canonical surface. Implement local Mandem report drafts, deduplication, explicit publication approval, upstream issue creation/update, and local publication events. The v1 report schema allows concise reproduction steps, Mandem versions, non-secret configuration names, artifact references, and clearly labeled evidence/inference; it rejects credential values and environment dumps before local draft creation and publication. It does not attempt general source-code or prose redaction. Mirror concise state to GitHub when configured while treating conflicts as events for reconciliation; Git history and the git-native issue remain sufficient when GitHub is unavailable.
@@ -780,6 +789,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
   - Plan paths outside the default directory work through configuration and remain canonical after restart.
   - Review dispatch is rejected until the plan commit is pushed, a draft planning PR references that branch and exact head, and a committed manifest binds the complete sanitized prompt, reviewer role, exact plan commit and digest, and current `PLANS.md` commit and digest.
   - A reviewer must demonstrate complete `PLANS.md` conformance before applying supplemental clean-room, feasibility, security, or product lenses; changing the plan or `PLANS.md` makes the verdict stale.
+  - Mandem rejects review by an author, by a session that received the authoring conversation, or by the same provider or model when risk policy requires an available alternative. A fresh non-author reviewer receives a challenge-oriented prompt, and the manifest names all involved sessions and providers.
   - Each repair round keeps its exact prompt, reviewed commit and digest, findings, dispositions, reviewer identity, and verdict on the planning PR; deleting or losing the GitHub projection does not prevent reconstruction from Git and the git-native issue.
   - A clean-room failure triggers repair and a fresh reviewer; three failed rounds yield one concise `Needs you` decision list.
   - Approval records exact intent/verdict hashes; material edits invalidate it while living evidence edits do not.
@@ -1115,7 +1125,8 @@ published interface.
 - A git-native issue cannot enter Work without one canonical compliant ExecPlan, executor-safe clean-room verdict, and exact operator approval.
 - Every planned issue has a draft planning PR before clean-room review begins, and that PR shows committed prompts, exact targets, findings, dispositions, repairs, and verdicts through approval and planning merge.
 - Every plan-review manifest binds the exact plan and current `PLANS.md` commits and digests; reviewers prove complete governing-contract conformance, and either input changing invalidates the verdict.
-- Every review is preserved as the exact reviewer-authored file and digest. Optional synthesis remains separate and source-linked; no terminal capture, transcription, compression, or summary replaces the original.
+- Mandem keeps the exact file the reviewer wrote and its digest. An optional synthesis uses another file and links the source; captured terminal text, copied text, compression, or a summary never replaces the original.
+- Every accepted review proves that the reviewer did not author or revise the artifact and did not receive the authoring conversation. Mandem blocks self-review, gives the reviewer challenge-oriented instructions, and records whether it used another provider or model when one was available.
 - Claude and Codex satisfy the same bounded-session and autonomous-worker contract using existing subscriptions rather than direct vendor APIs.
 - An approved SBP queue executes in isolated worktrees through TDD, draft PR, independent review/repair, Learn, serialized exact-SHA gates, automatic merge, and plan-defined verification.
 - TUI, CLI, and agent skills operate through the same primitives and produce identical attributable state transitions.
@@ -1163,7 +1174,8 @@ published interface.
 - [x] (2026-08-01) Standardized PR-visible, Git-owned review history across Plan and implementation Review: open the applicable draft PR first, then commit every review prompt, exact target, finding, disposition, repair, and verdict.
 - [x] (2026-08-03) Operationalized Mandem's own development as continuous product evidence through stable process findings, typed scope dispositions, phase-completion blocking, contract propagation, and downstream enforcement ownership.
 - [x] (2026-08-03) Bound clean-room review to both the exact plan and current `PLANS.md`, made the complete governing file the primary reviewer rubric, and required fresh review when either input changes.
-- [x] (2026-08-03) Replaced terminal-return and orchestrator-transcription review handling with reviewer-only output files, exact-byte hashing, and separate source-linked synthesis.
+- [x] (2026-08-03) Required reviewers to write their own output files, hashed those exact bytes, and kept later synthesis in a separate source-linked file.
+- [x] (2026-08-03) Required a fresh non-author reviewer, rejected self-review and inherited author context, added challenge-oriented prompts, and used another provider or model for high-risk work when available.
 - [ ] Complete U2 through U10 in dependency order; U2 is currently in Plan and remains unauthorized for implementation.
 
 ## Surprises & Discoveries
@@ -1241,6 +1253,9 @@ published interface.
 - Decision: Make the reviewer-authored file the immutable review record and treat every synthesis as a separate derived artifact.
   Rationale: Terminal returns and orchestrator rewrites introduce unspecified compression and attribution loss. A sole output path preserves exact reviewer reasoning while retaining a narrow, auditable write capability.
   Date/Author: 2026-08-03 / Brandon and Codex
+- Decision: Give review verdicts to fresh sessions that did not author the artifact and tell them to seek falsifying evidence.
+  Rationale: The originating intelligence tends to accept its own output and preserve its hidden assumptions during self-review. Another session with fresh context and the exact artifact can challenge those assumptions. Another provider or model adds a further independent view when available.
+  Date/Author: 2026-08-03 / Brandon and Codex
 
 ## Outcomes & Retrospective
 
@@ -1314,3 +1329,8 @@ Lossless-review-artifact update (2026-08-03): Gave each reviewer one manifest-bo
 made that exact reviewer-authored file plus digest the review record. Terminal-only results and
 orchestrator transcriptions are invalid. Any summary or synthesis must use a separate path, link the
 immutable source digest, describe its transformation, and never replace the original.
+
+Independent-review-control update (2026-08-03): Required a fresh session that did not author or
+revise the artifact and did not receive the authoring conversation. Manifests name the author and
+reviewer sessions, provider and model when available, risk policy, and challenge lens. Mandem
+rejects self-review and uses another provider or model for higher-risk work when available.

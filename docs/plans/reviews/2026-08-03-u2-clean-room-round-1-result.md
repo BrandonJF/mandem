@@ -18,7 +18,7 @@ Immutable reviewer output: [`2026-08-03-u2-clean-room-round-1-reviewer-output.md
 
 Immutable reviewer-output SHA-256: `db9974e1d8fc621f8e247b35a65f8dc79f0d7a7889d55dfb8ef769124c70a333`
 
-Transformation: The orchestrator condensed the reviewer's exact prose into shorter finding
+How the orchestrator changed the text: It condensed the reviewer's exact prose into shorter finding
 descriptions while preserving priorities, verdict, and required repairs. This synthesis is not the
 review record and must never be used when the immutable reviewer output is required.
 

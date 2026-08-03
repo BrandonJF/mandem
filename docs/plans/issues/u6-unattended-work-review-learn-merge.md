@@ -67,7 +67,8 @@ by the issue.
 - Integration lease transaction
 - Post-merge failure disposition
 - Process-finding repair leases, approval invalidation, and terminal-disposition rules
-- Reviewer-only artifact writes, exact-output preservation, and separate synthesis provenance for implementation Review
+- Let each implementation reviewer write one file, keep its exact bytes, and link any later synthesis to that file
+- Implementation Review by a fresh non-author, prompts that require counterexamples, and another provider or model when risk policy requires one
 
 ## Required issue ExecPlan Content
 
@@ -99,6 +100,8 @@ ExecPlan that includes:
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
 - [ ] Every process finding has one terminal disposition and linked repair or dismissal evidence;
   scope-changing dispositions return to Plan and invalidate stale review and approval
+- [ ] Implementation Review rejects the worker and every session that changed the artifact, then
+  records whether it used another provider or model when risk policy required one
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

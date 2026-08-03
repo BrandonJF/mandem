@@ -85,6 +85,16 @@ separate derived artifact that links the source path and digest, describes the t
 never replaces the reviewer's file. A change to the plan, governing `PLANS.md`, prompt, role, or
 output bytes invalidates the verdict and requires a fresh manifest and reviewer.
 
+The reviewer must be independent of the governed output. At minimum, use a fresh session that did
+not author or revise the plan or implementation and does not receive the originating conversation.
+Record which sessions authored or revised the artifact, which session reviewed it, the provider
+and model when available, and the named review lens. For high-risk work, use another provider or
+model when available. Never weaken the fresh-context and non-author rules to do so. The review
+prompt must ask the reviewer to challenge assumptions and seek falsifying cases rather than confirm
+the author's conclusion. The originating agent may repair findings or write a separate synthesis;
+it may not act as the independent reviewer or replace the reviewer's verdict. If no independent
+reviewer is available, block the transition instead of substituting self-review.
+
 Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
 conversation. Before requesting it, state one consent-boundary action and its immutable target:
 `execute-plan` for a reviewed plan commit and digest, `apply-ruleset` for a plan digest, ruleset

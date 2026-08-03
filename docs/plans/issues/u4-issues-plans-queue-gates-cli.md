@@ -62,7 +62,8 @@ by the issue.
 - Canonical issue/plan mapping
 - Plan promotion and invalidation rules
 - Review-manifest binding, complete `PLANS.md` conformance evidence, and dual-input verdict freshness
-- Reviewer-output path capability, exact-byte preservation, write-set validation, and derived-synthesis provenance
+- Give reviewers one writable output path, keep their exact bytes, reject other writes, and link every later synthesis to its source
+- Checks that reject authors as reviewers, record all involved sessions, and use another provider or model when risk policy requires one
 - Queue mutation and dependency failure behavior
 - GitHub conflict/import policy
 - Report publication boundary
