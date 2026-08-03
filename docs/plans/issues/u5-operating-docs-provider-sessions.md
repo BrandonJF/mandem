@@ -64,6 +64,7 @@ by the issue.
 - Session interruption and accepted-handoff semantics
 - Process-finding instructions, structured handoff fields, and protection against provider-specific omission
 - Clean-room reviewer role compilation from the current bound `PLANS.md` rather than copied or provider-specific checklist text
+- Provider capability that permits writing only the manifest's output file and returns its exact digest without relying on terminal capture
 
 ## Required issue ExecPlan Content
 
@@ -91,6 +92,8 @@ ExecPlan that includes:
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
 - [ ] Compiled prompts and typed handoffs preserve stable process findings and dispositions across
   fresh provider sessions without requiring transcript access
+- [ ] Reviewer sessions can write only the manifest-bound output file and return its digest; the
+  complete review never depends on terminal capture or orchestrator transcription
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

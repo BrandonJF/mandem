@@ -67,6 +67,7 @@ by the issue.
 - Integration lease transaction
 - Post-merge failure disposition
 - Process-finding repair leases, approval invalidation, and terminal-disposition rules
+- Reviewer-only artifact writes, exact-output preservation, and separate synthesis provenance for implementation Review
 
 ## Required issue ExecPlan Content
 
@@ -84,6 +85,9 @@ ExecPlan that includes:
 - test scenarios proving that operator corrections, agent errors, review findings, interruptions,
   and unexpected delays become stable process findings and that Review, Learn, merge, and closure
   reject unresolved findings;
+- test scenarios proving each implementation reviewer writes the complete review to its sole
+  permitted artifact path, exact bytes remain immutable, and optional synthesis remains separate
+  and source-linked;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 

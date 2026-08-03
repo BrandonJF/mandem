@@ -83,6 +83,9 @@ ExecPlan that includes:
 - test scenarios that inject execution deviations, issue-contract gaps, product-contract gaps,
   operating-contract gaps, and justified no-reusable-change outcomes, then prove phase blocking,
   durable reconstruction, and next-run enforcement;
+- test scenarios that close every provider session after review and reconstruct the exact
+  reviewer-authored bytes, digest, prompt, targets, and any separately identified synthesis without
+  terminal history;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 

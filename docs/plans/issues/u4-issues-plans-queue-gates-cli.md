@@ -62,6 +62,7 @@ by the issue.
 - Canonical issue/plan mapping
 - Plan promotion and invalidation rules
 - Review-manifest binding, complete `PLANS.md` conformance evidence, and dual-input verdict freshness
+- Reviewer-output path capability, exact-byte preservation, write-set validation, and derived-synthesis provenance
 - Queue mutation and dependency failure behavior
 - GitHub conflict/import policy
 - Report publication boundary
@@ -86,6 +87,9 @@ ExecPlan that includes:
 - test scenarios proving review dispatch binds exact plan and `PLANS.md` commits and digests,
   requires complete governing-contract conformance before supplemental lenses, and invalidates the
   verdict when either input changes;
+- test scenarios proving terminal-only results and out-of-path writes are rejected, exact reviewer
+  bytes are committed unchanged, and derived synthesis records source path, digest, and
+  transformation without replacing the original;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 

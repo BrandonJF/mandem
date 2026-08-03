@@ -16,4 +16,6 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
 - [U2 clean-room round 1 prompt](./2026-08-03-u2-clean-room-round-1-prompt.md) records the complete
   read-only review instructions and immutable target for planning PR #37.
 - [U2 clean-room round 1 result](./2026-08-03-u2-clean-room-round-1-result.md) records four P1
-  `PLANS.md` conformance findings for repair on planning PR #37.
+  `PLANS.md` conformance findings as a non-authoritative orchestrator synthesis.
+- [U2 clean-room round 1 reviewer output](./2026-08-03-u2-clean-room-round-1-reviewer-output.md)
+  preserves the reviewer's exact output and is the authoritative round-1 review artifact.

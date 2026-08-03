@@ -1,4 +1,4 @@
-# U2 Clean-Room Review, Round 1 Result
+# U2 Clean-Room Review, Round 1 Orchestrator Synthesis
 
 Date: 2026-08-03
 
@@ -13,6 +13,14 @@ Reviewed plan SHA-256: `0bb1f0505f1507c5c1a08c277381d68e0ccb87456e8ae86be22efd55
 Governing `PLANS.md` SHA-256: `86b545172b5830f1b454800b1ea2940266849f587e30c3b1e1fadce3351c3cf0`
 
 Reviewer: fresh read-only clean-room agent `/root/u2_clean_room_plans_bound`
+
+Immutable reviewer output: [`2026-08-03-u2-clean-room-round-1-reviewer-output.md`](./2026-08-03-u2-clean-room-round-1-reviewer-output.md)
+
+Immutable reviewer-output SHA-256: `db9974e1d8fc621f8e247b35a65f8dc79f0d7a7889d55dfb8ef769124c70a333`
+
+Transformation: The orchestrator condensed the reviewer's exact prose into shorter finding
+descriptions while preserving priorities, verdict, and required repairs. This synthesis is not the
+review record and must never be used when the immutable reviewer output is required.
 
 ## PLANS.md Conformance
 

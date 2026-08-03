@@ -73,11 +73,17 @@ scaffold, epic summary, chat summary, issue, or partial plan.
 A clean-room plan reviewer uses the complete current `PLANS.md` as the primary review contract, not
 a copied checklist or remembered convention. Before dispatch, commit a review manifest that binds
 the plan path, plan commit and digest, `PLANS.md` path, governing commit and digest, complete
-sanitized prompt, and reviewer role. The reviewer must inspect those exact bytes, verify every
-applicable `PLANS.md` requirement, and determine whether a fresh novice can execute the plan from
-the repository and plan alone. Additional security, feasibility, or product lenses supplement that
-contract. They do not replace it. A change to either the plan or governing `PLANS.md` invalidates
-the verdict and requires a fresh manifest and reviewer.
+sanitized prompt, reviewer role, and one repo-relative output path. The reviewer is read-only except
+for that file and must write the complete review there directly. The reviewer must inspect those
+exact bytes, verify every applicable `PLANS.md` requirement, and determine whether a fresh novice
+can execute the plan from the repository and plan alone. Additional security, feasibility, or
+product lenses supplement that contract. They do not replace it.
+
+Terminal output, an orchestrator-authored transcription, or a summary is not a review artifact.
+After the reviewer finishes, hash and commit the exact file unchanged. Any synthesis must be a
+separate derived artifact that links the source path and digest, describes the transformation, and
+never replaces the reviewer's file. A change to the plan, governing `PLANS.md`, prompt, role, or
+output bytes invalidates the verdict and requires a fresh manifest and reviewer.
 
 Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
 conversation. Before requesting it, state one consent-boundary action and its immutable target:
