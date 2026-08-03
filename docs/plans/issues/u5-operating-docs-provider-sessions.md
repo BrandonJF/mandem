@@ -40,6 +40,7 @@ implementation instruction.
 - Claude and Codex capability adapters
 - Typed contracts for launching and handing off phase sessions
 - Evidence of provider conformance and prompt provenance
+- Provider-neutral operating guidance that requires process-finding capture and scoped disposition before phase handoff
 
 ### Downstream Consumers
 
@@ -61,6 +62,7 @@ by the issue.
 - Provider capability/fallback matrix
 - Remote-control exposure
 - Session interruption and accepted-handoff semantics
+- Process-finding instructions, structured handoff fields, and protection against provider-specific omission
 
 ## Required issue ExecPlan Content
 
@@ -75,6 +77,8 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving Claude and Codex receive the same process-feedback rule and cannot submit
+  a phase handoff that omits an observed unresolved process finding;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -84,6 +88,8 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Compiled prompts and typed handoffs preserve stable process findings and dispositions across
+  fresh provider sessions without requiring transcript access
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

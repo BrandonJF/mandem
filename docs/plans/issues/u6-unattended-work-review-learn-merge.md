@@ -42,6 +42,7 @@ implementation instruction.
 - TDD iteration and conventional-commit evidence
 - Draft PR and independent review-and-repair cycle
 - Mandatory Learn outcome
+- Automatic routing and repair of stable process findings before phase completion
 - Exact-SHA serialized merge and post-merge verification
 - Takeover, cancellation, and cleanup behavior
 
@@ -65,6 +66,7 @@ by the issue.
 - Learn prevention mechanisms
 - Integration lease transaction
 - Post-merge failure disposition
+- Process-finding repair leases, approval invalidation, and terminal-disposition rules
 
 ## Required issue ExecPlan Content
 
@@ -79,6 +81,9 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving that operator corrections, agent errors, review findings, interruptions,
+  and unexpected delays become stable process findings and that Review, Learn, merge, and closure
+  reject unresolved findings;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -88,6 +93,8 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Every process finding has one terminal disposition and linked repair or dismissal evidence;
+  scope-changing dispositions return to Plan and invalidate stale review and approval
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

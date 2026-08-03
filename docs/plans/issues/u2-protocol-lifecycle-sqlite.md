@@ -1,5 +1,12 @@
 ---
-title: "U2: Protocol, lifecycle kernel, and SQLite event model"
+title: "Protocol, Lifecycle Kernel, and SQLite Event Model - Plan"
+type: feat
+date: 2026-07-31
+artifact_contract: ce-unified-plan/v1
+artifact_readiness: implementation-ready
+deepened: 2026-07-31
+product_contract_source: mandem-epic
+execution: code
 plan_kind: mandem-issue-execplan
 issue_key: U2
 parent: ../2026-07-21-001-feat-mandem-plan.md
@@ -9,144 +16,682 @@ depends_on_issue_ids:
   - 6a6a8bab-853f-4658-9bc0-38e2386b642d
   - 745eda80-1e74-4866-bc95-2f2983b31025
   - da645bd0-9899-40b3-9f23-3b48d65362a4
-promotion: scaffolded
+promotion: planned
 execution_authorized: false
 ---
 
-# U2: Protocol, lifecycle kernel, and SQLite event model
+# Protocol, Lifecycle Kernel, and SQLite Event Model - Plan
 
-> This is a dependency scaffold, not an executable plan. Before implementation dispatch, the
-> plan author must expand it, obtain a clean-room review, and obtain operator approval.
+This ExecPlan is a living document governed by `PLANS.md`. Keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current during implementation.
 
-## Purpose
+This plan is complete enough for clean-room review, but it does not authorize implementation. Implementation may begin only after a reviewer approves the exact plan revision, the operator responds with standalone `APPROVED` for the stated `execute-plan` target, that approval is recorded and pushed in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`, and `execution_authorized` is changed to `true`.
 
-Expand this scaffold into a self-contained U2 issue ExecPlan that incorporates every applicable
-epic constraint. Use the epic ExecPlan to sequence work; do not treat it as a worker's
-implementation instruction.
+## Goal Capsule
 
-## Dependency Contract
+- **Objective:** Give Mandem one versioned, deterministic contract for commands, lifecycle transitions, results, errors, events, leases, approvals, gate freshness, portable checkpoints, and replayable SQLite state.
+- **Observable outcome:** Domain tests prove every allowed and rejected transition without infrastructure. Real temporary SQLite tests then prove atomic first delivery, exact retry results, monotonic per-issue ordering, migration recovery, projection deletion and rebuild, and restart-safe pending checkpoints.
+- **Execution profile:** Implement test-first in one isolated worktree. Complete the milestones in order because the SQLite adapter depends on the protocol and lifecycle contracts.
+- **Authority:** The operator approves immutable plan intent. Agents and clients may validate and display approval records, but they cannot create an operator approval or denial.
+- **Stop conditions:** Stop for a product-scope change, a required change to the existing `Mandem-Approval: v1` format, an architecture exception, or evidence that Bun 1.3.14 cannot provide the required SQLite transaction behavior.
+- **Tail ownership:** The worker commits, pushes, opens a pull request, and supplies verification evidence. The worker does not merge.
 
-**Depends on:** corrected U1 and U1A
+---
 
-### Consumes
+## Product Contract
 
-- U1 architecture standard and module skeleton
-- U1 repository gates
-- U1A documentation, authored-source, Git-hook, and canonical-check gates
-- Epic lifecycle, authority, approval, and checkpoint decisions
+### Summary
 
-### Produces
+Mandem clients, agents, and later server processes need one shared way to request changes and interpret outcomes. U2 supplies that contract and the pure lifecycle policy before U3 adds a running server or transport. It also supplies the first durable operational ledger so a fresh process can reconstruct an issue without a provider transcript or surviving terminal session.
 
-- Versioned command, result, error, and event envelopes
-- Executable lifecycle transition table
-- Lease, idempotency, approval, and gate-freshness contracts
-- Append-only SQLite ledger and rebuildable projection ports/adapters
-- Portable checkpoint schema
+### Problem Frame
 
-### Downstream Consumers
+The current repository has a bounded `runtime` module and deterministic architecture tooling, but it has no workflow protocol, lifecycle state, execution module, or data store. If later issues invent those contracts independently, CLI, TUI, resident host, provider workers, and reconciliation could disagree about authority, retries, current state, and recovery.
 
-- U3 transport/server/reconciliation
-- U4 issue and gate behavior
-- U6 autonomous iteration loop
-- U7 CLI/TOON parity
-- U10 telemetry schema
+SQLite cannot commit atomically with Git, a git-native issue ref, or an ExecPlan file. U2 must therefore distinguish a locally committed event from a required portable checkpoint. A command that requires both stores is not reported as fully successful until the portable checkpoint is proven. If that write fails or the process stops, the ledger retains enough pending state to reconcile safely before any successor transition.
 
-## Architecture Constraint
+### Actors
 
-Authors must place all source code added for this issue in Mandem's Nucleus-derived clean
-architecture. The detailed plan must identify module ownership, layer placement, public API
-boundaries, composition roots, and deterministic architecture checks for each behavior implemented
-by the issue.
+- A1. **Operator:** Supplies exact approval or denial and controls queue order, takeover, release, pause, cancellation, and other consequential decisions.
+- A2. **Client:** A later CLI, TUI, skill, or phase agent that sends versioned commands and reads versioned results, errors, events, and context.
+- A3. **Worker:** Performs one bounded execution or review iteration under an active session and lease.
+- A4. **Control plane:** Validates commands, applies lifecycle policy, commits events and projections, and coordinates required portable checkpoints.
+- A5. **Checkpoint writer:** A later adapter that writes significant facts to the git-native issue or ExecPlan and returns verifiable evidence.
 
-## Decisions Required Before Promotion
+### Requirements
 
-- Domain vocabulary and schema versioning
-- Transaction and replay boundaries
-- Approval-sensitive versus living-plan content representation
-- Terminal disposition invariants
+**Protocol and attribution**
 
-## Required issue ExecPlan Content
+- R1. Every command, result, error, event, and portable checkpoint must carry a schema version and enough identity to attribute it to one project, full issue UUID, actor, correlation, and causation chain.
+- R2. Every state-changing command must use a project-wide idempotency UUID bound to its command kind and canonical payload digest. Repeating the same key and payload must return the stored result; repeating the key with different content must return a stable conflict and cause no mutation.
+- R3. Results and errors must use stable codes and include retryability, affected issue and correlation IDs, artifact references, and permitted next actions as data so later clients present the same recovery guidance.
+- R4. Protocol parsers must reject unknown schema versions, unknown fields, malformed identifiers, noncanonical serialized content, and commands that omit required context.
+- R4a. An application port must derive a trusted command principal from the local transport context before lifecycle policy runs. Envelope actor fields are requested attribution, not authentication; absent, unverifiable, or mismatched principals fail with a typed authorization error, and authentication material never enters durable protocol values.
 
-Before setting `promotion` to `planned`, the plan author must produce a nearly self-contained
-ExecPlan that includes:
+**Lifecycle and authority**
 
-- goal capsule and traced epic requirements;
-- current repository state and the patterns the plan author inspected;
-- concrete technical decisions and rejected alternatives;
-- repo-relative files and module/layer ownership;
-- test-first scenarios with expected red and green evidence;
-- failure, restart, idempotency, and rollback behavior where applicable;
-- exact consumed artifact versions and produced handoff artifacts;
-- verification contract and definition of done;
-- Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
-  work.
+- R5. The execution domain must encode the epic lifecycle as an exhaustive transition table with guards for current state, active lease and session, required artifacts, approval freshness, gate freshness, unresolved routed items, and portable checkpoint state.
+- R6. Invalid ordering, missing evidence, expired or non-owner leases, late messages from replaced sessions, stale approval targets, stale gate inputs, and authority violations must fail closed with typed errors and no event append.
+- R7. `Mandem-Approval: v1` from the public `architecture-standard` module is the only operator approval record. U2 must validate it and bind `execute-plan` to the exact plan commit and SHA-256 digest without defining a second approval format.
+- R8. Approval-sensitive plan bytes include the whole plan at the approved commit. Future living-record exemptions require a separately reviewed parser and schema; U2 must not infer exemptions from Markdown headings or the working tree.
+- R9. Gate decisions must name their versioned definition, input artifact digests, implementation or target revision, outcome, and evidence. A changed input invalidates only decisions that depend on it.
+- R10. A lease must have one owner, session, resource, acquisition time, expiry, and fencing token. A stale owner must never mutate after expiry, takeover, cancellation, or accepted handoff.
+- R11. An accepted phase handoff must bind the active lease and session, input artifact revisions, outcome, decisions, blockers, mutations, evidence, and next allowed transition. Acceptance atomically revokes the prior mutation lease.
+- R12. Routed findings must use stable identities and exactly one current terminal disposition before `Done`. Superseding or reopening a disposition must append a linked event rather than erase history.
+- R12a. Plan review must begin only after the initial plan revision is committed, its branch is pushed, and a planning pull request projects that branch for operator visibility. Each review round must store its exact prompt, reviewed commit and plan digest, findings, disposition, and reviewer identity as committed repository artifacts. Git remains sufficient to reconstruct the review if the hosting provider is unavailable; the pull request presents the same history but does not own it.
+- R12b. A process finding is a routed finding created from an operator correction, agent error, review finding, interruption, or unexpected delay that may reveal an orchestration gap. It must record a stable identity, typed origin, affected phase, bounded evidence and artifact references, and exactly one current disposition: `execution-deviation`, `issue-contract-gap`, `product-contract-gap`, `operating-contract-gap`, or `no-reusable-change`. No phase-completion transition may succeed while a process finding is unresolved. A disposition that changes approved intent must route to `NeedsPlanning` and invalidate dependent review, approval, and gate evidence.
 
-## Promotion Checklist
+**Durability and reconstruction**
 
-- [ ] Expanded using the current repository and complete epic ExecPlan
-- [ ] Dependency outputs exist or all provisional assumptions are explicit
-- [ ] The plan names module boundaries that conform to the architecture standard
-- [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
-- [ ] A clean-room reviewer approved the current revision
-- [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
-- [ ] Operator approved the exact reviewed revision
-- [ ] Set `execution_authorized` to `true` only after the operator approves the exact reviewed
-  revision
+- R13. SQLite must store an append-only event stream, command receipts with stored results, per-issue sequence allocation, pending portable checkpoints, and rebuildable projections in one project-local database contract.
+- R14. First delivery must atomically store the immutable command receipt, payload digest, monotonically ordered events, projection changes, and result. A lost response followed by retry must return those exact result bytes without another effect. Checkpoint completion is a separate idempotent command and never rewrites the original receipt.
+- R15. Projection tables must be disposable. Replaying valid events in sequence into staging projections must match a non-disposable checksum anchor in the append ledger before atomically replacing live projections and exposing exactly one next permitted action.
+- R16. Events and checkpoints must store bounded structured facts, hashes, and artifact references. Every persisted string and collection must have a documented size and format limit. Durable schemas must reject credentials, personal data, provider transcripts, raw prompts, filesystem content, and unbounded logs or free text.
+- R17. A transition that requires a portable checkpoint must commit one pending checkpoint record uniquely bound to its originating event before external I/O and block successor transitions. The checkpoint writer must observe the deterministic checkpoint identity before retrying a write, and only read-back evidence matching the immutable payload digest may complete it. Interruption must leave one recoverable pending action.
+- R18. Malformed events, sequence gaps, digest mismatches, projection checksum mismatches, migration failures, and ambiguous contradictions among durable sources must stop reconstruction with a typed `NeedsYou` outcome rather than skip or guess.
+- R19. The SQLite adapter must use Bun 1.3.14's built-in `bun:sqlite`, strict parameter binding, safe integer handling, foreign-key enforcement, WAL mode, a bounded busy timeout, explicit transactions, and real temporary-file tests.
+- R20. Schema upgrades must be ordered, versioned, and serialized under one project-local cross-process migration lock acquired before version inspection or backup. The applied-migration history and `user_version` must agree. A SQLite-consistent, separately verified backup must precede change, and required validation must pass before commit. Any failed or post-commit-invalid upgrade must restore a verified prior database and never expose a partially accepted schema.
 
-## Dependency Revalidation
+**Architecture and downstream contracts**
 
-When a dependency completes or its producer changes a consumed artifact, the plan author must
-compare the output with this plan's assumptions. If it materially differs, the plan author must set
-`promotion` to `planned` and obtain a refreshed review before execution.
+- R21. `runtime` owns shared protocol, serialization, checkpoint, and event-store contracts. `execution` owns lifecycle policy, leases, approvals and gate freshness, handoffs, routed-item disposition, and lifecycle use cases.
+- R22. Domain code remains pure. Application use cases depend on ports. `bun:sqlite`, clocks, UUID creation, hashing backed by host libraries, filesystem paths, and checkpoint I/O remain behind infrastructure adapters or composition roots.
+- R23. Each module must conform to `docs/architecture/architecture-standard-v1.md`, expose cross-module behavior only through its root barrel, keep infrastructure out of root barrels, and include module-local tests and fakes.
+- R24. U2 must document the protocol, lifecycle, source precedence, transaction boundary, replay contract, and downstream extension points in `docs/architecture/control-protocol.md` and index it from `docs/architecture/README.md`.
 
-The Mandem epic orchestrator completed the original U1 dependency revalidation on 2026-07-24
-against merge
-`88b9533ab840c9d357a1d09d2341709e2cbdd986`. The repository now provides Bun `1.3.14`, the
-canonical `bun run check` gate, public `architecture-standard` and `runtime` barrels, the
-versioned 22-rule catalog, deterministic filesystem analysis, two bounded entrypoints, and a
-completed Claude/Codex capability baseline. U2 must extend the existing `runtime` module, preserve
-those public barrels, keep SQLite behind infrastructure ports, and avoid weakening any U1 rule or
-gate. Post-merge verification on 2026-07-25 found material package and architecture-gate gaps,
-tracked by issue `5717221`, and the operator added the U1A documentation/authoring-quality
-dependency tracked by `745eda8`. U2 dependency readiness is therefore invalidated until both
-foundational issues merge and this scaffold is revalidated against their actual outputs.
+### Key Flows
+
+- F1. **First command delivery and lost response**
+  - **Trigger:** A client submits a new command and loses the response after commit.
+  - **Steps:** The control plane validates the envelope, commits its receipt, events, projection changes, and result atomically, then returns the stored result when the client retries the same key and payload.
+  - **Outcome:** One command causes one effect even when delivery is ambiguous.
+- F2. **Portable checkpoint completion**
+  - **Trigger:** A valid transition requires a git-native issue or ExecPlan checkpoint.
+  - **Steps:** SQLite records the event and uniquely bound pending checkpoint, blocks successors, and returns an immutable accepted result. A separate completion command first observes the deterministic checkpoint identity, writes only if absent, verifies the external bytes by digest, and records immutable evidence.
+  - **Outcome:** A local commit is never misreported as a completed portable transition.
+- F3. **Fresh phase after handoff or interruption**
+  - **Trigger:** A worker submits a handoff, disappears, expires, or is replaced.
+  - **Steps:** A valid handoff revokes the prior lease. Without one, reconciliation uses the last accepted checkpoint and gives a fresh session a new fencing token and bounded context.
+  - **Outcome:** Late messages from an old session cannot mutate current work.
+- F4. **Projection rebuild after restart**
+  - **Trigger:** Projection tables are absent or declared stale.
+  - **Steps:** The application validates schema and event integrity, replays every event in order, recomputes projections, and compares canonical checksums.
+  - **Outcome:** The rebuilt state and next permitted action match the pre-restart state.
+- F5. **Authority or source contradiction**
+  - **Trigger:** Approval, gate, Git, issue, plan, event, or observed process facts disagree and precedence cannot decide safely.
+  - **Steps:** The control plane records the contradiction without applying the requested transition and projects `NeedsYou` with bounded evidence and permitted operator actions.
+  - **Outcome:** Mandem does not silently repair an authority-sensitive conflict.
+- F6. **Process discrepancy becomes a durable repair decision**
+  - **Trigger:** An operator correction, agent error, review finding, interruption, or unexpected delay may reveal an orchestration gap.
+  - **Steps:** The control plane creates or deduplicates one process finding, records bounded evidence and the affected phase, requires one of the five R12b dispositions, links resulting contract or enforcement artifacts, and invalidates dependent review, approval, or gates when governed intent changes.
+  - **Outcome:** The phase cannot complete with an unresolved finding, and replay reconstructs both the discrepancy and its current disposition without conversation history.
+
+### Acceptance Examples
+
+- AE1. Given a valid `NeedsApproval -> Queued` command with a current `execute-plan` approval, when the command is delivered twice with the same key and bytes, then both calls return the same result and the ledger contains one transition event.
+- AE2. Given a caller reuses that key with a different plan digest, when the control plane validates it, then it returns `IDEMPOTENCY_KEY_REUSED` and changes nothing.
+- AE3. Given a worker is killed after SQLite commits a pending checkpoint, whether before or after the issue ref is updated, when a fresh process reconstructs the issue, then it observes the deterministic external identity first, exposes at most one pending action, and permits no successor transition until matching read-back evidence is recorded.
+- AE4. Given an active worker lease is replaced by takeover or accepted handoff, when the prior session submits a late command, then fencing-token validation rejects it without an event.
+- AE5. Given approval, gate definition, or target revision changes, when a guarded transition is requested, then only the affected evidence becomes stale and the error names the exact refresh action.
+- AE6. Given projection tables are deleted, when all valid events replay into staging tables, then their canonical checksum matches the immutable append-ledger anchor before they atomically replace live projections, and the next permitted action equals the pre-deletion snapshot.
+- AE7. Given a schema migration fails after backup creation, when the database is reopened, then the prior schema remains usable, the schema version is unchanged, and the backup passes integrity checks.
+- AE8. Given every agent conversation and process is closed, when a fresh client reads context, then it receives the same issue, plan revision, workspace, authority, gate, checkpoint, lifecycle, and next-action facts without transcript data.
+- AE9. Given one routed finding has no current terminal disposition, when closure is requested, then `Done` is rejected. After one valid disposition is appended, closure may proceed if every other guard passes.
+- AE10. Given the operator corrects an attempted plan review that lacks its required PR, when the correction is recorded twice, then one process finding exists with the same stable identity. `accept-plan-review` remains blocked until the finding is dispositioned; a `product-contract-gap` disposition links the epic, affected issue plans, and enforcement scope, returns changed approved intent to `NeedsPlanning`, and replays identically after restart.
+
+### Scope Boundaries
+
+**Included now**
+
+- Pure, versioned protocol values and canonical serialization.
+- Lifecycle transition and guard policy, lease fencing, handoff acceptance, approval and gate freshness, routed-item disposition, and portable checkpoint selection.
+- Application ports and use cases for command handling, checkpoint completion, replay, and projection rebuild.
+- A real `bun:sqlite` event-store adapter, schema migrations, backups, WAL configuration, integrity validation, and temporary-database tests.
+- Architecture documentation for downstream implementers.
+
+**Deferred to follow-up issues**
+
+- U3 owns the running server, local socket transport, Docker lifecycle, resident host mode, process reconciliation, and startup wiring.
+- U4 owns git-native issue and ExecPlan adapters, queue behavior, typed gates as product features, primitive CLI commands, and GitHub projections.
+- U5 owns provider-session launch and provider capability adapters.
+- U6 owns real worktree execution, PR review and repair, Learn, merge coordination, and external Git/hosting reconciliation.
+- U7 owns TOON and human rendering, complete AXI CLI behavior, OpenTUI, and live worker views.
+
+**Outside U2**
+
+- Public network APIs, polling transports, provider transcripts as durable state, model API orchestration, natural-language workflow tools, and any UI.
+- Performing an actual merge, GitHub mutation, operator approval, or git-native issue write.
+- Treating a Markdown working-tree edit as approved content or inventing living-plan exemptions before their format is reviewed.
+
+### Dependency Snapshot
+
+U2 consumes these merged outputs:
+
+- U1 at `88b9533ab840c9d357a1d09d2341709e2cbdd986`: the single Bun package, thin entrypoints, initial `runtime` module, public barrels, and canonical `bun run check` direction.
+- U1C merged by `27d4abe1a2815bfef1bec56c71bc6d90880ef035`: the checked 22-rule architecture catalog, package proof, deterministic filesystem analysis, and corrected public module contract.
+- U1A merged by `e75f66591e5494cc94a8d8dd4d43c7be86d72227`: documentation and authored-source manifests, `@fileoverview` enforcement, repository hooks, revision checks, and the `Mandem-Approval: v1` public contract.
+- WI1 merged by `2efc4d7cf1f8e968ca38c46938014185d825ca8b`: full issue UUIDs, native issue graph metadata, deterministic plan/apply separation, immutable projection transactions, exact retry verification, and the rule that provider state is a projection.
+
+The current repository at `3fa78093ba5d17cc5da4cb9173bc85073b9d074f` passes those outputs to U2. The previous scaffold text that described U1C, U1A, or WI1 as incomplete is superseded.
+
+---
+
+## Planning Contract
+
+### Context and Orientation
+
+`src/modules/runtime/` currently provides only executable identity and Bun-version policy. U2 extends it with transport-independent protocol and persistence contracts. U2 also creates `src/modules/execution/` because lifecycle policy is a business capability rather than process-runtime plumbing.
+
+The architecture standard requires every module to contain `domain`, `application`, `infrastructure`, `api`, `tests/fakes`, `README.md`, a root `index.ts`, `domain/types.ts`, and `api/composition.ts`. A module root barrel may export stable domain, application, and API behavior but never infrastructure. Cross-module imports use `@/modules/<module>`.
+
+An **event** is an immutable fact that already happened. A **projection** is disposable current-state data derived from ordered events. A **command receipt** binds one idempotency key to the canonical command digest and stored result. A **fencing token** is a monotonically increasing lease generation that lets the control plane reject a previous owner's late command. A **portable checkpoint** is a significant lifecycle fact written outside SQLite to the git-native issue or ExecPlan so a fresh environment can recover intent and authority. A **checkpoint outbox** is the durable SQLite record that says an external checkpoint still needs to be written or verified.
+
+### Key Technical Decisions
+
+- KTD1. **Use one protocol envelope with discriminated command payloads.** Define a small catalog of named primitive commands instead of a generic `advance` command. Initial primitives cover lease acquisition/release/revocation, lifecycle transition submission, approval and gate references, handoff acceptance, checkpoint completion, heartbeat facts, routed-item disposition, pause, resume, cancellation, takeover, and reconciliation outcomes. This keeps authorization and validation specific while later interfaces reuse the same contract.
+- KTD2. **Use canonical JSON semantics and explicit schema versions.** Reuse `canonicalJson` and approval types from `@/modules/architecture-standard`. Each stored or exchanged envelope has a versioned marker, exact field validation, LF-normalized canonical serialization, and digest tests. Unknown versions or fields fail closed.
+- KTD3. **Use project-wide idempotency UUIDs for the ledger lifetime.** Bind the key to command kind plus canonical payload digest. Store the result indefinitely with the event ledger. A matching retry returns the stored result; a mismatched retry returns `IDEMPOTENCY_KEY_REUSED`.
+- KTD3a. **Authenticate outside the durable envelope and authorize before policy.** A trusted application port maps U3's future local transport identity to a command principal with actor role and authority scopes. Command handling compares that principal with the envelope's requested attribution before receipt lookup or policy. Tests use a fake principal provider; U3 supplies the real local adapter.
+- KTD4. **Use one module dependency direction: execution depends on runtime.** `runtime` owns envelopes, events, immutable command receipts, serialization, event-store and checkpoint ports, checkpoint outbox contracts, SQLite migrations, and the adapter. `execution` owns lifecycle states and guards, leases, handoffs, approval and gate freshness, routed items, and every command, checkpoint-completion, and replay orchestration use case. `execution` imports runtime only through `@/modules/runtime`; runtime never imports execution. Composition injects execution's pure reducers into runtime-owned persistence contracts where needed.
+- KTD5. **Reuse the existing approval record without extending it in U2.** `execute-plan` guards entry into queued work. Other existing actions remain valid protocol references for later issues, but U2 does not implement their workflows or add actions. Plan freshness compares the approved commit and digest with canonical plan bytes read through an application port.
+- KTD6. **Represent living-plan exemptions as unsupported until a reviewed format exists.** The epic describes machine-delimited living regions, but no merged parser or schema exists. U2 hashes the full approved plan bytes. A later issue may add exemptions only through a plan revision, tests, clean-room review, and new approval.
+- KTD7. **Use an explicit transition catalog and pure reducer.** Each transition declaration names source, destination, command, authority, lease rule, artifact prerequisites, gate and approval prerequisites, unresolved-item rule, portable checkpoint type, and failure code. Tests derive coverage from this finite catalog and pair each rejection with an allowed control.
+- KTD8. **Use leases with fencing tokens, not timestamps alone.** Expiry makes a lease eligible for replacement, but every mutation must also present the active lease ID, session ID, and fencing token. Takeover, cancellation, and accepted handoff revoke the old lease atomically with the lifecycle event.
+- KTD9. **Use a transactional checkpoint outbox across the SQLite/portable boundary.** The lifecycle event and one uniquely bound pending checkpoint commit together, and the original receipt remains an immutable accepted result. Successors remain blocked while checkpoint work is pending. A separate idempotent completion command observes the deterministic external identity before write, verifies read-back bytes and digest, then appends immutable evidence. Reconciliation enters `NeedsYou` on conflicting evidence instead of promising cross-store exactly-once I/O.
+- KTD10. **Use Bun's built-in SQLite driver.** Open `bun:sqlite` with strict binding and safe integers. Enable foreign keys, WAL, and a bounded busy timeout on every connection. Use explicit immediate write transactions so one writer allocates the next per-issue sequence and commits receipt, events, projections, and result together.
+- KTD11. **Version migrations in code under a cross-process lock.** A migration catalog has contiguous integer versions and immutable checksums. Hold one project-local migration lock before reading versions, creating a SQLite-consistent backup, or admitting another writer. Verify the backup through a separate connection, compare the complete applied-migration history with `user_version`, run only transactional migrations, and validate foreign keys and integrity before commit. If later open validation fails, restore the verified backup before exposing the database. U3 may choose startup timing, but it must reuse this U2 service.
+- KTD12. **Treat events and replay anchors as durable and projections as replaceable.** The append ledger includes event identity and digest plus the reducer and projection schema versions and expected post-append aggregate checksum. Rebuild validates every sequence and digest, reduces into isolated staging projections, compares the durable anchor, and atomically swaps only a valid complete rebuild.
+- KTD13. **Define source precedence per fact class.** The architecture document must list each portable intent, approval, checkpoint, operational event, commit, pull request, check, merge, lease, and process-observation fact with its authoritative recorder, acceptable evidence, freshness key, conflict rule, and `NeedsYou` action. SQLite may record observations and references but may not repair Git-, issue-, plan-, or approval-owned facts. Safe source disagreement may append a bounded reconciliation event only after ledger integrity passes; storage or event-integrity failure is read-only and preserves the database for recovery.
+- KTD14. **Store bounded context, never conversational content.** Events reference artifact paths, commits, digests, provider/session IDs, and evidence summaries. Credentials, raw prompts, transcripts, terminal logs, and arbitrary stdout are rejected from durable envelope schemas.
+- KTD15. **Open the planning pull request before review and keep the review record in Git.** The planning branch contains the ExecPlan plus one committed artifact per review round under `docs/plans/reviews/`. Each artifact records the complete reviewer prompt, exact reviewed plan commit and digest, findings, dispositions, and verdict. GitHub renders the branch, discussion, and checks for the operator, but Mandem reconstructs review state from Git and the git-native issue. A provider outage may delay projection updates; it cannot erase or redefine the review.
+- KTD16. **Represent Mandem process feedback through routed items.** Add `process-finding` as a routed-item kind with the five closed dispositions from R12b. Creation and disposition append events; correction never rewrites the original evidence. Phase-completion guards require every current process finding to have one terminal disposition. U2 defines the protocol and policy only; U4 captures findings and links contract changes, while U6 drives repair and Learn behavior.
+
+### High-Level Technical Design
+
+#### Fact ownership and conflict handling
+
+| Fact class | Authoritative recorder | Accepted evidence | Freshness key | Conflict response |
+| --- | --- | --- | --- | --- |
+| Product intent, canonical plan, and portable lifecycle checkpoint | Git-native issue and committed ExecPlan | Exact ref, commit, path, and content digest | Issue-ref head and plan commit/digest | Preserve both observations and enter `NeedsYou`; never rewrite from SQLite. |
+| Plan-review prompt, findings, dispositions, and verdict | Committed review artifacts and git-native issue checkpoints | Artifact path, artifact commit, reviewed plan commit and digest, reviewer identity, and pull-request reference when available | Current plan digest plus latest completed review round | Reject missing or stale review; reconstruct from Git when the hosting projection is unavailable. |
+| Operator approval or denial | Canonical `Mandem-Approval: v1` commit on the issue ref | Parsed record plus ancestry proof | Action and immutable target | Reject guarded transition as absent, denied, stale, malformed, or incomparable. |
+| Commit, pull request, check, and merge | Git and hosting provider | Exact repository, ref, head, status, and provider identity | Target branch and exact head SHA plus gate definition | Observe first; deterministic stale evidence returns to its safe lifecycle state, ambiguity enters `NeedsYou`. |
+| Operational command, event, receipt, lease, outbox, and projection | Validated SQLite append ledger | Canonical event stream and immutable replay anchors | Database schema, event schema, sequence, and digest | Safe source disagreement may append a bounded reconciliation event; storage-integrity failure makes the ledger read-only. |
+| Live process, tmux pane, or provider session | No durable authority; observation only | Bounded process and session identifiers | Observation timestamp and lease fencing token | Never infer completion. Reconcile against durable facts or enter `NeedsYou`. |
+
+SQLite may retain hashes and references to facts owned elsewhere, but those observations do not become permission to mutate the owning source.
+
+#### Module and data flow
+
+```mermaid
+flowchart TB
+  Client[Later CLI TUI agent or server adapter] --> RuntimeAPI[Runtime protocol API]
+  RuntimeAPI --> ExecutionUC[Execution application use case]
+  ExecutionUC --> Policy[Execution domain transition policy]
+  ExecutionUC --> StorePort[Runtime event store port]
+  StorePort --> SQLite[Runtime SQLite adapter]
+  ExecutionUC --> CheckpointPort[Portable checkpoint port]
+  CheckpointPort --> LaterAdapters[U4 issue and ExecPlan adapters]
+  SQLite --> Events[(Append-only events)]
+  SQLite --> Receipts[(Command receipts)]
+  SQLite --> Outbox[(Checkpoint outbox)]
+  SQLite --> Projections[(Rebuildable projections)]
+```
+
+The execution application use case validates the versioned command, reads current projection state through a runtime port, invokes pure lifecycle policy, and asks the event store to commit the complete local transaction. Infrastructure never decides whether a transition is allowed.
+
+#### Lifecycle state machine
+
+```mermaid
+stateDiagram-v2
+  [*] --> NeedsPlanning
+  NeedsPlanning --> PlanReview
+  PlanReview --> NeedsPlanning
+  PlanReview --> NeedsApproval
+  NeedsApproval --> Queued
+  Queued --> Working
+  Working --> Reviewing
+  Reviewing --> Working
+  Reviewing --> Learning
+  Learning --> Reviewing
+  Learning --> Merging
+  Merging --> Working
+  Merging --> Verifying
+  Verifying --> Done
+  Verifying --> NeedsYou
+  NeedsPlanning --> NeedsYou
+  NeedsApproval --> NeedsYou
+  Queued --> Paused
+  Working --> Paused
+  Reviewing --> Paused
+  Learning --> Paused
+  Paused --> Queued
+  NeedsYou --> NeedsPlanning
+  NeedsYou --> Queued
+  NeedsPlanning --> Cancelled
+  NeedsApproval --> Cancelled
+  Queued --> Cancelled
+  Working --> Cancelled
+  Reviewing --> Cancelled
+  Learning --> Cancelled
+```
+
+The transition catalog also permits a guarded move to `NeedsYou` from any nonterminal state when reconciliation finds an ambiguous or authority-sensitive contradiction. `Merging` is non-cancellable after its exact-head external transaction begins; interruption there records reconciliation work and resolves only to `Working`, `Verifying`, or `NeedsYou` after Git and hosting evidence is read. `Done` and `Cancelled` are terminal. Paused work preserves its workspace and lease history but has no active mutation lease.
+
+#### Atomic command and checkpoint sequence
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant A as Application
+  participant D as Domain policy
+  participant S as SQLite adapter
+  participant P as Checkpoint writer
+  C->>A: versioned command and idempotency key
+  A->>S: read receipt and projection
+  alt matching receipt exists
+    S-->>A: stored result
+    A-->>C: same stored result
+  else new command
+    A->>D: validate and derive events
+    D-->>A: events result checkpoint requirement
+  A->>S: atomic append immutable receipt events projections outbox result
+    alt no portable checkpoint
+      A-->>C: completed result
+    else checkpoint required
+      A-->>C: immutable accepted result and checkpoint identity
+    end
+  end
+  C->>A: separate checkpoint completion command
+  A->>P: observe identity then write if absent
+  P-->>A: read-back verified evidence
+  A->>S: append completion receipt event and projection
+  S-->>A: immutable completion result
+  A-->>C: completion result
+```
+
+If the checkpoint writer fails or the process stops, the original stored accepted result never changes. The transition's local facts remain durable, successor commands fail with `CHECKPOINT_PENDING`, and reconciliation observes the exact external checkpoint identity before retrying. Clients read checkpoint projection state for eventual completion; the separate completion command has its own immutable receipt.
+
+#### Replay and migration sequence
+
+```mermaid
+flowchart TB
+  Open[Open database] --> Lock[Acquire project migration lock]
+  Lock --> Version{Schema version current}
+  Version -->|No older| Backup[Create SQLite consistent backup and verify separately]
+  Backup --> Migrate[Run contiguous migration transaction]
+  Migrate --> Integrity[Foreign key and integrity checks before commit]
+  Version -->|Yes| Integrity
+  Version -->|Newer or invalid| Stop[Typed NeedsYou database error]
+  Integrity --> Events[Validate ordered event stream]
+  Events --> Reduce[Apply pure projection reducers]
+  Reduce --> Compare{Checksums match}
+  Compare -->|Yes| Ready[Expose state and next action]
+  Compare -->|No| Stop
+```
+
+### Lifecycle Guard Contract
+
+Every transition declaration must answer these questions in data so a test can enumerate the complete catalog:
+
+1. Which source states and command kind permit the transition?
+2. Which actor role and authority scope may request it?
+3. Must the caller hold an active lease and matching fencing token, or must no mutation lease exist?
+4. Which plan commit, approval, handoff, PR, review, Learn, gate, merge, or verification artifacts must be present and fresh?
+5. Which pending checkpoint, unresolved routed item, stale evidence, or contradiction blocks it?
+6. Which event or events, projection changes, lease changes, result code, and portable checkpoint follow success?
+7. Which stable error and permitted next action follow each failed guard?
+
+The catalog must cover all displayed edges plus global `NeedsYou` reconciliation edges. Tests must compare the catalog with a fixture inventory so adding a transition or guard without rejection and allowed-boundary tests fails deterministically.
+
+#### Transition catalog
+
+Every row below is part of protocol v1. `portable` means the transition commits a checkpoint outbox item and returns an immutable accepted result until a separate completion command records read-back evidence. `local` means the SQLite transaction may return completed immediately. All commands require a trusted principal whose role matches the row. Any nonterminal state may enter `NeedsYou` through `record-reconciliation-conflict` only after ledger integrity passes and evidence shows an ambiguous or authority-sensitive contradiction.
+
+| From | Command | Role | Lease rule | Required fresh inputs | To | Events and result | Checkpoint |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `NeedsPlanning` | `submit-plan-review` | phase agent | Matching planning session; no worker lease | Canonical plan path, commit, digest, self-check evidence, pushed planning branch, planning PR identity and exact head, and committed review-round prompt | `PlanReview` | Plan submitted; accepted | portable plan revision and review-round manifest |
+| `PlanReview` | `reject-plan-review` | phase agent | Matching review session | Typed blockers and reviewed plan target | `NeedsPlanning` | Review rejected; completed | portable review verdict |
+| `PlanReview` | `accept-plan-review` | phase agent | Matching review session | Executor-safe verdict for exact plan commit and digest; every process finding has one terminal disposition | `NeedsApproval` | Review accepted; completed | portable review verdict |
+| `NeedsApproval` | `record-plan-decision` with denial | operator | No worker lease | Canonical denied `execute-plan` record | `NeedsYou` | Approval denied; accepted | portable approval decision |
+| `NeedsApproval` | `queue-approved-plan` | operator or control plane | No worker lease | Canonical approved `execute-plan` record matching plan and review | `Queued` | Plan approved and queued; accepted | portable approval and queue checkpoint |
+| `Queued` | `acquire-work-lease` | control plane | No active work lease; dependency guards pass | Queue order, dependency completion, workspace identity | `Working` | Lease acquired and work dispatched; accepted | portable dispatch checkpoint |
+| `Working` | `submit-work-handoff` | worker | Active work lease, session, fencing token; lease revoked on accept | Iteration commit, validation evidence, workspace and PR references | `Reviewing` | Work handoff accepted; accepted | portable work handoff |
+| `Reviewing` | `record-review-findings` | control plane | Active review session ends; atomically create the named fresh repair-worker lease, session, expiry, and next fencing token | Reviewer handoff, PR and exact reviewed head, actionable findings, successor worker identity | `Working` | Review repair requested and repair lease acquired; accepted | portable review verdict and dispatch checkpoint |
+| `Reviewing` | `accept-review` | reviewer | Active review session | PR and exact reviewed head, clean verdict; every process finding raised through Review has one terminal disposition | `Learning` | Review accepted; accepted | portable review verdict |
+| `Learning` | `invalidate-review` | phase agent | Active Learn session | Learn mutation changes reviewed head or governed artifact | `Reviewing` | Review invalidated; accepted | portable invalidation checkpoint |
+| `Learning` | `accept-learn` | control plane | Active Learn session ends; atomically create the control-plane integration lease, expiry, and next fencing token | Learn handoff, terminal disposition for every routed item including every process finding, linked repairs or dismissal reasons, fresh affected gates, integration owner identity | `Merging` | Learn accepted and integration lease acquired; accepted | portable Learn handoff and integration checkpoint |
+| `Merging` | `return-for-repair` | control plane | Integration lease released after safe conflict | Git/provider evidence proves unmerged stale head or repairable sync conflict | `Working` | Merge repair requested; accepted | portable reconciliation checkpoint |
+| `Merging` | `record-exact-merge` | control plane | Active integration lease; command is non-cancellable after external attempt begins | Approved exact head, fresh review/Learn/gates, provider read-back proves merge | `Verifying` | Exact merge recorded; accepted | portable merge checkpoint |
+| `Verifying` | `record-verification-success` | control plane | No worker lease | Merge SHA and plan-defined verification evidence | `Done` | Verification passed and issue completed; accepted | portable closure checkpoint |
+| `Verifying` | `record-verification-failure` | control plane | No worker lease | Merge SHA and failing evidence | `NeedsYou` | Verification failed; accepted | portable incident checkpoint |
+| `NeedsYou` | `resume-planning` | operator | No mutation lease | Resolution changes plan or approval-sensitive intent | `NeedsPlanning` | Operator resolution recorded; accepted | portable decision checkpoint |
+| `NeedsYou` | `resume-queued` | operator | No mutation lease | Resolution changes only runtime or authority blocker; existing approval remains fresh | `Queued` | Operator resolution recorded; accepted | portable decision checkpoint |
+| `Queued`, `Working`, `Reviewing`, or `Learning` | `pause-work` | operator | Revoke any active mutation lease and increment fencing token | Bounded pause reason and workspace reference | `Paused` | Work paused and lease revoked; accepted | portable pause checkpoint |
+| `Paused` | `resume-work` | operator | No active mutation lease | Reconciliation proves workspace and approval/gates remain usable | `Queued` | Work resumed for fresh dispatch; accepted | portable resume checkpoint |
+| `NeedsPlanning`, `NeedsApproval`, `Queued`, `Working`, `Reviewing`, or `Learning` | `cancel-work` | operator | Revoke active lease and preserve workspace | Cancellation allowed only before exact merge attempt | `Cancelled` | Work cancelled and lease revoked; accepted | portable cancellation checkpoint |
+| Any nonterminal state except integrity-failed storage | `record-reconciliation-conflict` | control plane | Revoke unsafe mutation lease | Ledger is valid; bounded source evidence is ambiguous or authority-sensitive | `NeedsYou` | Conflict recorded; accepted | portable incident checkpoint |
+
+Every row rejects an untrusted principal, wrong role, invalid source state, active or missing lease contrary to the rule, stale fencing token, absent or stale named input, unresolved required disposition, or pending checkpoint. Errors name the failed guard and one of these next actions: refresh plan approval, refresh gate, complete checkpoint, release or reacquire lease, reconcile sources, return to planning, or ask the operator. A `Merging` interruption never accepts cancel; reconciliation must observe Git and provider state and select `Working`, `Verifying`, or `NeedsYou` through the corresponding row.
+
+`complete-checkpoint` is a protocol-v1 state-preserving command available whenever one outbox item is pending. Only a trusted checkpoint-writer principal with `complete-portable-checkpoint` scope may submit it. The command requires the pending checkpoint UUID, originating event UUID, immutable payload digest, external destination identity, and read-back evidence digest. Pending plus matching absent-or-identical external state emits one checkpoint-verified event and updates the outbox and checkpoint projection; a same-key retry returns the stored completion result. Already verified plus identical evidence is an idempotent success. Wrong identity, payload, destination, stale writer session, or conflicting evidence returns `CHECKPOINT_CONFLICT`, changes no prior evidence, and permits only `reconcile-sources` or `ask-operator`. No lifecycle successor becomes eligible until the verified projection is committed.
+
+### Protocol and Durable Data Limits
+
+Protocol v1 applies these limits before canonicalization, hashing, receipt lookup, or policy. UTF-8 byte counts include encoded content. Parsers reject excessive nesting or collection sizes without partially materializing durable values. Infrastructure rechecks the same validated value before persistence.
+
+| Value | Format | Limit | Durable locations |
+| --- | --- | --- | --- |
+| Canonical command envelope | Closed JSON object | 256 KiB total, nesting depth 8 | Receipt digest input; never stored as raw bytes |
+| Event batch derived from one command | Closed array | 16 events | Append ledger transaction |
+| Generic identifier | Lowercase ASCII UUID unless a named type says otherwise | 36 bytes | All records |
+| Project and issue identity | UUID | 36 bytes each | All issue-scoped records |
+| Actor, role, authority scope, command, event, error, and next-action code | Versioned lowercase kebab token | 64 bytes; at most 16 scopes and 8 next actions | Envelopes, events, receipts, projections |
+| Correlation, causation, lease, session, checkpoint, finding, and gate identity | UUID | 36 bytes each | Envelopes and governed projections |
+| Git commit | Lowercase hexadecimal | 40 bytes | Artifact and evidence references |
+| SHA-256 digest | Lowercase hexadecimal | 64 bytes | Events, approvals, gates, receipts, replay anchors, checkpoints |
+| RFC 3339 UTC timestamp | `YYYY-MM-DDTHH:MM:SSZ` | 20 bytes | Events, leases, evidence |
+| Repo-relative artifact path | Normalized UTF-8 path without `..`, control bytes, home prefixes, URI credentials, or query strings | 1,024 bytes; 32 references per envelope | Events, checkpoints, results, projections |
+| Repository/provider reference | Closed structured identity, never a URL with credentials | 256 bytes; 16 references per envelope | Evidence and projections |
+| Bounded evidence summary | Closed code plus typed numeric/boolean fields and artifact references; no free-text message | 4 KiB canonical bytes; 16 items | Events, gates, checkpoints |
+| Typed error evidence | Closed codes and references | 8 KiB canonical bytes | Results and receipts |
+| Routed-item identity links | UUID list | 64 items | Routed-item events and projection |
+
+Any limit violation returns `PROTOCOL_LIMIT_EXCEEDED`, is non-retryable without changing the request, and appends nothing. Unknown nested fields return `INVALID_ENVELOPE`. Human-readable detail belongs in referenced issue, plan, review, or log artifacts governed by their own storage policy, not in SQLite.
+
+### SQLite Storage Contract
+
+The first schema must represent these logical records. Exact SQL and index names may change during implementation, but their uniqueness and transaction boundaries may not.
+
+- **Event stream:** Immutable rows unique by event ID and by `(project_id, issue_id, sequence)`, with canonical payload and digest.
+- **Command receipts:** One row per project-wide idempotency key. The command kind, payload digest, correlation ID, and exact result bytes are immutable bound attributes; payload digests are not globally unique because distinct keys may legitimately carry identical commands.
+- **Issue sequence:** One current allocation record per issue, updated only inside the append transaction.
+- **Checkpoint outbox:** One immutable checkpoint identity and payload per originating transition event, enforced by a uniqueness constraint. Its state moves from pending to verified or conflict; payload and evidence digests are immutable, and conflicting completion evidence cannot replace prior evidence.
+- **Lifecycle projection:** Current state, last sequence, current phase context, plan and approval references, next permitted actions, and projection checksum. The append ledger, not this disposable table, stores the expected replay anchor.
+- **Lease projection:** Current lease, session, fencing token, expiry, and revocation reason per protected resource.
+- **Gate projection:** Latest decision and freshness inputs per gate and issue.
+- **Routed-item projection:** Stable finding identity, kind, typed origin, affected phase, bounded evidence references, current disposition, linked repair artifacts, supersession link, and unresolved count.
+- **Schema metadata:** One transactional applied-migration history with immutable version and checksum rows plus a matching `user_version`. Any disagreement stops opening.
+
+The adapter must use one write transaction for a command receipt, every derived event, the per-issue sequence update, affected projection rows, the immutable replay anchor, any outbox item, and the stored result. It must roll back all of them on any failure. Database-busy exhaustion returns a retryable error and no partial receipt. A ledger that fails storage or event-integrity validation becomes read-only; Mandem reports the recovery condition outside that untrusted ledger and preserves the database and backup.
+
+### Migration and Filesystem Contract
+
+Linux v1 stores the active database at `.mandem/runtime/mandem.sqlite`, the advisory lock at `.mandem/runtime/mandem.sqlite.migrate.lock`, and immutable backups below `.mandem/runtime/backups/`. The runtime directory and backup directory are created with mode `0700`; database, lock, backup, WAL, and shared-memory files are restricted to the Mandem service account with mode `0600` where SQLite and the host permit it. U3 must run the container and resident process with a configured shared project-service identity that can access this project-local runtime directory. Other local users and untrusted processes are outside the supported trust boundary; detected ownership or permission drift stops opening with `DATABASE_PERMISSIONS_INVALID`.
+
+The migration service follows this exact order:
+
+1. Acquire exclusive nonblocking util-linux `flock` on the lock path through an infrastructure database-supervisor port. Missing `flock` or contention returns `MIGRATION_LOCK_UNAVAILABLE`; normal runtime opening waits or retries only within the configured bounded startup policy.
+2. While holding the lock, open the active database without applying migrations, enable foreign keys, read `user_version`, and compare every applied-history version and checksum with the immutable code catalog. A future, missing, duplicate, changed, or disagreeing version stops read-only.
+3. If no upgrade is needed, run foreign-key and integrity checks, close cleanly, and release the lock.
+4. For an upgrade, force a full WAL checkpoint while no competing Mandem writer is admitted, then use `Database.serialize()` to obtain one committed SQLite image. Its backup name is `mandem-v<from>-<sha256>.sqlite`; writing uses a same-directory temporary file, file sync, atomic rename, and directory sync through a filesystem port.
+5. Open the backup in a separate read-only connection, verify the expected source `user_version`, applied-history checksums, foreign-key check, integrity check, and serialized-image digest. Never overwrite a backup with the same name but different bytes.
+6. Begin one immediate transaction on the active database. Apply each contiguous migration exactly once, record its version and checksum in applied history, set `user_version` to the same final version, and run foreign-key and integrity validation before commit. Migration SQL may not require an implicit transaction boundary or a non-transactional vacuum-style operation.
+7. Commit, close, reopen through a new connection, and repeat version, history, foreign-key, integrity, and schema smoke validation before releasing the lock. If this post-commit validation fails, close the database, move the rejected file to a preserved recovery name, atomically restore the verified backup image, validate the restored database separately, and return `MIGRATION_RESTORED_FROM_BACKUP` as a typed startup failure for operator inspection.
+8. Retain verified backups for the lifetime of U2. Automatic retention or deletion is deferred until U3 defines lifecycle and operator controls; U2 never deletes recovery evidence.
+
+Every failure stage closes connections, releases the advisory lock, preserves the active or rejected database and verified backup, and exposes one recovery action. Tests inject failure before backup rename, after backup validation, during each migration, during pre-commit validation, after commit, during reopen validation, and during restoration.
+
+Every ordinary event-store process must enter through the same database-supervisor port. It acquires a shared `flock` before opening SQLite and retains the supervisor handle for the complete connection lifetime. Migration requires the exclusive lock and therefore cannot start while a writer connection exists; a writer cannot open while migration holds the lock. The supervisor releases the lock automatically when its owning process exits. U2 implements and tests the lock protocol with disposable subprocess workers. U3 must wrap the long-running server startup with this same supervisor rather than opening the database directly.
+
+### Protocol Error Catalog
+
+At minimum, the stable catalog must distinguish invalid envelope or schema version, idempotency-key reuse, unknown issue, invalid transition, missing or stale artifact, approval absent/denied/stale, gate absent/failed/stale, lease held/expired/non-owner/fenced, handoff invalid or late, unresolved routed items, checkpoint pending or conflicting, database busy, migration unsupported or failed, event integrity failure, projection mismatch, and authority-sensitive reconciliation required.
+
+Each error includes one stable code, retryability, issue and correlation IDs when known, bounded evidence references, and a finite list of next-action identifiers. Error messages are presentation-neutral and contain no terminal formatting.
+
+### Alternatives Considered
+
+- **External SQLite package or ORM:** Rejected because Bun 1.3.14 provides `bun:sqlite`, the schema is an event ledger rather than an object graph, and another dependency would not remove the need for explicit transactions and replay policy.
+- **One generic lifecycle mutation:** Rejected because it hides authorization, required evidence, and retry semantics from type and catalog coverage.
+- **SQLite-only significant checkpoints:** Rejected because the epic requires portable recovery through the git-native issue and ExecPlan.
+- **Writing the portable checkpoint before SQLite:** Rejected because a successful external write followed by a local failure would leave no durable command receipt or ordered event. The transactional outbox makes the incomplete boundary explicit and retryable.
+- **Timestamp-only leases:** Rejected because clock expiry cannot fence a late command from a replaced owner.
+- **Mutable event correction:** Rejected because it destroys audit history. Corrections append superseding events and rebuild projections.
+- **Automatic repair of source contradictions:** Rejected because approval, merge, and checkpoint disagreements can cross an operator authority boundary.
+
+### Risks and Mitigations
+
+- **The lifecycle table drifts from epic requirements.** Derive exhaustive tests from the transition catalog and include the epic state graph in `docs/architecture/control-protocol.md`.
+- **Retries return success for a different command.** Bind every idempotency key to command kind and canonical payload digest and test same-key/different-payload rejection.
+- **SQLite and portable checkpoints diverge.** Block successors on a durable outbox item and require verified completion evidence before final acknowledgement.
+- **Old workers mutate after replacement.** Require lease, session, and fencing token on every worker mutation and revoke them atomically on handoff, takeover, pause, or cancellation.
+- **Approval freshness is inferred from the working tree.** Read exact plan bytes at the approved commit through a port and compare the full-plan digest to `Mandem-Approval: v1`.
+- **Projection rebuild silently omits corrupt history.** Validate versions, sequence continuity, canonical payloads, and digests before reducing; stop on the first invalid event.
+- **WAL sidecars or busy writers surprise later lifecycle code.** Keep the database on one host, configure a bounded busy timeout, close connections explicitly, and test real concurrent connections and checkpoint cleanup on Linux.
+- **A backup omits committed WAL frames or races another migrator.** Hold the project-local migration lock before version inspection, take a SQLite-consistent snapshot, verify it separately, and test a populated WAL plus competing writer.
+- **Migration validation fails after schema change.** Restrict migrations to transactional operations, validate before commit, retain authoritative applied-history checksums, and restore the verified backup if post-commit open validation fails.
+- **Replay exposes partial or unverifiable projections.** Store checksum anchors outside disposable projections, rebuild into staging, and swap only after full stream and checksum validation.
+- **Durable events expose secrets or become unbounded.** Define byte and count limits for every string and collection, use opaque non-personal actor/session identifiers, and reject credential, personal, transcript, prompt, path-content, raw-log, and free-text fields before persistence.
+- **Recovery writes into an untrusted ledger.** Distinguish safe source disagreement from storage integrity failure. The latter makes the database read-only and reports recovery outside it while preserving the original and backup.
+
+### External Research
+
+Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supports strict parameter binding, safe 64-bit integers, explicit transactions, serialization, and WAL configuration. SQLite's official WAL documentation requires all WAL users to remain on one host and notes the extra checkpoint operation and possible `SQLITE_BUSY` results. SQLite's PRAGMA documentation supports explicit foreign-key enforcement, busy timeout, `user_version`, and integrity checks. These constraints support KTD10 and KTD11; they do not change the epic's selected SQLite/WAL architecture.
+
+---
+
+## Implementation Units
+
+### U1. Define canonical runtime protocol and serialization
+
+- **Goal:** Create versioned command, result, error, event, actor-context, correlation, idempotency, and checkpoint values with fail-closed canonical serialization.
+- **Requirements:** R1-R4, R16, R21-R23.
+- **Dependencies:** None.
+- **Files:** `src/modules/runtime/domain/types.ts`, `src/modules/runtime/domain/protocol.ts`, `src/modules/runtime/domain/protocol.test.ts`, `src/modules/runtime/domain/serialization.ts`, `src/modules/runtime/domain/serialization.test.ts`, `src/modules/runtime/domain/index.ts`, `src/modules/runtime/application/index.ts`, `src/modules/runtime/infrastructure/index.ts`, `src/modules/runtime/api/composition.ts`, `src/modules/runtime/api/index.ts`, `src/modules/runtime/tests/fakes/index.ts`, `src/modules/runtime/index.ts`, `src/modules/runtime/README.md`.
+- **Approach:** Define closed discriminated unions and version markers for primitive commands and their outcomes. Reuse canonical JSON and approval types through `@/modules/architecture-standard`. Keep parsing and digest policy pure; pass host-backed hashing through the existing public helper only where its behavior is already contractual. Add the required empty infrastructure and fake barrels now so the module remains conformant after this unit. All later consumers import only `@/modules/runtime`, never a module subpath.
+- **Execution note:** Write rejection and round-trip tests before adding serializers or parsers.
+- **Patterns to follow:** `src/modules/architecture-standard/domain/approval-contract.ts`, `src/modules/architecture-standard/domain/projection-transaction.ts`, and their tests.
+- **Test scenarios:**
+  1. Every command and result variant round-trips to one canonical byte representation.
+  2. Unknown versions, fields, command kinds, error codes, actor roles, invalid UUIDs, invalid timestamps, non-LF endings, and noncanonical key order fail with stable parse errors.
+  3. Two semantically identical payloads produce the same digest; any command kind or payload change changes the bound digest.
+  4. Error envelopes preserve retryability and permitted next actions without presentation formatting.
+  5. Credential, transcript, prompt, and unbounded log fields cannot be represented by the closed event types.
+- **Verification:** The protocol suite proves exact serialized fixtures and the public runtime barrel exports no infrastructure.
+
+### U2. Implement lifecycle, lease, handoff, freshness, and disposition policy
+
+- **Goal:** Create the `execution` module and pure policy that derives allowed events or typed rejection from current state and one command.
+- **Requirements:** R5-R12b, R21-R23; AE4, AE5, AE9, AE10.
+- **Dependencies:** U1.
+- **Files:** `src/modules/execution/domain/types.ts`, `src/modules/execution/domain/lifecycle.ts`, `src/modules/execution/domain/lifecycle.test.ts`, `src/modules/execution/domain/leases.ts`, `src/modules/execution/domain/leases.test.ts`, `src/modules/execution/domain/freshness.ts`, `src/modules/execution/domain/freshness.test.ts`, `src/modules/execution/domain/handoffs.ts`, `src/modules/execution/domain/handoffs.test.ts`, `src/modules/execution/domain/routed-items.ts`, `src/modules/execution/domain/routed-items.test.ts`, `src/modules/execution/domain/index.ts`, `src/modules/execution/application/index.ts`, `src/modules/execution/infrastructure/index.ts`, `src/modules/execution/api/composition.ts`, `src/modules/execution/api/index.ts`, `src/modules/execution/tests/fakes/clock.ts`, `src/modules/execution/tests/fakes/index.ts`, `src/modules/execution/index.ts`, `src/modules/execution/README.md`.
+- **Approach:** Represent transitions and their guards as a finite catalog, then apply them through a pure reducer. Model approval and gate freshness as value comparisons, leases with monotonically increasing fencing tokens, handoffs as lease-ending events, and routed-item changes as append-only disposition or supersession events. The execution module imports runtime only through `@/modules/runtime`; runtime never imports execution or its subpaths.
+- **Execution note:** Start with one failing fixture for every catalog row and guard category. Pair each invalid fixture with an allowed-boundary control so missing policy cannot silently pass.
+- **Patterns to follow:** `src/modules/architecture-standard/domain/rules.ts` for versioned catalog coverage and `docs/plans/2026-07-21-001-feat-mandem-plan.md` for the required state graph.
+- **Test scenarios:**
+  1. Every lifecycle edge succeeds with its minimum valid context, and every unlisted edge returns `INVALID_TRANSITION`.
+  2. Missing, denied, stale, malformed, or incomparable `execute-plan` approval blocks `NeedsApproval -> Queued`; an exact current approval permits it.
+  3. A changed plan digest, gate definition, gate input, implementation revision, or target revision invalidates only the dependent guard.
+  4. Concurrent acquisition yields one lease owner and a new fencing token; expiry, takeover, handoff, pause, and cancellation reject the old token.
+  5. A valid handoff revokes the active lease and carries exact artifact and evidence references; a late or differently identified handoff from the prior session is rejected.
+  6. Paused, cancelled, `NeedsYou`, and interrupted merge paths follow the stated recovery constraints and preserve workspace references.
+  7. Every phase-completion transition rejects an unresolved process finding. Each of the five process-finding dispositions appends one current result; a later supersession preserves the prior event, and duplicate delivery is idempotent.
+  8. An execution deviation preserves the existing contracts, issue-, product-, and operating-contract gaps require their typed linked artifacts, and no-reusable-change requires a bounded reason. Any disposition that changes approved intent returns to `NeedsPlanning` and invalidates dependent review, approval, and gates.
+  9. `Done` rejects zero, duplicate-current, unresolved, or conflicting dispositions and accepts exactly one current terminal disposition per routed item.
+  10. The transition-fixture inventory has exact row and deterministic-order parity with the catalog.
+- **Verification:** A pure deterministic suite covers every transition row, guard category, lease boundary, and terminal-state invariant without SQLite or I/O.
+
+### U3. Add command handling, event-store ports, and checkpoint orchestration
+
+- **Goal:** Coordinate protocol validation, lifecycle policy, idempotent command execution, pending checkpoints, and replay through application ports.
+- **Requirements:** R2, R11-R18, R21-R23; AE1-AE6, AE8.
+- **Dependencies:** U1, U2.
+- **Files:** `src/modules/runtime/application/ports/event-store.ts`, `src/modules/runtime/application/ports/portable-checkpoint.ts`, `src/modules/runtime/application/ports/plan-content.ts`, `src/modules/runtime/application/ports/command-principal.ts`, `src/modules/runtime/application/ports/database-supervisor.ts`, `src/modules/runtime/application/ports/clock.ts`, `src/modules/runtime/application/index.ts`, `src/modules/runtime/tests/fakes/event-store.ts`, `src/modules/runtime/tests/fakes/portable-checkpoint.ts`, `src/modules/runtime/tests/fakes/plan-content.ts`, `src/modules/runtime/tests/fakes/command-principal.ts`, `src/modules/runtime/tests/fakes/database-supervisor.ts`, `src/modules/runtime/tests/fakes/clock.ts`, `src/modules/runtime/tests/fakes/index.ts`, `src/modules/execution/application/use-cases/execute-command.ts`, `src/modules/execution/application/use-cases/execute-command.test.ts`, `src/modules/execution/application/use-cases/complete-checkpoint.ts`, `src/modules/execution/application/use-cases/complete-checkpoint.test.ts`, `src/modules/execution/application/use-cases/rebuild-projections.ts`, `src/modules/execution/application/use-cases/rebuild-projections.test.ts`, `src/modules/execution/application/index.ts`.
+- **Approach:** Execution application use cases consume runtime's public protocol and ports. The command use case obtains a trusted principal from transport context, compares its role and authority scopes with requested attribution, enforces protocol limits, then checks an existing receipt before invoking execution policy and commits through one port. A required checkpoint remains pending until a separate completion command observes the deterministic external identity and verifies read-back evidence. Replay validates event integrity, reduces into staging projections, compares the append-ledger checksum anchor, and atomically replaces live projections. Exact plan bytes come from the approved Git commit through a port, never from an ambient working tree.
+- **Execution note:** Prove lost-response retry, pending-checkpoint interruption, and replay with in-memory fakes before building SQLite.
+- **Patterns to follow:** `src/modules/architecture-standard/application/use-cases/reconcile-issue-graph.ts` and `src/modules/architecture-standard/infrastructure/services/projection-transaction-writer.ts` for plan/apply separation and exact retry verification.
+- **Test scenarios:**
+  1. An absent, unverifiable, wrong-role, or insufficient-scope principal is rejected before receipt lookup and appends nothing; authentication material never enters a returned or stored value.
+  2. First delivery commits one immutable receipt and event set; same-key/same-payload retry returns byte-identical stored result without invoking policy again, including for an accepted handoff.
+  3. Same-key/different-payload retry returns `IDEMPOTENCY_KEY_REUSED` with no mutation.
+  4. A required checkpoint returns an immutable accepted result, blocks a successor, survives a simulated process stop, and completes through a separate idempotent command without changing original retry bytes.
+  5. Checkpoint completion observes before write, treats matching existing bytes as success, and records verified evidence once. Duplicate evidence is idempotent; conflicting evidence yields `NeedsYou` and cannot replace prior evidence.
+  6. Exact approved-commit plan bytes pass freshness while changed working-tree bytes have no effect; a changed approved target fails.
+  7. Replay rejects an unknown event version, malformed canonical payload, digest mismatch, and sequence gap.
+  8. Replay from a valid stream yields byte-equivalent staging projections, matches the append-ledger anchor, atomically replaces live lifecycle, lease, gate, routed-item, and checkpoint projections, and exposes one next permitted action.
+- **Verification:** Port-contract tests prove orchestration and recovery independently of a database or Git implementation.
+
+### U4. Implement the SQLite ledger, migrations, receipts, outbox, and projections
+
+- **Goal:** Implement the runtime event-store port with real `bun:sqlite` transactions and safe schema lifecycle behavior.
+- **Requirements:** R13-R20, R22-R23; AE1-AE3, AE6, AE7.
+- **Dependencies:** U1, U3.
+- **Files:** `src/modules/runtime/infrastructure/sqlite/database.ts`, `src/modules/runtime/infrastructure/sqlite/schema.ts`, `src/modules/runtime/infrastructure/sqlite/migrations.ts`, `src/modules/runtime/infrastructure/sqlite/event-store.ts`, `src/modules/runtime/infrastructure/sqlite/projections.ts`, `src/modules/runtime/infrastructure/sqlite/backup.ts`, `src/modules/runtime/infrastructure/services/flock-database-supervisor.ts`, `src/modules/runtime/infrastructure/repositories/runtime-files.ts`, `src/modules/runtime/infrastructure/sqlite/index.ts`, `src/modules/runtime/infrastructure/index.ts`, `src/modules/runtime/tests/sqlite/event-store.test.ts`, `src/modules/runtime/tests/sqlite/migrations.test.ts`, `src/modules/runtime/tests/sqlite/replay.test.ts`, `src/modules/runtime/tests/sqlite/database-supervisor.test.ts`, `src/modules/runtime/tests/fixtures/database-lock-worker.ts`, `src/modules/runtime/api/composition.ts`.
+- **Approach:** Open strict, safe-integer connections; set foreign keys, WAL, and busy timeout; prepare statements once per adapter; and use one immediate write transaction per command. Allocate per-issue sequences inside that transaction. Use the idempotency key as the only receipt uniqueness key. Hold the cross-process migration lock before reading version or snapshotting; use a SQLite-consistent backup mechanism, validate it in a separate connection, compare authoritative applied-history checksums with `user_version`, and run transactional validation before commit. Rebuild into staging projections and swap only after the append-ledger checksum matches.
+- **Execution note:** Start with real temporary database tests that fail against an unimplemented port. Do not substitute mocks for transaction, WAL, concurrency, migration, or replay proof.
+- **Patterns to follow:** The runtime port contract from U3 and Bun 1.3.14's official `bun:sqlite` transaction and WAL behavior.
+- **Test scenarios:**
+  1. A new temporary database opens with the expected schema version, foreign keys enabled, WAL active, strict binding, and safe integer round-trips.
+  2. First delivery atomically writes receipt, ordered events, projections, outbox, and stored result; an injected failure rolls back every record.
+  3. Two connections race the same key and payload and produce one effect with byte-identical results; the same key with different payload yields one effect plus one conflict; distinct keys with identical payloads both remain valid. Concurrent issue commands still produce one lease owner and unique monotonic sequences. Bounded busy exhaustion returns a retryable error.
+  4. A response lost after commit is recovered by reopening the database and retrying the exact command; no second event appears.
+  5. Same idempotency key with different content is rejected before any write.
+  6. Deleting projection rows and replaying the event stream into staging produces the append-ledger checksum, then atomically swaps byte-equivalent live projections. A corrupt late event or checksum mismatch preserves the prior live projection.
+  7. A shared-lock writer prevents migration, an exclusive-lock migrator prevents a writer from opening, and process exit releases either lock. With committed frames in WAL, a valid migration acquires exclusivity, creates a consistent separately verified backup, validates before commit, and advances one version. Injected failure at backup, migration, validation, commit, or reopen leaves or restores the exact prior data, history, and `user_version`.
+  8. Unknown future schema versions, missing or duplicate migration versions, changed migration checksums, `user_version` disagreement, integrity failures, foreign-key failures, corrupt event payloads, and sequence gaps stop startup with typed errors.
+  9. Closing the final Linux connection leaves a recoverable database and does not require WAL sidecars to reconstruct state.
+  10. Oversized, free-text, personal, credential-like, path-content, transcript, prompt, log, and unknown nested fields are rejected before persistence. After storage-integrity failure, attempted recovery appends nothing to the untrusted ledger.
+- **Verification:** Real temporary-file suites prove atomicity, concurrency, reopen retry, backup-first migration, integrity checks, and projection rebuild under Bun 1.3.14.
+
+### U5. Document the control protocol and complete repository integration
+
+- **Goal:** Publish the U2 contracts for downstream issues and verify that the full repository remains conformant.
+- **Requirements:** R24 and all prior requirements through their documented handoff.
+- **Dependencies:** U1-U4.
+- **Files:** `docs/architecture/control-protocol.md`, `docs/architecture/README.md`, `src/modules/README.md`, `src/modules/runtime/README.md`, `src/modules/execution/README.md`, `docs/plans/issues/README.md`, `docs/plans/issues/u2-protocol-lifecycle-sqlite.md`.
+- **Approach:** Document versioning, primitive command catalog, state and guard table, error catalog, attribution fields, source precedence, SQLite transaction and replay boundaries, checkpoint outbox recovery, migration policy, privacy exclusions, and the public module surfaces U3-U7 must consume. Update maintained indexes and the issue registry.
+- **Execution note:** Documentation follows the strongest available checks; behavior-bearing source remains test-first in U1-U4.
+- **Patterns to follow:** `docs/architecture/architecture-standard-v1.md`, `docs/architecture/mandem-system.md`, and the indexed documentation rules established by U1A.
+- **Test scenarios:** Test expectation: none for prose itself because repository documentation and vocabulary checks provide deterministic validation. Existing protocol and integration tests remain the behavioral evidence.
+- **Verification:** `docs:audit`, authored-source checks, architecture checks, typecheck, lint, the full test suite, and the composite repository gate pass from the implementation commit.
+
+---
+
+## Verification Contract
+
+Run every command from the repository root with Bun 1.3.14. Record the implementation commit SHA with the evidence.
+
+| Gate | Applies to | Required outcome |
+| --- | --- | --- |
+| Focused protocol and execution domain tests | U1-U2 | New red-first fixtures fail for the intended missing behavior, then every protocol variant, transition row, and guard category passes deterministically. |
+| Runtime application port-contract tests | U3 | Lost-response retry, checkpoint interruption, exact plan freshness, and projection replay pass without infrastructure. |
+| Real SQLite integration tests | U4 | Temporary-file WAL, atomic append, concurrent sequence allocation, reopen retry, migration rollback, integrity validation, and replay pass under Bun 1.3.14. |
+| `bun run docs:audit` | U5 | Every maintained document is indexed and valid. |
+| `bun run authored-files:check` | U1-U5 | Every authored TypeScript file has a meaningful file overview and no prohibited source form. |
+| `bun run architecture:check` | U1-U5 | Both modules conform, cross-module imports use public barrels, and infrastructure is not exported. |
+| `bun run typecheck` | U1-U5 | Strict TypeScript passes without `any` or undocumented casts. |
+| `bun run lint` | U1-U5 | ESLint passes. |
+| `bun run test:run` | U1-U5 | The complete Vitest suite passes. |
+| `bun run check` | Final implementation commit | The composite repository gate passes from a clean committed revision. |
+
+Behavioral acceptance additionally requires a test transcript showing this scenario: open a temporary database, deliver a guarded transition, simulate a lost response, close every connection, reopen, retry, delete projections, rebuild, and observe the same stored result, one event sequence, the same projection checksum, and one next permitted action.
+
+---
+
+## Definition of Done
+
+- Every Product Contract requirement is implemented and traced through at least one implementation unit and test or deterministic documentation check.
+- Runtime protocol parsers and serializers have exact fixtures, version rejection, closed-field validation, canonical digests, stable typed errors, and bounded attribution context.
+- The execution module implements the complete lifecycle and global reconciliation paths with exhaustive transition-catalog and guard coverage.
+- Lease fencing, handoff revocation, approval and gate freshness, routed-item dispositions, cancellation, pause, takeover, and interrupted merge invariants pass pure tests.
+- The application layer proves atomic idempotency semantics, pending portable checkpoint recovery, exact approved-plan freshness, and deterministic replay through ports.
+- The real SQLite adapter proves transaction rollback, concurrency, per-issue sequence ordering, stored retry results across reopen, WAL configuration, backup-first migrations, integrity checks, and byte-equivalent projection rebuild.
+- Public module barrels expose only stable domain, application, and API contracts. No infrastructure adapter leaks through a root barrel.
+- `docs/architecture/control-protocol.md` gives U3-U7 enough information to implement transport and presentation without redefining U2 behavior.
+- No credentials, transcripts, raw prompts, or unbounded logs enter durable test fixtures or schemas.
+- Every required repository gate passes on the final implementation commit.
+- The worker removes abandoned experiments, unused schema variants, temporary fixtures, generated databases, WAL sidecars, and dead code before handoff.
+- The ExecPlan living sections record actual implementation progress, discoveries, decisions, evidence, and remaining work.
+- The implementation is committed, pushed, and presented in a pull request. The worker does not merge.
+
+---
 
 ## Progress
 
-- [x] (2026-07-24) Revalidated consumed inputs against merged U1 commit
-  `88b9533ab840c9d357a1d09d2341709e2cbdd986`.
-- [x] (2026-07-25) Invalidated that dependency readiness after corrective U1 findings and the U1A
-  quality-gate dependency were recorded.
-- [ ] Expand this scaffold into a self-contained U2 ExecPlan that follows `PLANS.md`.
-- [ ] Have a clean-room reviewer review the exact planned revision and address the findings.
-- [ ] Obtain the operator's approval of that revision before setting `execution_authorized` to
-  `true`.
+- [x] (2026-07-24) Revalidated the original scaffold against merged U1 output.
+- [x] (2026-07-25) Invalidated dependency readiness after U1C and U1A were added.
+- [x] (2026-07-31 21:33Z) Revalidated U1, U1C, U1A, and WI1 against merged repository output at `3fa78093ba5d17cc5da4cb9173bc85073b9d074f`.
+- [x] (2026-07-31 21:33Z) Expanded the scaffold into a self-contained U2 ExecPlan with protocol, lifecycle, checkpoint, SQLite, replay, migration, testing, and downstream handoff contracts.
+- [x] (2026-07-31 21:33Z) Deepened module dependency, immutable receipt, checkpoint observation, migration lock, replay anchor, fact ownership, privacy, and corruption-recovery contracts through independent architecture and data-integrity review.
+- [x] (2026-07-31) Required a pushed planning branch and planning PR before clean-room review, with prompts, findings, dispositions, and verdicts stored as local-first committed artifacts.
+- [x] (2026-08-03) Added stable process findings, five scoped dispositions, phase-completion blocking, and return-to-Plan invalidation so Mandem's own workflow failures become enforceable product evidence.
+- [ ] Run clean-room review of the exact plan revision, address every finding, and re-review until executor-safe.
+- [ ] State the immutable `execute-plan` approval target and obtain standalone operator `APPROVED` or `DENIED`.
+- [ ] Record and push the exact approval in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`; set `execution_authorized: true` only after verified approval.
+- [ ] Implement U1-U5 in an isolated worktree using the red-first and verification contracts above.
+
+---
 
 ## Surprises & Discoveries
 
-- Observation: U1 completed the provider capability matrix. It is no longer a U2 promotion
-  blocker.
-  Evidence: `docs/operations/provider-capability-baseline.md` lists evidence for working-directory,
-  full-access, structured completion, interruption, read-only review, and fresh-session recovery.
+- Observation: The merged repository already has a canonical approval serializer, parser, selector, and public barrel, including `execute-plan`; U2 must consume it instead of designing approval from the epic prose.
+  Evidence: `src/modules/architecture-standard/domain/approval-contract.ts` and `src/modules/architecture-standard/index.ts`.
+- Observation: WI1 established a useful exact-retry pattern before the general event ledger exists: plan an immutable transaction, retry safely, then reread external evidence before accepting a lost response as success.
+  Evidence: `src/modules/architecture-standard/infrastructure/services/projection-transaction-writer.ts` and its tests.
+- Observation: No existing solution document covers event sourcing, leases, replay, or SQLite. The only adjacent learning applies to finite validation catalogs.
+  Evidence: `docs/solutions/best-practices/preventing-silent-pass-architecture-gates.md`.
+- Observation: Bun 1.3.14 provides the required SQLite driver directly, including strict binding, transactions, safe integers, serialization, and WAL configuration, so U2 needs no new runtime dependency.
+  Evidence: Bun's official `bun:sqlite` documentation and the pinned runtime in `package.json`.
+
+---
 
 ## Decision Log
 
-- Decision: Extend U1's existing `runtime` module and public barrels in U2.
-  Rationale: U1's merged package and architecture contract specify the interfaces U2 must use. A
-  parallel lifecycle root would create a second public surface and conflict with the U1-to-U2
-  handoff.
-  Date/Author: 2026-07-24 / Mandem epic orchestrator
+- Decision: Create `execution` for lifecycle policy and extend `runtime` for shared protocol and persistence contracts.
+  Rationale: The epic assigns files to both modules, and placing business lifecycle rules in runtime infrastructure would violate the checked architecture boundaries.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Reuse `Mandem-Approval: v1` unchanged and apply full-plan hashing for U2.
+  Rationale: The approval contract is merged and public. No reviewed living-region parser exists, so inventing exemptions would weaken the exact-revision boundary.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Use project-wide idempotency UUIDs bound to command kind and canonical payload digest for the lifetime of the ledger.
+  Rationale: This makes retries unambiguous across process restarts and rejects accidental key reuse with different commands.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Use a transactional checkpoint outbox and block successor transitions until verified external evidence is recorded.
+  Rationale: SQLite and Git-backed portable records cannot share one atomic transaction; pending state must be durable and visible rather than falsely acknowledged.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Use Bun's built-in SQLite driver with explicit pragmas, immediate write transactions, and versioned backup-first migrations.
+  Rationale: It matches the pinned runtime, avoids an unnecessary dependency, and exposes the transaction behavior the ledger needs.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Treat events as immutable and corrections as superseding events.
+  Rationale: Auditability and deterministic replay require preserving what was recorded and why a later fact replaced it.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Keep command orchestration in `execution/application` and allow only `execution -> runtime` dependencies.
+  Rationale: Runtime-owned orchestration would need lifecycle policy from execution and create a cycle or hidden inversion. Runtime supplies shared contracts and storage; execution coordinates them.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Keep original command result bytes immutable when a portable checkpoint is pending.
+  Rationale: Exact retry semantics cannot coexist with mutating an accepted result into a later final result. A separate completion command and projection state provide eventual completion.
+  Date/Author: 2026-07-31 / Codex
+- Decision: Open the planning pull request before review and commit every review round's prompt and result to the planning branch.
+  Rationale: The operator must be able to follow plan evolution and reviewer findings from the pull request while Git retains a complete provider-independent record. GitHub is a useful projection, not the only copy or the workflow authority.
+  Date/Author: 2026-07-31 / Brandon John-Freso and Codex
+- Decision: Model discrepancies found while building Mandem as a routed-item kind with five closed dispositions.
+  Rationale: Reusing stable finding identity and append-only disposition semantics makes the feedback loop replayable and enforceable. A general Learn note would miss planning-stage failures and could not block an unsafe phase transition.
+  Date/Author: 2026-08-03 / Brandon John-Freso and Codex
+
+---
 
 ## Outcomes & Retrospective
 
-The original dependency revalidation found no incompatible U1 output, but the 2026-07-25 findings
-and U1A requirement supersede that conclusion. U2 becomes dependency-ready for detailed planning
-only after corrected U1 and U1A complete. It remains `promotion: scaffolded` and
-`execution_authorized: false`.
+Planning produced an implementation-ready U2 specification and reconciled the obsolete dependency state. Implementation, review evidence, approval, and runtime outcomes do not yet exist. The next permitted action is to commit and push the plan, open its planning pull request, commit the first review prompt, and then begin clean-room review; implementation remains unauthorized.
 
-Revision note (2026-07-24): The Mandem epic orchestrator revalidated U2 against U1's actual
-merged artifacts and recorded the concrete interfaces, gates, provider evidence, and
-module-extension constraint. This update does not authorize U2 implementation.
+---
 
-Revision note (2026-07-25): Invalidated U2 dependency readiness after post-merge U1 verification
-opened corrective issue `5717221` and documentation/authoring-quality issue `745eda8`.
+## Idempotence and Recovery
+
+Planning reads, dependency checks, document checks, and clean-room reviews are safe to repeat. Any approval applies only to the exact committed plan and digest stated at the consent boundary. A content change after review requires a new plan commit, digest, and review; a change after approval also requires new operator approval.
+
+During implementation, use temporary directories for SQLite integration tests and close all connections in teardown. Preserve a failing migration database and its backup as test evidence until the failure is understood. Do not delete an incomplete worktree or event database to make a retry pass. If a migration or replay result is ambiguous, stop with the typed error the plan specifies and retain the artifacts for diagnosis.
+
+---
+
+## Artifacts and Notes
+
+The exact consumed dependency commits are listed under Dependency Snapshot. Implementation evidence belongs in this plan's living sections, focused test transcripts, commits, and the pull request. Do not paste raw logs or provider transcripts into this document.
+
+Primary external references for the implementation are the official [Bun SQLite documentation](https://bun.com/docs/runtime/sqlite), [SQLite WAL documentation](https://sqlite.org/wal.html), [SQLite transaction documentation](https://sqlite.org/lang_transaction.html), and [SQLite PRAGMA documentation](https://sqlite.org/pragma.html). The plan embeds the decisions derived from them so execution does not depend on rediscovering the design.
+
+Revision note (2026-07-31): Replaced the dependency scaffold with a self-contained U2 ExecPlan after U1, U1C, U1A, and WI1 merged. The revision resolves protocol identity, module ownership, approval reuse, lifecycle guards, lease fencing, idempotency, portable checkpoint recovery, SQLite transactions, replay, migrations, verification, and downstream boundaries. A confidence pass then corrected the module dependency direction, made command receipts immutable, required observe-before-write checkpoint completion, locked and validated migrations safely, anchored replay outside disposable projections, and separated safe source conflicts from storage corruption. It does not authorize implementation.
+
+Review-trace revision note (2026-07-31): Required the planning pull request to exist before plan review begins and made every review prompt, exact target, finding, disposition, and verdict a committed local artifact. This gives the operator one visible PR timeline without making GitHub the only durable record or the workflow authority.
+
+Continuous-product-feedback revision note (2026-08-03): Added `process-finding` as a routed-item kind for operator corrections, agent errors, review findings, interruptions, and unexpected delays. The lifecycle now blocks phase completion until each finding has one scoped terminal disposition, and intent-changing repairs return to Plan and invalidate stale evidence. U4 and U6 own later capture and repair behavior.

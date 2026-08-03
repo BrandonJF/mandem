@@ -37,7 +37,7 @@ implementation instruction.
 
 - Installed SBP control plane
 - All provider, lifecycle, architecture, and operator surfaces
-- Epic acceptance examples AE1-AE12
+- Epic acceptance examples AE1-AE14
 
 ### Produces
 
@@ -45,6 +45,7 @@ implementation instruction.
 - Matrix of process-kill and restart cases
 - Clean-install proof
 - Reconstructable completed SBP issue
+- Evidence that Mandem process discrepancies produce stable findings, scoped dispositions, durable contract repairs, and prevention on the next run
 - Pinned v1 release candidate
 
 ### Downstream Consumers
@@ -64,6 +65,7 @@ by the issue.
 - Chaos checkpoint matrix
 - Release evidence manifest
 - Release-candidate acceptance threshold
+- Continuous-product-feedback injection cases and proof that the same discrepancy is prevented on rerun
 
 ## Required issue ExecPlan Content
 
@@ -78,6 +80,9 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios that inject execution deviations, issue-contract gaps, product-contract gaps,
+  operating-contract gaps, and justified no-reusable-change outcomes, then prove phase blocking,
+  durable reconstruction, and next-run enforcement;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -87,6 +92,8 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] The SBP vertical slice proves every process-finding disposition and prevents a repeated
+  product-contract discrepancy without conversation or provider-only evidence
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

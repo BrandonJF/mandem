@@ -38,6 +38,7 @@ implementation instruction.
 - Git-native issue adapter
 - issue ExecPlan validation and promotion workflow
 - Services for queue and dependency management and clean-room review
+- Process-finding capture, deduplication, scope classification, contract links, and phase-completion checks
 - Approvals bound to hashes and typed gates
 - Minimal AXI CLI and TOON envelopes
 - GitHub projection and workflow for Mandem reports
@@ -63,6 +64,7 @@ by the issue.
 - Queue mutation and dependency failure behavior
 - GitHub conflict/import policy
 - Report publication boundary
+- Process-finding identity, evidence, disposition validation, and product-contract propagation
 
 ## Required issue ExecPlan Content
 
@@ -77,6 +79,9 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving operator corrections and other process discrepancies create one stable
+  finding, require a terminal disposition, and link every required issue, epic, operating-contract,
+  or enforcement repair;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -86,6 +91,9 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Process findings cannot be lost, duplicated, or left unresolved at phase completion; a
+  product-contract gap updates the epic and affected issue contracts or creates linked enforcement
+  work
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

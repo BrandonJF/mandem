@@ -87,6 +87,29 @@ During implementation, keep `Progress`, `Surprises & Discoveries`, `Decision Log
 operator for routine next steps. Stop when the plan requires operator judgment, the requested
 action would expand authorization, or a material discovery invalidates the approved plan.
 
+## Process feedback while building Mandem
+
+Treat Mandem's own development workflow as continuous product evidence. When an operator correction,
+agent error, review finding, interruption, or unexpected delay reveals a possible orchestration
+gap, record one process finding in the active issue before the current phase closes. Give it a
+stable identity, concise evidence, affected phase, and one terminal disposition:
+
+- `execution-deviation`: the existing contract was sufficient; repair the current run and record
+  why the agent did not follow it;
+- `issue-contract-gap`: revise the active issue ExecPlan and repeat any invalidated review or
+  approval;
+- `product-contract-gap`: revise the epic ExecPlan and every affected issue contract, then add an
+  enforcement mechanism to existing scope or create a linked issue;
+- `operating-contract-gap`: revise repository-owned operating guidance through its required review
+  process; or
+- `no-reusable-change`: record why the evidence does not justify a durable change.
+
+One finding may require several linked repairs, but it has one current disposition. Do not close a
+phase with an unresolved process finding. If a finding changes approved intent or implementation
+scope, return to planning and obtain fresh review and approval. Preserve the finding, disposition,
+and artifact links in Git and the git-native issue; provider comments may project that record but
+must not be its only copy.
+
 ## Architecture and implementation
 
 Conform to the architecture the repository checks. Preserve clean module boundaries, keep external
