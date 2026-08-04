@@ -47,7 +47,7 @@ issues:
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6"]
     expected_native_state: "open"
-    expected_native_labels: ["blocked", "u2b"]
+    expected_native_labels: ["blocked", "planned", "u2b"]
   - issue_id: "6a6a8bab-853f-4658-9bc0-38e2386b642d"
     issue_key: "WI1"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
@@ -161,7 +161,7 @@ issues:
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids: ["6a6a8bab-853f-4658-9bc0-38e2386b642d", "745eda80-1e74-4866-bc95-2f2983b31025", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
     expected_native_state: "open"
-    expected_native_labels: ["blocked", "u2"]
+    expected_native_labels: ["in-progress", "planned", "u2"]
   - issue_id: "cf239716-00e2-46ae-82e7-84ac8f31baaf"
     issue_key: "U5"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"

@@ -152,6 +152,11 @@ review, and any change after approval requires a new review and approval.
 
 ## Decision Log
 
+- Decision: Keep U2A in progress during replanning and keep U2B planned and blocked by U2A.
+  Rationale: U2A has no unmet dependency for planning, while U2B cannot finish planning until U2A
+  publishes reviewed and approved public values. The issue-graph manifest must include every
+  managed status label already recorded on those native issues before its metadata writer runs.
+  Date/Author: 2026-08-04 / Codex
 - Decision: Split work-control rules from durable storage and restart recovery.
   Rationale: The work rules must define complete facts before storage can persist and reconstruct
   them. Separate plans let each reviewer judge one clear outcome.
@@ -184,3 +189,7 @@ Split-scope revision note (2026-08-04): Replaced the combined protocol, lifecycl
 with a smaller U2A planning scaffold for work-control rules. Moved durable storage, Git checkpoint,
 migration, backup, and restart recovery to U2B. This plan remains unauthorized and is not ready for
 clean-room review.
+
+Issue-graph status revision note (2026-08-04): Kept U2A in progress for replanning and U2B planned
+and blocked by U2A. Updated the graph manifest to match those native issue phases before the guarded
+metadata operation.
