@@ -66,6 +66,8 @@ by the issue.
 - Clean-room reviewer role compilation from the current bound `PLANS.md` rather than copied or provider-specific checklist text
 - Let each provider write only the manifest's output file and return its exact digest without relying on terminal text
 - Fresh reviewer sessions without the author conversation, prompts that require counterexamples, and records of which provider and model ran
+- Refusal to launch a fourth reviewer without the required replanning record or a sixth reviewer
+  without the operator's recorded choice
 
 ## Required issue ExecPlan Content
 
@@ -82,6 +84,8 @@ ExecPlan that includes:
 - verification contract and definition of done;
 - test scenarios proving Claude and Codex receive the same process-feedback rule and cannot submit
   a phase handoff that omits an observed unresolved process finding;
+- test scenarios proving every provider adapter refuses review dispatch when U4 reports that the
+  third- or fifth-failure response is missing;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 

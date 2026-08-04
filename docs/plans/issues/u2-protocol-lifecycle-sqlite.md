@@ -3,7 +3,7 @@ title: "Protocol, Lifecycle Kernel, and SQLite Event Model - Plan"
 type: feat
 date: 2026-07-31
 artifact_contract: ce-unified-plan/v1
-artifact_readiness: implementation-ready
+artifact_readiness: draft
 deepened: 2026-07-31
 product_contract_source: mandem-epic
 execution: code
@@ -24,7 +24,44 @@ execution_authorized: false
 
 This ExecPlan is a living document governed by `PLANS.md`. Keep `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current during implementation.
 
-This plan is complete enough for clean-room review, but it does not authorize implementation. Implementation may begin only after a reviewer approves the exact plan revision, the operator responds with standalone `APPROVED` for the stated `execute-plan` target, that approval is recorded and pushed in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`, and `execution_authorized` is changed to `true`.
+This plan returned to planning after thirteen failed clean-room reviews. Do not dispatch another reviewer yet. The author must first complete the behavior-readiness check below, reconsider the scope, and record the operator's choice because this plan has passed the five-review limit. Implementation remains unauthorized.
+
+## What U2 Builds
+
+U2 gives Mandem reliable memory for agent work. It does not add the user interface, long-running
+server, or provider launchers. Later issues build those parts on the records and rules from U2.
+
+After U2, Mandem can accept a request once even if a client retries it after losing the response.
+It can tell which agent currently controls work and reject changes from an agent whose session
+expired or was replaced. It can bind reviews and approvals to exact files. It can record important
+facts in both its local database and Git without claiming success before both copies match. After a
+restart, it can rebuild the current issue state and tell the next agent what action is allowed.
+
+An operator can see this work through tests that simulate a lost response, an interrupted agent, a
+stale approval, a failed Git checkpoint, and deleted database summaries. Each test restarts Mandem
+and proves that it returns the same result, rejects the unsafe action, or reconstructs the same
+current state.
+
+## Behavior Readiness Check
+
+This check must be complete before another clean-room review. For each behavior below, the author
+must confirm that the plan names the triggering action, the permanent record, the restart rule, the
+result an operator or agent can observe, and the exact test. The author must also confirm that no
+stored value appears without a declared action that creates it and no component receives only a
+digest when it needs the complete value.
+
+| Promised behavior | Trigger | Permanent record | Restart result | Proof in this plan | Current status |
+| --- | --- | --- | --- | --- | --- |
+| A retry does not repeat work | A client resends one request after losing its response | Command receipt, result bytes, and events | Mandem returns the original result without another event | AE1-AE2; Milestones 1, 3, and 4 | Needs whole-plan recheck |
+| A replaced agent cannot keep changing work | A lease expires, transfers, or is released | Lease events with the latest fencing number | Mandem restores the current owner and rejects the old session | AE4; Milestone 2 | Needs whole-plan recheck |
+| Review and approval apply to exact files | A plan enters review or receives operator approval | Review, Git target, and approval events | Mandem restores the exact reviewed and approved targets | AE10-AE13; Milestones 2 and 3 | Needs whole-plan recheck |
+| Local and Git records cannot silently disagree | A transition requires a Git checkpoint | Pending checkpoint plus verified Git target | Mandem resumes the one incomplete write or reports a conflict | AE3; Milestones 3 and 4 | Needs whole-plan recheck |
+| Restart restores the current issue | Mandem starts after summaries were deleted | Immutable ordered events and stored checksums | Mandem rebuilds every summary and the next allowed action | AE6 and AE8; Milestones 3 and 4 | Needs whole-plan recheck |
+| A failed upgrade preserves the prior database | Mandem opens an older database version | Verified backup and migration history | Mandem restores the usable prior database or reports the exact failure | AE7; Milestone 4 | Needs whole-plan recheck |
+
+The thirteen existing reviewer files remain evidence. They do not authorize a fourteenth review.
+The next planning pass must check all six rows together, remove unnecessary scope, and change every
+status above to `Ready` only with matching plan sections and tests.
 
 ## Goal Capsule
 
@@ -966,7 +1003,9 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - [x] (2026-08-04) Repaired round eleven's final P1 by carrying the independently validated checkpoint target through the reducer input and immutable verified event so event-only replay restores it.
 - [x] (2026-08-04) Repaired round twelve's final P1 by requiring both checkpoint destination tests to delete and byte-compare every disposable projection without external checkpoint reads.
 - [x] (2026-08-04) Repaired round thirteen's two P1 findings by carrying every complete rebuilt projection through the replacement port and adding an authorized gate-decision command and replay event.
-- [ ] Run clean-room review of the exact plan revision, address every finding, and re-review until executor-safe.
+- [x] (2026-08-04) Stopped reviewer dispatch after thirteen failed verdicts and returned U2 to planning under the new third- and fifth-failure rules.
+- [ ] Complete the six-row behavior-readiness check, reconsider whether U2 should be split, and record the operator's required choice.
+- [ ] After the operator permits the selected course, run no more clean-room review until the plan satisfies the readiness check.
 - [ ] State the immutable `execute-plan` approval target and obtain standalone operator `APPROVED` or `DENIED`.
 - [ ] Record and push the exact approval in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`; set `execution_authorized: true` only after verified approval.
 - [ ] Implement Milestones 1-5 in an isolated worktree using the red-first and verification contracts above.
@@ -1072,12 +1111,15 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - Decision: Record gate decisions through a state-preserving U2 command and immutable event.
   Rationale: U2 guards and replay require a durable gate source. U4 may produce gate results later, but it must submit them through this protocol instead of writing a disposable projection directly.
   Date/Author: 2026-08-04 / Codex, responding to clean-room review
+- Decision: Stop U2 review and return to whole-plan work.
+  Rationale: Thirteen failed verdicts show that narrow finding repairs did not produce a coherent plan. The author must check the six promised behaviors together and reconsider the issue boundary before another independent review.
+  Date/Author: 2026-08-04 / Brandon and Codex
 
 ---
 
 ## Outcomes & Retrospective
 
-Planning PR #37 now contains thirteen authoritative clean-room review rounds and the repairs they required. Earlier rounds closed protocol, process-finding, milestone, SQLite, policy-state, lease, disposition, evidence-boundary, release-path, exact-byte, accepted-event, merge-repair, living-section, prompt, verdict, dispatch, receipt, causal-order, output-selection, checkpoint-payload, destination, verified-target, and complete-deletion findings. Round thirteen found that the replacement port lacked four projection collections and the event catalog lacked a gate source. The current revision carries all five complete rebuilt projection values through one atomic replacement and records gate decisions through an authorized command and immutable event. No clean verdict, operator approval, implementation, or runtime evidence exists yet. The next permitted action is to bind this exact revision and current `PLANS.md` in another fresh clean-room review, then repair any finding or present a clean reviewed commit for standalone `execute-plan` approval. Implementation remains unauthorized.
+Planning PR #37 contains thirteen authoritative clean-room review rounds and the repairs they required. The reviews found real gaps, but the author used them to finish the design one defect at a time. U2 has returned to planning under the new failed-review limits. No clean verdict, operator approval, implementation, or runtime evidence exists. The next action is to complete the behavior-readiness check, reconsider whether one issue should contain all six behaviors, and record the operator's choice to split, redesign, or permit continuation. Implementation remains unauthorized.
 
 ---
 
@@ -1134,3 +1176,5 @@ Verified-target-event revision note (2026-08-04): Repaired round eleven's remain
 Complete-projection-rebuild revision note (2026-08-04): Repaired round twelve's remaining replay-test gap. Each checkpoint destination test now captures every disposable projection, deletes all five projection sets, forbids checkpoint-port reads during replay, compares every rebuilt value byte-for-byte, and proves review acceptance through the rebuilt receipt target. This revision requires another bound clean-room verdict.
 
 Rebuilt-values-and-gate-event revision note (2026-08-04): Repaired round thirteen's two replay-contract gaps. `RebuiltProjectionsV1` now carries complete, ordered lifecycle, lease, gate, routed-item, and checkpoint values plus verified digests into one atomic replacement. A scoped state-preserving command now appends complete gate decisions, updates the latest gate projection, and gives event-only replay a durable gate source. This revision requires another bound clean-room verdict.
+
+Review-limit replanning note (2026-08-04): Returned U2 to planning after thirteen failed verdicts. Added an operator-facing description of U2, a six-behavior readiness check, a third-failure replanning stop, and a fifth-failure operator boundary. Do not dispatch another reviewer until the readiness check and operator choice are complete.

@@ -68,6 +68,7 @@ by the issue.
 - GitHub conflict/import policy
 - Report publication boundary
 - Process-finding identity, evidence, disposition validation, and product-contract propagation
+- Failed-review counting, the third-failure replanning stop, and the fifth-failure operator choice
 
 ## Required issue ExecPlan Content
 
@@ -91,6 +92,9 @@ ExecPlan that includes:
 - test scenarios proving terminal-only results and out-of-path writes are rejected, exact reviewer
   bytes are committed unchanged, and derived synthesis records source path, digest, and
   transformation without replacing the original;
+- test scenarios proving three failed plan reviews stop reviewer dispatch until the author records
+  a whole-plan readiness check and scope decision, five failures require an operator choice, and a
+  rewritten plan does not reset the count;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
