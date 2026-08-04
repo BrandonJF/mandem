@@ -95,3 +95,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   lineage, complete rejection/workspace repair, current `PLANS.md`, a new independent reviewer, and
   one sole output path. The operator invalidated this tailored prompt before verdict; it does not
   count as a failed review and must not be reused.
+- [U2A clean-room round 5 dispatch](./2026-08-04-u2a-clean-room-round-5-dispatch.md) binds only the
+  immutable plan, governing contract, canonical prompt, fresh reviewer, and sole output path.
