@@ -735,31 +735,51 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Verification:** The real repository and conformant fixtures pass; unindexed docs, missing
   fileoverviews, invalid staged commits, and malformed provider events fail with concise evidence.
 
-### U2. Define the versioned protocol, lifecycle kernel, and SQLite event model
+### U2A. Define Mandem work-control rules
 
-- **Goal:** Define explicit representations for every mutation, transition, authority decision,
-  event, error, lease, and result envelope before adding presentation or provider code.
+- **Goal:** Define what Mandem requests mean, which requests are allowed, which agent controls work,
+  and how reviews and approvals bind to exact files.
 - **Requirements:** R1-R6a, R20-R22, R29-R33, R47-R57, R65-R70; AE2, AE4, AE8
 - **Dependencies:** U1C and U1A
-- **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/infrastructure/sqlite/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
-- **Approach:** Define the versioned command envelope, result envelope, error taxonomy, event envelope, state machine, lease model, approval hashes, gate freshness, cancellation/takeover semantics, and portable checkpoint list. Store append-only events and rebuildable projections in SQLite with WAL, schema migrations, unique idempotency keys, and transactionally updated sequence numbers. Model every finding or routed item with a terminal disposition so completion proves nothing was merely announced and abandoned.
-- **Execution note:** Start with state-machine and replay tests before storage adapters. Then prove the SQLite adapter against the same port contract using temporary databases.
+- **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
+- **Approach:** Define the versioned request, result, error, and event values; the allowed work phases; agent-control rules; exact review and approval binding; gate facts; process findings; and failed-review limits. Keep every rule pure and deterministic. Publish complete values that U2B can store without inventing a new work rule.
+- **Execution note:** Prove every allowed and rejected rule without SQLite, GitHub, Docker, or provider CLIs.
 - **Patterns to follow:** `src/lib/pipeline-graph/pipeline-state.server.ts`, `src/lib/pipeline-graph/pipeline-graph.server.ts`, `scripts/agents/coord-service/*-store.ts`, `scripts/agents/observability-feed.ts`, and `docs/product/spec/2026-07-08-eng-plane-pipeline-design.md`.
 - **Test scenarios:**
-  - Every valid lifecycle transition succeeds once and duplicate delivery returns the original result without duplicating events.
+  - Every valid lifecycle transition returns the complete events and next state.
   - Invalid ordering, missing artifacts, expired leases, stale approval hashes, stale gate revisions, and non-owner mutations fail with stable typed errors.
   - Schema-valid appends inside machine-delimited living-record regions preserve approval; edits elsewhere, invalid living entries, or approval-sensitive instructions placed in an exempt region invalidate it.
-  - Event replay rebuilds identical projections after deleting projection tables.
-  - Concurrent commands against one issue yield one lease holder and one monotonically ordered event sequence.
   - Every routed finding has exactly one terminal disposition before Done is reachable.
-- **Verification:** A deterministic domain suite and real-SQLite adapter suite prove the lifecycle without tmux, Docker, GitHub, or vendor CLIs.
+  - Three failed plan reviews require replanning, and five require an operator choice that a plan rewrite cannot reset.
+- **Verification:** A deterministic domain suite proves the work rules and exports every complete value U2B needs.
+
+### U2B. Persist and recover Mandem work state
+
+- **Goal:** Store accepted U2A requests and facts so retries, interruptions, database upgrades, and
+  restarts preserve one correct result and next action.
+- **Requirements:** R20-R22, R29-R33, R65-R70; AE2, AE4, AE8
+- **Dependencies:** U2A
+- **Files:** `src/modules/runtime/infrastructure/sqlite/**`, checkpoint and event-store ports under
+  `src/modules/runtime/application/**`, storage tests under `src/modules/runtime/tests/**`
+- **Approach:** Store one immutable result per request identity, append ordered events, maintain
+  disposable summaries, resume required Git checkpoints safely, rebuild summaries from events, and
+  protect schema upgrades with verified backups and restoration.
+- **Execution note:** Start only from U2A's reviewed public values. Use real temporary SQLite files
+  and disposable Git repositories for storage and recovery tests.
+- **Test scenarios:**
+  - A lost response followed by the same request returns the original result without another effect.
+  - Reusing a request identity with different content changes nothing and returns one typed error.
+  - An interrupted Git checkpoint resumes once or reports an exact conflict.
+  - Deleting disposable summaries and restarting rebuilds the same state and next action.
+  - A failed schema upgrade restores the prior usable database.
+- **Verification:** Real storage and restart tests prove recovery without changing U2A's work rules.
 
 ### U3. Build the local server, Docker lifecycle, resident host mode, and reconciliation
 
 - **Goal:** Keep Mandem processing running after the interactive client exits, and recover safely
   after interruption of the container, resident host mode, tmux, or machine.
 - **Requirements:** R3, R7-R12, R29-R33, R65-R70; F2, AE2, AE4, AE8
-- **Dependencies:** U2
+- **Dependencies:** U2B
 - **Files:** `src/server/**`, `src/cli/commands/init.ts`, `src/cli/commands/up.ts`, `src/cli/commands/down.ts`, `src/cli/commands/reconcile.ts`, `src/modules/runtime/infrastructure/socket/**`, `src/modules/runtime/infrastructure/docker/**`, `src/modules/runtime/infrastructure/service-manager/**`, `src/modules/sessions/**`, `compose.yaml`, `Dockerfile`, `tests/e2e/restart-reconciliation.test.ts`
 - **Approach:** Run `mandem-server` in one project-scoped container. Begin with a blocking transport spike that proves local request/response, server-pushed events, reconnection, backpressure, and host-to-container operation without polling or a public listener; select Unix sockets, WebSockets, protobuf-based transport, or another local mechanism from that evidence. `mandem up` also installs/starts the same `mandem` binary in resident-host mode through a Linux user service. Use a protocol handshake carrying project, client, server, protocol, and standard versions. On reconnect, apply ground-truth precedence and either resume one safe next action, record a deterministic repair, or enter `Needs you`.
 - **Execution note:** Prove the transport and restart model with fake host capabilities before integrating tmux or agents. Keep authenticated vendor and GitHub credentials in native host-side stores and never copy authentication material into the container, project state, or event ledger.
@@ -781,7 +801,7 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 
 - **Goal:** Give every workflow one authoritative git-native issue, one canonical self-contained ExecPlan, explicit dependencies, clean-room review, immutable approval, and a visible queue.
 - **Requirements:** R1-R6a, R34-R42a, R47-R50, R56-R57; F1, F3-F5, AE8-AE9, AE14-AE16
-- **Dependencies:** U2, U3
+- **Dependencies:** U2A, U3
 - **Files:** `src/modules/issues/**`, `src/modules/execution/application/plan-*.ts`, `src/modules/execution/application/queue-*.ts`, `src/modules/execution/application/gate-*.ts`, `src/modules/issues/infrastructure/git-native-issue/**`, `src/modules/issues/infrastructure/github/**`, `src/modules/issues/application/report-*.ts`, `src/cli/commands/{work,plan,gate,run,worker,events,report,reconcile}/**`, `src/modules/runtime/api/result-renderers/**`, `assets/operating-docs/workflows/plan/**`, `tests/e2e/plan-approval.test.ts`, `tests/contract/primitive-cli.test.ts`, `tests/contract/dispatch-authority.test.ts`
 - **Approach:** Keep workflow decisions in the server while typed resident-host capabilities execute filesystem, Git, `git issue`, and authenticated GitHub operations and return attributable results. Store issue identity, conventional type, plan path, dependencies, queue position, projection links, and portable checkpoints in the issue event chain. Implement configurable plan directory and naming, PLANS.md validation, and hash-bound approval. After the initial plan commit, push the planning branch and open a draft planning PR before dispatching review. For every clean-room round, commit a review artifact containing the complete sanitized prompt, reviewer identity, exact reviewed commit and plan digest, findings, dispositions, and verdict; repairs and later rounds continue on the same PR. Deliver the minimal AXI command families and versioned TOON envelopes here so skills and later presentation layers consume a stable canonical surface. Implement local Mandem report drafts, deduplication, explicit publication approval, upstream issue creation/update, and local publication events. The v1 report schema allows concise reproduction steps, Mandem versions, non-secret configuration names, artifact references, and clearly labeled evidence/inference; it rejects credential values and environment dumps before local draft creation and publication. It does not attempt general source-code or prose redaction. Mirror concise state to GitHub when configured while treating conflicts as events for reconciliation; Git history and the git-native issue remain sufficient when GitHub is unavailable.
 - **Execution note:** Start with fixture repositories and fake tracker executors; add one real local Git integration suite without requiring network access.
@@ -1106,7 +1126,7 @@ failure that led to the issue plan promotion contract, not approved implementati
 
 ## Interfaces and Dependencies
 
-The epic-level dependency order is U1, U2, U3, U4, U5, U6, U7, U8, U9, then U10. An issue may
+The epic-level dependency order is U1, U2A, U2B, U3, U4, U5, U6, U7, U8, U9, then U10. An issue may
 declare narrower parallel work only after proving that its inputs and merge boundaries are
 independent. `docs/plans/issues/README.md` is the human-readable registry; each issue plan must name
 the exact upstream artifacts it consumes and downstream artifacts it produces.
@@ -1179,6 +1199,7 @@ published interface.
 - [x] (2026-08-03) Required reviewers to write their own output files, hashed those exact bytes, and kept later synthesis in a separate source-linked file.
 - [x] (2026-08-03) Required a fresh non-author reviewer, rejected self-review and inherited author context, added challenge-oriented prompts, and used another provider or model for high-risk work when available.
 - [x] (2026-08-04) Stopped U2 review after thirteen failed verdicts and added a third-failure replanning stop, a fifth-failure operator boundary, and a required behavior-readiness check.
+- [x] (2026-08-04) Split U2 into U2A work-control rules and U2B durable storage and recovery; U2B now blocks U3.
 - [ ] Complete U2 through U10 in dependency order; U2 is currently in Plan and remains unauthorized for implementation.
 
 ## Surprises & Discoveries
@@ -1261,6 +1282,9 @@ published interface.
   Date/Author: 2026-08-03 / Brandon and Codex
 - Decision: Stop clean-room review after three failed verdicts and require operator direction after five.
   Rationale: Repeated failures show that the author is asking reviewers to finish the design. Three failures require a whole-plan and scope check. Five failures require the operator to choose whether to split, redesign, or continue the issue. Rewriting the plan does not reset the count.
+  Date/Author: 2026-08-04 / Brandon and Codex
+- Decision: Split U2 into work-control rules and durable recovery.
+  Rationale: Reviewers must be able to judge what Mandem does separately from how Mandem preserves it across retries and restarts. U2B depends on U2A and cannot invent lifecycle meaning.
   Date/Author: 2026-08-04 / Brandon and Codex
 
 ## Outcomes & Retrospective
@@ -1350,3 +1374,7 @@ Failed-review-limit update (2026-08-04): Required a behavior-readiness check bef
 review dispatch after three failed verdicts, and required an operator choice after five. The count
 persists across rewrites so repeated plan defects cannot consume an unlimited series of independent
 reviews.
+
+U2 split update (2026-08-04): Replaced the combined U2 issue boundary with U2A for work-control
+rules and U2B for durable storage and restart recovery. U2B depends on U2A, and U3 now depends on
+U2B. The former combined plan and thirteen review artifacts remain in Git as planning evidence.

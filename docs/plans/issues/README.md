@@ -6,7 +6,8 @@ The checked-in [Mandem v1 issue graph manifest](./mandem-v1-issue-graph.yaml) is
 desired input for deterministic native-issue metadata reconciliation. After apply, native issue
 refs own the graph. GitHub receives a one-way projection of the managed fields.
 
-The epic ExecPlan defines product intent, architecture, the U1-U10 issue sequence, and epic
+The epic ExecPlan defines product intent, architecture, the U1-U10 issue sequence, including the
+U2A/U2B split, and epic
 acceptance. Each issue ExecPlan begins as a non-executable scaffold. The scaffold lists
 dependencies and handoffs before detailed planning begins.
 
@@ -37,15 +38,15 @@ checker must report success. This requirement also applies to tooling and bootst
 
 ```mermaid
 flowchart LR
-  U1 --> U1C --> U1A --> WI1 --> U2 --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
-  U2 --> U4
+  U1 --> U1C --> U1A --> WI1 --> U2A --> U2B --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
+  U2A --> U4
   U3 --> U5
-  U2 --> U6
+  U2A --> U6
   U3 --> U6
   U4 --> U6
   U5 --> U6
   U1 --> U8
-  U2 --> U8
+  U2A --> U8
   U3 --> U8
   U4 --> U8
   U5 --> U8
@@ -64,12 +65,13 @@ must revalidate those scaffolds after dependencies complete.
 | U1C | [Correct architecture checker and package contract](./u1-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | complete |
 | U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | complete |
 | WI1 | [Deterministic epic issue graph checks and idempotent GitHub reconciliation](./wi1-epic-issue-graph-integrity.md) | U1A | implementation and live projection complete; final review and merge remain |
-| U2 | [Protocol, lifecycle kernel, and SQLite event model](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | scaffolded; revalidate after WI1 merges |
-| U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2 | scaffolded |
-| U4 | [Issues, ExecPlans, queue, gates, primitive CLI, and projections](./u4-issues-plans-queue-gates-cli.md) | U2, U3 | scaffolded |
+| U2A | [Mandem work-control rules](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | replanning; not ready for review |
+| U2B | [Durable storage and restart recovery](./u2b-durable-storage-recovery.md) | U2A | scaffolded; blocked by U2A |
+| U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2B | scaffolded |
+| U4 | [Issues, ExecPlans, queue, gates, primitive CLI, and projections](./u4-issues-plans-queue-gates-cli.md) | U2A, U3 | scaffolded |
 | U5 | [Operating docs and bounded Claude/Codex sessions](./u5-operating-docs-provider-sessions.md) | U3, U4 | scaffolded |
-| U6 | [Unattended worktree delivery through Review, Learn, and merge](./u6-unattended-work-review-learn-merge.md) | U2, U3, U4, U5 | scaffolded |
-| U7 | [Complete AXI CLI, TOON output, OpenTUI, and worker witnessability](./u7-complete-cli-toon-opentui.md) | U2, U3, U4, U5, U6 | scaffolded |
-| U8 | [SBP installation, architecture baseline, and migration shims](./u8-sbp-install-architecture-baseline.md) | U1, U2, U3, U4, U5, U6, U7 | scaffolded |
-| U9 | [Restart-proof SBP vertical slice and v1 release candidate](./u9-restart-proof-sbp-release-candidate.md) | U1, U2, U3, U4, U5, U6, U7, U8 | scaffolded |
+| U6 | [Unattended worktree delivery through Review, Learn, and merge](./u6-unattended-work-review-learn-merge.md) | U2A, U3, U4, U5 | scaffolded |
+| U7 | [Complete AXI CLI, TOON output, OpenTUI, and worker witnessability](./u7-complete-cli-toon-opentui.md) | U2A, U3, U4, U5, U6 | scaffolded |
+| U8 | [SBP installation, architecture baseline, and migration shims](./u8-sbp-install-architecture-baseline.md) | U1, U2A, U3, U4, U5, U6, U7 | scaffolded |
+| U9 | [Restart-proof SBP vertical slice and v1 release candidate](./u9-restart-proof-sbp-release-candidate.md) | U1, U2A, U3, U4, U5, U6, U7, U8 | scaffolded |
 | U10 | [Alloy, Loki, Grafana, and final v1 publication](./u10-observability-final-v1.md) | U9 | scaffolded |
