@@ -60,8 +60,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   three P1 and one P2 finding, raised the lifetime count to sixteen, and stopped review dispatch.
 - [x] (2026-08-04) Returned U2A to planning and reviewed the whole plan's producer, event, fold, and
   consumer paths. Kept the reduced U2A scope because all remaining gaps belong to the same reducer.
-- [ ] Repair the common cause across interruption, reconciliation, and participant-provenance
-  values; repeat readiness; then bind a fresh clean-room review and obtain a clean verdict.
+- [x] (2026-08-04) Preserved U2A clean-room round 4, which closed every round-3 finding, returned
+  three P1 findings, and raised the retained issue's lifetime failed-review count to seventeen.
+- [ ] Repair stable lineage, exhaustive rejection results, and trusted workspace observations;
+  repeat readiness; then bind a fresh clean-room review and obtain a clean verdict.
 - [ ] Obtain exact operator approval before implementation.
 
 ## Surprises & Discoveries
@@ -101,7 +103,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all sixteen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all seventeen failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -116,9 +118,9 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–3 are
-preserved as failed verdicts, all round-2 findings are closed, and the lifetime count is sixteen.
-Review dispatch is stopped while the author repairs the round-3 common cause. No review, approval,
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–4 are
+preserved as failed verdicts, all round-3 findings are closed, and the lifetime count is seventeen.
+The author is repairing the round-4 findings. No review, approval,
 or implementation exists for the repaired revision yet.
 
 ## Context and Orientation
@@ -374,10 +376,13 @@ Every payload contains only closed scalar fields or these named values:
   `third_review_response` is nullable, choice arrays are ordered event UUID/reference pairs, and
   active permit is nullable.
 - `ReviewScopeResponseV1` is either `{ kind: "third-review-response"; plan: PlanTargetV1;
-  lineage: ReviewScopeLineageV1; readiness_artifact; scope_decision: "keep-scope" | "split" | "redesign"; evidence }` or
+  lineage: ReviewScopeLineageV1; readiness_artifact: ReadinessDeclarationV1;
+  scope_decision: "keep-scope" | "split" | "redesign"; evidence: readonly ArtifactReferenceV1[] }` or
   `{ kind: "fifth-review-choice"; plan: PlanTargetV1;
   lineage: ReviewScopeLineageV1; choice: "split" | "redesign" | "permit-one-more";
-  evidence }`. Third response requires phase-agent or operator; fifth choice requires operator.
+  evidence: readonly ArtifactReferenceV1[] }`. Third response requires phase-agent or operator;
+  fifth choice requires operator. The `submit-plan-review` payload's `readiness_artifact` field is
+  a `ReadinessDeclarationV1`.
 - `LeaseSnapshotV1 { lease_id, resource, workspace, owner_id, session_id, acquired_at, expires_at,
   fencing_token, last_heartbeat_at, revoked_at, reason_code }`, where `resource` is `work` or
   `integration`, `last_heartbeat_at` is nullable, and `revoked_at` and `reason_code` are both null
@@ -510,14 +515,58 @@ The complete readonly shapes are:
 `ObservedTimeV1` is `{ observed_at: UtcTimestamp; source_digest: Sha256 }`, constructed only by the
 control plane's trusted clock adapter. `DependencyStatusV1` is `{ issue_id: Uuid;
 state: "complete" | "incomplete"; evidence: ArtifactReferenceV1 }`.
-`ReviewScopeLineageV1` is `{ retained_issue_id: Uuid; predecessor_plan: PlanTargetV1;
-successor_issue_ids: readonly Uuid[]; scope_digest: Sha256 }`. Successor IDs are sorted and unique;
+`ValidatedWorkspaceObservationV1` is `{ workspace: WorkspaceTargetV1; repository_digest: Sha256;
+observed_at: UtcTimestamp; source: ArtifactReferenceV1; validator_identity_digest: Sha256 }`. The
+later workspace adapter constructs it only after resolving the configured repository, workspace
+identity, branch, exact head, and canonical path-state digest. `source` is a committed `workspace`
+artifact containing those observed fields. The reducer requires byte equality with the command's
+workspace. Acquisition also requires branch/head equality with the approved plan target. A command
+under an active lease requires the same workspace ID and branch as the lease; its observed head and
+path digest may advance only when the command payload and trusted observation match. Lease-free
+pause/cancellation requires configured-repository provenance but has no prior-lease comparison.
+Foreign repository, absent observation, identity/branch mismatch, stale head, path-digest mismatch,
+or source mismatch is `ARTIFACT_STALE` under the rejection matrix.
+`ScopeBehaviorIdV1` is exactly `interpret-request`, `reject-invalid-order`,
+`control-active-agent`, `bind-clean-review`, `bind-operator-approval`, `limit-failed-reviews`, or
+`handoff-to-storage`. `ReviewScopeLineageV1` is `{ decision: "keep-scope" | "split" | "redesign";
+retained_issue_id: Uuid; predecessor_plan: PlanTargetV1; successor_issue_ids: readonly Uuid[];
+behavior_ids: readonly ScopeBehaviorIdV1[]; excluded_responsibilities: readonly string[];
+lineage_id: Sha256; declaration_artifact: ArtifactReferenceV1 }`. Successor IDs and behavior IDs are
+sorted and unique. Exclusion strings are sorted unique 1–128-byte closed responsibility tokens from
+`sqlite`, `durable-storage`, `checkpoint-io`, `provider-adapters`, `server`, `git-io`, and `ui`.
 `keep-scope` and `redesign` require exactly the retained issue ID, while `split` requires the
-retained ID plus at least one distinct successor. `scope_digest` hashes canonical JSON containing
-the retained ID, predecessor target, successor IDs, and readiness artifact digest. A later plan is
-in the authorized lineage only when its issue ID is present and its readiness artifact declares
-that same scope digest. This is the exact producer and comparison rule; arbitrary evidence prose
-cannot establish lineage.
+retained ID plus at least one distinct successor.
+
+`lineage_id` is `canonicalDigestV1` of the closed object `{ protocol_version: 1, decision,
+retained_issue_id, predecessor_plan, successor_issue_ids, behavior_ids,
+excluded_responsibilities }`; it does not include itself, an artifact digest, a readiness digest,
+or a later plan. `declaration_artifact` must be a committed `operator-decision` artifact whose exact
+canonical bytes are that closed object plus the derived `lineage_id`. The fifth-choice event stores
+this complete immutable declaration.
+
+`ReadinessDeclarationV1` is `{ artifact: ArtifactReferenceV1; plan: PlanTargetV1; issue_id: Uuid;
+lineage_id: Sha256; behavior_trace_digests: readonly { behavior_id: ScopeBehaviorIdV1;
+trace_digest: Sha256 }[] }`. Traces are sorted, unique, and contain exactly the lineage's behavior
+IDs. Its committed `readiness-check` artifact contains that closed value except `artifact`; the
+artifact digest covers those bytes without self-reference. Each later plan/readiness revision may
+change its own target and trace digests but must repeat the immutable lineage ID. Submission and
+dispatch compare issue membership, the exact lineage ID, and the complete behavior-ID set; they do
+not recompute lineage from mutable readiness bytes. Arbitrary evidence prose cannot establish
+lineage.
+
+The retained U2A planning lineage uses `lineage_id`
+`723787f06b1e33896b70cbaabdfc9555dbbab306e4b9da09690b72a7218262a1`. Its predecessor is this
+plan at `4e1785f4eefd1b75a49c3a4fe4ffbb63c59ffaab` / digest
+`9eb769837bbc2c71ce4c6f39445eb63450b2a8c6c258b14bfd272823072c1598`; its sorted successors are
+U2B `5abb076c-c5ba-41da-aeab-089664360dbb` and retained U2A
+`cb67d131-975c-4d97-9a6f-4934be991ac6`; its behavior IDs are the seven values in the readiness
+table; and it excludes all seven deferred responsibility tokens above. The exact canonical
+declaration is the `git-issue` `operator-decision` artifact at commit
+`5de15b514dc4acfb127b2a76291b2ccf1c741ed6`, digest
+`adb31761bd72af5a6bad15780dc5c518aa118040558f7c5f74c63f63990d5957`, provider `git-issue`,
+external ID `cb67d131-975c-4d97-9a6f-4934be991ac6`, and null path. Each review manifest binds its
+current plan/readiness target to this stable lineage; later bytes never change the declaration.
+
 `HandoffKindV1` is exactly `implementation`, `review-findings`, `review-clean`, `learn-complete`,
 or `repair-return`. `HandoffOutcomeCodeV1` is exactly `ready-for-review`, `changes-required`,
 `review-accepted`, `ready-to-merge`, or `returned-for-repair`; the allowed pairings are respectively
@@ -753,16 +802,77 @@ events, complete next snapshot, and `completed` or `accepted` status. It perform
       readonly review_dispatch: ValidatedReviewDispatchV1 | null;
       readonly review_evidence: ValidatedReviewEvidenceV1 | null;
       readonly approval_evidence: ApprovalEvidenceV1 | null;
+      readonly workspace_observation: ValidatedWorkspaceObservationV1 | null;
     }
 
 `event_ids` contains exactly the count declared by the command-to-event mapping and no duplicate.
 Dependency statuses sort by issue UUID and are consumed only by work acquisition; other commands
 require an empty list. Trusted evidence fields follow the same matching-command-only rule.
+`workspace_observation` is non-null exactly for every command payload that contains `workspace` and
+null for every other command. Absence or presence on the wrong command is `ARTIFACT_MISSING` or
+`INVALID_ENVELOPE` before lifecycle guards.
 
 `LifecycleDecisionV1` is exactly `{ accepted: true; events: EventEnvelopeV1[];
 next_snapshot: LifecycleSnapshotV1; result: CommandResultV1 } | { accepted: false; events: [];
 next_snapshot: LifecycleSnapshotV1; result: CommandResultV1 }`. On rejection, `next_snapshot` is
 structurally equal to the input snapshot.
+
+### Exhaustive rejection contract
+
+Every command evaluates guards in this order and stops at the first failure: raw protocol and
+limits; expected revision/events digest; trusted-input presence; principal identity; requested
+attribution; role; scope; source state; review-limit policy; artifact/workspace/dependency
+freshness; approval; gates; unresolved findings; lease; handoff; finding/disposition; and
+command-specific reconciliation predicates. `retryable: true` means the same command kind may be
+resubmitted with refreshed/corrected inputs; `false` means the caller must take the named different
+action or obtain authority. `evidence` is the canonically sorted validated artifact references that
+caused the failure, and is empty when parsing failed before an artifact was trustworthy or the
+failed guard has no artifact. This is the sole exception to the general nonempty evidence-array
+rule. An implementation never fabricates evidence.
+
+The following matrix is exhaustive. Context alternatives in one row select the exact stated action;
+there is no fallback or implementation discretion. Every action array has exactly one member.
+
+| Ordered failing guard | Error / retryable | Evidence | `next_actions` |
+| --- | --- | --- | --- |
+| malformed bytes, unknown/duplicate field, noncanonical value | `INVALID_ENVELOPE` / true | empty | `[retry-command]` |
+| protocol version other than 1 | `UNSUPPORTED_PROTOCOL_VERSION` / false | empty | `[return-to-planning]` |
+| byte/depth/collection limit | `PROTOCOL_LIMIT_EXCEEDED` / true | empty | `[retry-command]` |
+| expected revision, expected digest, event prior revision, or event prior digest mismatch | `STALE_SNAPSHOT` / true | empty | `[retry-command]` |
+| required trusted evaluation input absent | `ARTIFACT_MISSING` / true | available locator artifacts | review -> `[refresh-plan-review]`; approval -> `[refresh-plan-approval]`; gate -> `[refresh-gate]`; workspace/dependency -> `[reconcile-sources]` |
+| trusted input present for the wrong command | `INVALID_ENVELOPE` / true | that trusted input's source artifacts | `[retry-command]` |
+| unauthenticated or invalid transport principal | `UNTRUSTED_PRINCIPAL` / false | empty | `[ask-operator]` |
+| requested actor differs from trusted principal | `ACTOR_ATTRIBUTION_MISMATCH` / false | empty | `[ask-operator]` |
+| role/command or role/scope pair absent from the exhaustive matrix | `ACTOR_ROLE_FORBIDDEN` / false | empty | `[ask-operator]` |
+| allowed role lacks the row's required scope | `AUTHORITY_SCOPE_MISSING` / false | empty | `[ask-operator]` |
+| command not listed for current lifecycle state, including terminal mutation | `INVALID_TRANSITION` / false | empty | `[return-to-planning]` |
+| third-response/replan boundary reached | `REVIEW_REPLAN_REQUIRED` / false | readiness/scope artifacts | `[return-to-planning]` |
+| fifth-choice or later-choice boundary lacks matching declaration/permit | `REVIEW_OPERATOR_CHOICE_REQUIRED` / false | current readiness/scope artifacts | `[ask-operator]` |
+| required artifact/dependency/evidence absent | `ARTIFACT_MISSING` / true | available related artifacts | review -> `[refresh-plan-review]`; workspace/dependency/reconciliation -> `[reconcile-sources]`; other command evidence -> `[retry-command]` |
+| plan, review, dispatch, output, attestation, lineage, readiness, or workspace artifact mismatched/stale/foreign | `ARTIFACT_STALE` / true | exact stale/mismatched artifacts | review/lineage/readiness -> `[refresh-plan-review]`; workspace -> `[reconcile-sources]`; other -> `[retry-command]` |
+| approval locator/value absent | `APPROVAL_ABSENT` / true | available locator | `[refresh-plan-approval]` |
+| exact denial | `APPROVAL_DENIED` / false | denial source | `[return-to-planning]` |
+| approval issue/action/commit/digest no longer matches | `APPROVAL_STALE` / true | approval source and plan | `[refresh-plan-approval]` |
+| required gate ID missing | `GATE_ABSENT` / true | accepted review/gate artifacts | `[refresh-gate]` |
+| gate outcome failed | `GATE_FAILED` / false | failing gate evidence | `[return-for-repair]` |
+| gate definition/input/target/time stale | `GATE_STALE` / true | stale gate evidence | `[refresh-gate]` |
+| unresolved process finding blocks phase exit/completion | `PROCESS_FINDING_UNRESOLVED` / false | finding evidence | `[dispose-process-finding]` |
+| lease required but absent, including wrong `without-active-lease` variant | `LEASE_REQUIRED` / true | workspace observation | `[reacquire-lease]` |
+| another live lease prevents acquisition | `LEASE_HELD` / false | workspace-observation source when present, otherwise empty | `[release-lease]` |
+| active lease expired | `LEASE_EXPIRED` / true | workspace-observation source when present, otherwise empty | `[reacquire-lease]` |
+| lease owner/session mismatch | `LEASE_NON_OWNER` / false | workspace-observation source when present, otherwise empty | `[ask-operator]` |
+| lease ID/token mismatch or stale prior owner, including wrong `with-active-lease` variant | `LEASE_FENCED` / true | workspace-observation source when present, otherwise empty | `[reacquire-lease]` |
+| handoff schema/pairing/source/target invalid | `HANDOFF_INVALID` / true | handoff artifacts | `[return-for-repair]` |
+| handoff target revision is older than current revision | `HANDOFF_LATE` / true | handoff and current-target artifacts | `[return-for-repair]` |
+| finding ID does not exist | `PROCESS_FINDING_UNKNOWN` / true | supplied finding artifacts | `[retry-command]` |
+| disposition conflicts with current event or supersession link | `PROCESS_FINDING_DISPOSITION_CONFLICT` / true | finding/disposition artifacts | `[retry-command]` |
+| valid ledger contains an authority-sensitive contradiction | `RECONCILIATION_REQUIRED` / false | contradiction artifacts | `[reconcile-sources]` |
+
+For each lifecycle-table row, the named evidence predicate selects the context alternative above.
+The row adds no new error family. Parser tests cover the first three rows; the exhaustive
+role/command/state fixture crosses every command with identity, role, scope, source-state, review
+limit, evidence, approval, gate, finding, lease, and handoff failures in the stated order and asserts
+the complete `ProtocolErrorV1`, including empty/nonempty evidence, retryability, and exact action.
 
 Every row also rejects malformed trusted evidence with `ARTIFACT_STALE`, missing required evidence
 with `ARTIFACT_MISSING`, and an unresolved finding
@@ -834,7 +944,9 @@ validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the p
 configured-repository digest appears in the trusted attestation. Dependencies ready means every
 declared dependency has exactly one sorted `DependencyStatusV1` with state `complete`; a missing,
 duplicate, or incomplete entry returns `ARTIFACT_MISSING` and `reconcile-sources`. Workspace ready
-means the named `WorkspaceTargetV1` has the approved branch/head and nonzero path digest. Every lease
+means the trusted `ValidatedWorkspaceObservationV1` matches the payload and configured repository;
+acquisition also matches the approved branch/head, and an existing lease also matches workspace ID
+and branch. Every lease
 creation or transfer requires `expires_at > observed_time.observed_at`; otherwise it returns
 `LEASE_EXPIRED` and `reacquire-lease`. A complete handoff contains every closed field, nonempty
 evidence, a source session matching the active phase or lease, and a target revision matching the
@@ -947,7 +1059,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–3 are lifetime failures fourteen through sixteen; the native issue records that count,
+verdicts. U2A clean-room rounds 1–4 are lifetime failures fourteen through seventeen; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -980,6 +1092,12 @@ the complete third response and ordered fifth-choice history, so a rewrite canno
 
 ## Behavior Readiness Check
 
+These seven rows are the current readiness declaration for U2A lineage
+`723787f06b1e33896b70cbaabdfc9555dbbab306e4b9da09690b72a7218262a1`; their behavior names map
+one-to-one to its seven `ScopeBehaviorIdV1` values. The next review manifest binds the exact plan
+commit/digest containing these rows as its readiness artifact. Later edits change that artifact
+digest and trace digests but not the lineage ID or behavior set.
+
 | Behavior | Complete trace | Status |
 | --- | --- | --- |
 | Interpret one request | `CommandEnvelopeV1` -> closed parser/canonical digest -> reducer decision -> `CommandResultV1`; protocol tests cover every variant and limit | Ready |
@@ -987,11 +1105,11 @@ the complete third response and ordered fifth-choice history, so a rewrite canno
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–3 as failures fourteen through sixteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–4 as failures fourteen through seventeen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
-trusted principal; application adapters supply validated review and approval evidence; the caller
+trusted principal; application adapters supply validated review, approval, and workspace observations; the caller
 supplies event IDs and time in the command; and the reducer derives events, next snapshot, finding
 IDs, lease tokens, invalidation effects, error codes, and next actions. Every output has a named
 consumer: U2B stores events and snapshots; U3 executes the reducer; U4-U7 render or supply adapters.
@@ -1072,6 +1190,9 @@ Test scenarios are prescriptive:
   delete the derived snapshot, replay solely from events, and prove approved head, merge SHA,
   evidence, verification outcome, and failure code are byte-identical. Accept matching verification
   and reject a different merge SHA without an event.
+  For every rejected fixture, assert the first guard, exact code, retryable boolean, exact sorted
+  evidence array, and exact one-member next-action array from the rejection matrix; permute two
+  simultaneous failures to prove guard order.
 - `leases.test.ts`: expiry without takeover, heartbeat at and after expiry, wrong owner, wrong
   session, wrong token, takeover, handoff, release twice, merging release, pause, cancellation,
   review repair, merge repair, first mutation by the replacement owner, and backdated or future
@@ -1085,6 +1206,10 @@ Test scenarios are prescriptive:
   token counters byte-for-byte. Resume proves null active lease and preserved counters. Reconcile a
   conflict in a lease-free state and with both work and integration leases, then replay and reject
   each stale owner.
+  Every workspace-bearing case supplies a matching trusted observation, then independently rejects
+  absence, wrong-command presence, foreign repository, wrong workspace ID/branch/head/path digest,
+  stale source artifact, acquisition against an unapproved head, and lease transfer across another
+  workspace.
 - `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
@@ -1105,10 +1230,14 @@ Test scenarios are prescriptive:
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–3 as failures fourteen through sixteen, and prove another plan commit in the same split lineage retains sixteen
+  rounds 1–4 as failures fourteen through seventeen, and prove another plan commit in the same split lineage retains seventeen
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
+  Use one fixed split declaration whose lineage ID is computed without readiness bytes; after
+  failure seventeen, change both plan and readiness artifact digests while retaining that ID and
+  behavior set, then allow U2A and reject another issue, another behavior set, a recomputed lineage,
+  a self-referential declaration, and an artifact whose bytes do not match the declaration.
 - `reducer-determinism.test.ts`: byte-identical decision for identical input, no ambient I/O, every
   snapshot/event field has a declared input or reducer derivation, and every public value is
   reachable through the correct root barrel without infrastructure exports. It also folds every
@@ -1210,3 +1339,9 @@ pause/cancel now use discriminated lease targets and complete interruption effec
 distinct no-lease effect; reconciliation records nullable complete revocation and token history;
 and trusted participant inventory independently produces every author, reviser, reviewer, context,
 and attestation fact consumed by review validation. Updated all living sections and replay tests.
+
+Round-4 repair note (2026-08-04): Preserved lifetime failure seventeen. Replaced the mutable,
+self-referential scope digest with one immutable operator-decision lineage declaration and separate
+per-plan readiness declaration; added the exhaustive ordered rejection/error/retry/evidence/action
+matrix; and required a trusted configured-repository workspace observation for every
+workspace-bearing command, with mismatch and no-lease fixtures.
