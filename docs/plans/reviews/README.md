@@ -47,3 +47,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   dispatch record revision to a fresh reviewer and sole output path.
 - [U2 clean-room round 8 reviewer output](./2026-08-04-u2-clean-room-round-8-reviewer-output.md)
   preserves the reviewer’s exact one-P1 verdict as the authoritative round-8 artifact.
+- [U2 clean-room round 9 prompt](./2026-08-04-u2-clean-room-round-9-prompt.md) binds the exact
+  provider-receipt evidence revision to a fresh reviewer and sole output path.
