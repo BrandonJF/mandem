@@ -33,3 +33,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   preserves the reviewer's exact two-P1 verdict and is the authoritative round-4 artifact.
 - [U2 clean-room round 5 prompt](./2026-08-04-u2-clean-room-round-5-prompt.md) binds the trusted
   review-evidence and release-recovery repair to a fresh reviewer and sole output path.
+- [U2 clean-room round 5 reviewer output](./2026-08-04-u2-clean-room-round-5-reviewer-output.md)
+  preserves the reviewer’s exact three-P1 and one-P2 verdict as the authoritative round-5 artifact.
