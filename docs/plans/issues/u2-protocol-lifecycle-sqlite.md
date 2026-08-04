@@ -54,6 +54,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - [x] (2026-08-04) Completed an author-side whole-plan and stored-value/consumer audit.
 - [x] (2026-08-04) Preserved U2A clean-room round 1, which returned four P1 findings and raised the
   retained issue's lifetime failed-review count from thirteen to fourteen.
+- [x] (2026-08-04) Preserved U2A clean-room round 2, which closed three round-1 findings, returned
+  four P1 findings, and raised the retained issue's lifetime failed-review count to fifteen.
 - [ ] Repair all four round-1 findings, repeat the whole-plan readiness audit, bind the revision in
   a fresh clean-room review manifest, and obtain a clean verdict.
 - [ ] Obtain exact operator approval before implementation.
@@ -95,7 +97,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all fourteen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all fifteen failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -107,7 +109,7 @@ Planning now separates work-control meaning from durable recovery. The plan spec
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
 gates, process findings, failed-review limits, and deterministic tests. No review, approval, or
 implementation exists for the repaired revision yet. U2A clean-room round 1 is preserved as a
-four-P1 failed verdict and lifetime failure fourteen.
+four-P1 failed verdicts and lifetime failure fifteen.
 
 ## Context and Orientation
 
@@ -242,8 +244,8 @@ The role/scope matrix is exhaustive. Operator may hold every scope. Phase agent 
 `record-process-finding`, and `dispose-process-finding`. Worker may hold `mutate-work`,
 `heartbeat-lease`, `release-lease`, and `record-process-finding`. Reviewer may hold `decide-plan`,
 `review-work`, and `record-process-finding`. Control plane may hold `dispatch-plan-review`,
-`dispatch-work`, `heartbeat-lease`, `takeover-lease`, `release-lease`, `record-learn`, `integrate`,
-`verify-merge`, `reconcile-sources`, `record-gate-decision`, `record-process-finding`, and
+`dispatch-work`, `decide-plan`, `heartbeat-lease`, `takeover-lease`, `release-lease`, `review-work`,
+`record-learn`, `integrate`, `verify-merge`, `reconcile-sources`, `record-gate-decision`, `record-process-finding`, and
 `dispose-process-finding`. A principal containing a role/scope pair outside this matrix is
 `ACTOR_ROLE_FORBIDDEN`. Both `return-for-repair` and `record-exact-merge` require the control-plane
 role and `integrate`; no other role may use `integrate`.
@@ -331,10 +333,11 @@ Every payload contains only closed scalar fields or these named values:
 - `PlanTargetV1 { path, commit, digest }` and
   `GoverningContractTargetV1 { path: "PLANS.md", commit, digest }`.
 - `PullRequestTargetV1 { provider: "github", repository, number, head }`.
-- `ReviewManifestV1 { plan, governing_contract, complete_prompt, complete_prompt_digest, reviewer_role,
-  reviewer, challenge_lenses, output_path, author_attestations, reviser_attestations,
-  reviewer_attestation, risk_policy, dispatch_id }`, where `complete_prompt` is the immutable
-  artifact reference that locates the exact committed prompt bytes.
+- `ReviewManifestV1 { plan, governing_contract, complete_prompt, complete_prompt_digest,
+  reviewer_role, reviewer, challenge_lenses, output_path, author_attestations,
+  reviser_attestations, reviewer_attestation, risk_policy, dispatch_id }`, using the exact review
+  values below. `complete_prompt` is the immutable artifact reference that locates the exact
+  committed prompt bytes.
 - `ValidatedReviewDispatchV1 { dispatch_id, prompt_digest, reviewer, provider, model,
   dispatched_at, receipt }` where `receipt` is an artifact reference to exact validated bytes.
 - `ValidatedReviewEvidenceV1 { manifest, dispatch, output, reviewer_commit, sole_write,
@@ -343,8 +346,8 @@ Every payload contains only closed scalar fields or these named values:
   values and `verdict: "clean" | "changes-required"`.
 - `ReviewEvidenceAttestationV1 { configured_repository_digest, resolved_manifest_commit,
   resolved_reviewer_commit, reviewer_parent_commit, ancestry_proof_digest, write_set,
-  provider_session, transport_identity_digest, source_digests }`; it is constructed only by the
-  later trusted evidence adapter, never parsed from a command.
+  provider_session, transport_identity_digest, source_digests }` uses the exact types below. It is
+  constructed only by the later trusted evidence adapter, never parsed from a command.
 - `ApprovalEvidenceV1 { record, source }`, where `record` is the public
   `architecture-standard` `ApprovalRecord` and `source` is its exact commit/digest reference.
 - `ApprovalLocatorV1 { issue_id, commit }` is the only approval value accepted from a command.
@@ -380,7 +383,97 @@ session, active lease, last heartbeat, revoked time, current disposition and dis
 path_digest: Sha256 }`. `ReviewOutputTargetV1` is `{ path: RepoPath; commit: GitSha;
 digest: Sha256; verdict: "clean" | "changes-required" }`. `ReviewWriteV1` is
 `{ path: RepoPath; digest: Sha256 }`. `ReviewSessionIdentityV1` is
-`{ session_id: Uuid; provider: string; model: string | null }`.
+`{ session_id: Uuid; provider: ArtifactProviderV1; model: string | null }`; a non-null model is
+1–128 printable ASCII bytes. `ReviewParticipantAttestationV1` is `{ participant:
+ReviewSessionIdentityV1; role: "author" | "reviser" | "reviewer"; context_source:
+"originating" | "fresh-isolated"; attestation: ArtifactReferenceV1 }`. Author and reviser entries
+require `originating`; the sole reviewer requires `fresh-isolated`; session IDs are unique across
+all three collections. `ReviewChallengeLensV1` is exactly `plans-conformance`,
+`novice-executability`, `security`, `data-integrity`, `adversarial-counterexample`,
+`pure-domain-boundary`, or `deterministic-replay`.
+
+`ReviewRiskPolicyV1` is exactly `{ risk: "standard"; alternative: "not-required" }`,
+`{ risk: "high"; alternative: "used"; difference: "provider" | "model" | "both" }`, or
+`{ risk: "high"; alternative: "unavailable"; limitation: ArtifactReferenceV1 }`. The used reviewer
+is the manifest's primary reviewer and must differ from every author/reviser by the dimension named
+in `difference`. The unavailable limitation must be a committed `operator-decision` artifact.
+Standard risk rejects the high-risk-only fields; high risk rejects `not-required`.
+
+In `ReviewManifestV1`, `reviewer_role` is 1–128 NFC UTF-8 bytes, `reviewer` equals the participant
+inside `reviewer_attestation`, `challenge_lenses` is a sorted unique nonempty array of at most 8,
+`author_attestations` and `reviser_attestations` are separately sorted by session ID with at most 16
+each, `reviewer_attestation.role` is `reviewer`, and `output_path` equals the only permitted write.
+`ValidatedReviewEvidenceV1.authors` and `.revisers` are the exact sorted participant arrays derived
+from those attestations; `.reviewer`, `.challenge_lenses`, and `.risk_policy` equal the manifest;
+`.attestation_digests` is the sorted unique digest of every participant attestation plus the trusted
+evidence attestation; and `.sole_write` equals the only `write_set` member and output target.
+`required_gates` is sorted uniquely by `gate_id` with at most 64 entries. `bundle_digest` is
+`canonicalDigestV1` of the closed object `{ manifest_digest, dispatch_digest, output_digest,
+attestation_digests, required_gates, verdict }`, using the exact canonical digests/collections
+already validated and no other fields.
+
+`ReviewEvidenceAttestationV1.write_set` is a sorted unique readonly `ReviewWriteV1[]` of exactly one
+member. `provider_session` is the exact primary `ReviewSessionIdentityV1`.
+`source_digests` is a sorted unique readonly `Sha256[]` containing the manifest, prompt, dispatch
+receipt, output, ancestry proof, participant attestations, and any risk-limitation sources, with at
+most 32 members. `transport_identity_digest` and `configured_repository_digest` are nonzero
+`Sha256` values. All review collections participate in the 32-session, 32-write, and 640-KiB review
+validation limits; stricter exact-one rules still apply.
+
+The complete readonly shapes are:
+
+    interface ReviewManifestV1 {
+      readonly plan: PlanTargetV1;
+      readonly governing_contract: GoverningContractTargetV1;
+      readonly complete_prompt: ArtifactReferenceV1;
+      readonly complete_prompt_digest: Sha256;
+      readonly reviewer_role: string;
+      readonly reviewer: ReviewSessionIdentityV1;
+      readonly challenge_lenses: readonly ReviewChallengeLensV1[];
+      readonly output_path: RepoPath;
+      readonly author_attestations: readonly ReviewParticipantAttestationV1[];
+      readonly reviser_attestations: readonly ReviewParticipantAttestationV1[];
+      readonly reviewer_attestation: ReviewParticipantAttestationV1;
+      readonly risk_policy: ReviewRiskPolicyV1;
+      readonly dispatch_id: Uuid;
+    }
+    interface ValidatedReviewDispatchV1 {
+      readonly dispatch_id: Uuid;
+      readonly prompt_digest: Sha256;
+      readonly reviewer: ReviewSessionIdentityV1;
+      readonly provider: ArtifactProviderV1;
+      readonly model: string | null;
+      readonly dispatched_at: UtcTimestamp;
+      readonly receipt: ArtifactReferenceV1;
+    }
+    interface ReviewEvidenceAttestationV1 {
+      readonly configured_repository_digest: Sha256;
+      readonly resolved_manifest_commit: GitSha;
+      readonly resolved_reviewer_commit: GitSha;
+      readonly reviewer_parent_commit: GitSha;
+      readonly ancestry_proof_digest: Sha256;
+      readonly write_set: readonly ReviewWriteV1[];
+      readonly provider_session: ReviewSessionIdentityV1;
+      readonly transport_identity_digest: Sha256;
+      readonly source_digests: readonly Sha256[];
+    }
+    interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256; }
+    interface ValidatedReviewEvidenceV1 {
+      readonly manifest: ReviewManifestV1;
+      readonly dispatch: ValidatedReviewDispatchV1;
+      readonly output: ReviewOutputTargetV1;
+      readonly reviewer_commit: GitSha;
+      readonly sole_write: ReviewWriteV1;
+      readonly reviewer: ReviewSessionIdentityV1;
+      readonly authors: readonly ReviewSessionIdentityV1[];
+      readonly revisers: readonly ReviewSessionIdentityV1[];
+      readonly challenge_lenses: readonly ReviewChallengeLensV1[];
+      readonly risk_policy: ReviewRiskPolicyV1;
+      readonly attestation_digests: readonly Sha256[];
+      readonly bundle_digest: Sha256;
+      readonly required_gates: readonly GateRequirementV1[];
+      readonly verdict: "clean" | "changes-required";
+    }
 `ObservedTimeV1` is `{ observed_at: UtcTimestamp; source_digest: Sha256 }`, constructed only by the
 control plane's trusted clock adapter. `DependencyStatusV1` is `{ issue_id: Uuid;
 state: "complete" | "incomplete"; evidence: ArtifactReferenceV1 }`.
@@ -494,8 +587,8 @@ is fixed by kind: plan-review-submitted uses `ReviewManifestV1`; dispatch uses
 `ValidatedReviewDispatchV1`; changes-required uses `{ review: ValidatedReviewEvidenceV1;
 policy: FailedReviewPolicyV1 }`; review accepted uses `ValidatedReviewEvidenceV1`; denial and queue
 use `ApprovalEvidenceV1`; every lease acquire/revoke/heartbeat uses `LeaseSnapshotV1`; work handoff,
-review findings, review accepted, Learn accepted, return for repair, pause, resume and cancellation
-use `LeaseHandoffEffectV1`; review invalidation and planning resume use
+pause, resume, and cancellation use `LeaseHandoffEffectV1`; review findings, review accepted, Learn
+accepted, and return for repair use `HandoffDecisionV1` and never mutate a lease; review invalidation and planning resume use
 `InvalidationEffectV1 { review, approval, gates, resulting_state }`; exact merge and verification
 events use `ExactMergeRecordV1` and `VerificationOutcomeV1`, respectively; review-scope response uses `ReviewScopeResponseV1`; gate uses
 `GateDecisionV1`; finding creation uses `ProcessFindingV1`; finding disposition and supersession use
@@ -504,7 +597,7 @@ uses `{ conflict_code: ErrorCodeV1; evidence: ArtifactReferenceV1[] }`. This map
 an event with another value type is `INVALID_ENVELOPE`.
 
 `createInitialLifecycleSnapshotV1(projectId, issueId)` returns `NeedsPlanning`, null revision, the
-digest of an empty canonical event array, null plan/review/approval/lease/handoff values, empty
+`SHA256("mandem-events-v1\\0")` empty-stream digest defined below, null plan/review/approval/lease/handoff values, empty
 exact-merge and verification values, empty gates/findings, zero token counters, failed-review count
 zero with no responses, and
 `return-to-planning` as its only next action. `applyLifecycleEventV1(snapshot, event)` is the only
@@ -516,6 +609,19 @@ it. Every command test must also prove that folding its emitted events from the 
 the returned next snapshot. U2B rebuilds by folding ordered stored events from the initial snapshot.
 Wrong prior revision or digest returns `STALE_SNAPSHOT` and the unchanged snapshot. Event
 constructors always copy those two prior values from the reducer's current intermediate snapshot.
+
+The event-stream digest is one prescribed SHA-256 chain. Let `D` be ASCII
+`mandem-events-v1` followed by one zero byte. The empty digest is
+`SHA256(D)`. For each event in order, serialize the complete validated `EventEnvelopeV1`, including
+its `prior_revision` and `prior_events_digest`, to canonical bytes with the required trailing LF.
+The next digest is `SHA256(D || hex_decode(prior_events_digest) || uint64be(byte_length) ||
+event_bytes)`. `uint64be` is the unsigned eight-byte big-endian length of `event_bytes`; no hex,
+separator, or platform text encoding participates. The event must name the snapshot's current
+digest as its prior digest; then `applyLifecycleEventV1` verifies that anchor, applies the event,
+and computes the next digest with this equation. Constructors use the intermediate digest before
+building the next event in a batch. `canonicalDigestV1` remains the digest of one canonical value;
+it is not the event-chain function. Export `initialEventsDigestV1` and
+`advanceEventsDigestV1(priorDigest, canonicalEventBytes)` from the runtime barrel.
 
 `ErrorCodeV1` contains exactly `INVALID_ENVELOPE`, `UNSUPPORTED_PROTOCOL_VERSION`,
 `PROTOCOL_LIMIT_EXCEEDED`, `UNTRUSTED_PRINCIPAL`, `ACTOR_ATTRIBUTION_MISMATCH`,
@@ -650,6 +756,19 @@ complete revoked lease in their single event instead of emitting a separate revo
 finding disposition events contain the complete invalidation effect: prior review and approval,
 sorted gate IDs and values, and resulting `NeedsPlanning` state. No other multi-event batch exists.
 
+The intermediate transition rules are exact. `review-findings-recorded` is
+`Reviewing -> Reviewing` and stores only the handoff; `work-lease-acquired-for-repair` is
+`Reviewing -> Working` and alone installs the replacement work lease. `learn-accepted` is
+`Learning -> Learning` and stores only the handoff; `integration-lease-acquired` is
+`Learning -> Merging` and alone installs the integration lease. For merge repair, `lease-revoked`
+is `Merging -> Merging` and alone clears/fences the integration lease,
+`work-returned-for-repair` is `Merging -> Merging` and stores only the handoff, and
+`work-lease-acquired-for-repair` is `Merging -> Working` and alone installs the work lease. Each
+event uses the prior revision and digest produced by the immediately preceding event. A
+handoff-only event never reads or writes `active_lease` or token history; an explicit lease event is
+the sole writer. Single-event work handoff, pause, resume, and cancellation apply their complete
+`LeaseHandoffEffectV1` once and have no adjacent lease event.
+
 Every table predicate is closed as follows. A complete manifest passes the exact review-binding
 validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the plan commit and whose
 configured-repository digest appears in the trusted attestation. Dependencies ready means every
@@ -698,6 +817,30 @@ output path, exactly one attested write, and risk policy. It never reads Git or 
 Self-attestation and caller-provided context claims fail. High risk requires another provider or model when available; unavailable use requires
 bound limitation evidence. Standard risk alone permits `not-required`.
 
+Its complete interface is:
+
+    interface ReviewValidationInputV1 {
+      readonly manifest_bytes: Uint8Array;
+      readonly dispatch: ValidatedReviewDispatchV1;
+      readonly output_bytes: Uint8Array;
+      readonly attestation: ReviewEvidenceAttestationV1;
+      readonly required_gates: readonly { gate_id: string; definition_digest: Sha256 }[];
+    }
+    type ReviewValidationResultV1 =
+      | { ok: true; value: ValidatedReviewEvidenceV1 }
+      | { ok: false; error: ProtocolErrorV1 };
+    function validateReviewEvidenceV1(
+      input: ReviewValidationInputV1,
+    ): ReviewValidationResultV1;
+
+The function parses `manifest_bytes` through the closed `ReviewManifestV1` decoder, parses the
+bounded Markdown output only through `parseReviewVerdictV1`, validates the typed trusted
+attestation, derives every duplicated field in `ValidatedReviewEvidenceV1`, and returns
+`ARTIFACT_STALE` for any mismatch. It never accepts caller-supplied validated evidence or a claimed
+verdict. `serializeReviewManifestV1` and `parseReviewManifestV1` join the runtime barrel and use
+`ParseResultV1<ReviewManifestV1>`; trusted `ReviewEvidenceAttestationV1` is constructed in-process
+by the later adapter and has a validator but no public command decoder.
+
 `parseReviewVerdictV1` accepts bounded NFC UTF-8 Markdown with LF endings and one trailing LF only.
 The final nonblank line must be exactly `MANDEM_REVIEW_VERDICT: CLEAN` or
 `MANDEM_REVIEW_VERDICT: CHANGES_REQUIRED`, appearing once. Terminal text is never input. A caller
@@ -742,7 +885,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room round 1 is lifetime failure fourteen; the native issue records that count,
+verdicts. U2A clean-room rounds 1 and 2 are lifetime failures fourteen and fifteen; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -782,7 +925,7 @@ the complete third response and ordered fifth-choice history, so a rewrite canno
 | Control one active agent | Lease payload -> revoke/replace events -> snapshot token history -> stale-owner rejection; lease tests cover every transfer and expiry edge | Ready |
 | Bind a clean-room review | Manifest and validated external inputs -> evidence validator -> accepted-review value/event -> exact review snapshot; review-binding tests cover every substituted or stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply round 1 as failure fourteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1 and 2 as failures fourteen and fifteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -858,6 +1001,9 @@ Test scenarios are prescriptive:
   provider/nullability combination, every handoff kind/outcome/code pairing, every reason,
   resolution, and verification-failure code, both `ParseResultV1` variants, and unknown values for
   each closed catalog.
+- Event digest fixtures assert the literal hex output for the empty domain, one fixed event, and
+  each intermediate digest in a fixed multi-event transfer. Tampering with the prior digest fails,
+  and U2B-style replay over the same canonical event bytes produces the identical final digest.
 - `lifecycle.test.ts`: one success fixture per table row; every command in every invalid source
   state; stale-snapshot and unresolved-finding completion blocks; terminal-state rules; event
   inventory parity; accepted event reduction equals returned snapshot. Record an exact merge,
@@ -867,11 +1013,18 @@ Test scenarios are prescriptive:
 - `leases.test.ts`: expiry without takeover, heartbeat at and after expiry, wrong owner, wrong
   session, wrong token, takeover, handoff, release twice, merging release, pause, cancellation,
   review repair, merge repair, first mutation by the replacement owner, and backdated or future
-  client `occurred_at` values evaluated only against attested `observed_at`.
+  client `occurred_at` values evaluated only against attested `observed_at`. For review repair,
+  Learn integration, and merge repair, assert every intermediate state/revision/digest, prove
+  handoff-only events leave lease/token bytes unchanged, prove the explicit lease event is the sole
+  mutation, and reject the stale owner after revocation.
 - `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
-  unavailable alternative without evidence; valid bounded unavailable case.
+  unavailable alternative without evidence; valid bounded unavailable case. Round-trip the exact
+  manifest and every risk-policy variant; reject unknown risk/lens/context/provider values,
+  unsorted/duplicate/oversized collections, field mismatches between manifest, attestation, and
+  derived evidence, author/reviser/reviewer session collisions, inherited reviewer context, and a
+  high-risk unavailable alternative without the committed limitation artifact.
 - `freshness.test.ts`: exact approval; absent, denied, malformed, incomparable, wrong issue/action,
   wrong commit/digest, changed plan; exact gate, absent/failed/stale gate, unrelated gate preserved.
 - `gates.test.ts`: sorted unique values, duplicate rejection, replace one gate, preserve others.
@@ -879,8 +1032,8 @@ Test scenarios are prescriptive:
   completion block, every disposition, required repair artifacts, supersession, invalidation effect.
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
-  retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A round
-  1 as failure fourteen, and prove another plan commit in the same split lineage retains fourteen
+  retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
+  rounds 1 and 2 as failures fourteen and fifteen, and prove another plan commit in the same split lineage retains fifteen
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
@@ -972,3 +1125,9 @@ round 1, recorded the selected split lineage without resetting the counter, made
 artifact/handoff/reason/result schemas explicit, documented the exhaustive role/scope matrix,
 stored exact merge and verification facts in events and snapshots, and added replay, mismatch,
 unknown-value, and historical-counter fixtures for every repaired boundary.
+
+Round-2 repair note (2026-08-04): Preserved lifetime failure fifteen; aligned both control-plane
+transition scopes with the exhaustive matrix; specified every review participant, risk,
+attestation, manifest, validated-evidence, validator-input, and result field; defined the exact
+domain-separated event-digest equation; and assigned lease mutation to one explicit event at every
+intermediate step with fixed replay fixtures.
