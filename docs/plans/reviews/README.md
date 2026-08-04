@@ -57,3 +57,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   preserves the reviewer’s exact one-P1 verdict as the authoritative round-10 artifact.
 - [U2 clean-room round 11 prompt](./2026-08-04-u2-clean-room-round-11-prompt.md) binds the concrete
   checkpoint payload and destination revision to a fresh reviewer and sole output path.
+- [U2 clean-room round 11 reviewer output](./2026-08-04-u2-clean-room-round-11-reviewer-output.md)
+  preserves the reviewer’s exact one-P1 verdict as the authoritative round-11 artifact.
