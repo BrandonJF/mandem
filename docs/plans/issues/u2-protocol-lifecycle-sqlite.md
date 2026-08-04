@@ -157,6 +157,11 @@ review, and any change after approval requires a new review and approval.
   publishes reviewed and approved public values. The issue-graph manifest must include every
   managed status label already recorded on those native issues before its metadata writer runs.
   Date/Author: 2026-08-04 / Codex
+- Decision: Record WI1 as complete in the managed issue graph.
+  Rationale: WI1 implemented the issue-graph integrity workflow and its native issue is closed. The
+  split manifest incorrectly retained its earlier open and blocked planning state. A complete audit
+  of all sixteen managed issues found no other state or managed-label mismatch.
+  Date/Author: 2026-08-04 / Codex
 - Decision: Split work-control rules from durable storage and restart recovery.
   Rationale: The work rules must define complete facts before storage can persist and reconstruct
   them. Separate plans let each reviewer judge one clear outcome.
@@ -192,4 +197,5 @@ clean-room review.
 
 Issue-graph status revision note (2026-08-04): Kept U2A in progress for replanning and U2B planned
 and blocked by U2A. Updated the graph manifest to match those native issue phases before the guarded
-metadata operation.
+metadata operation. A subsequent complete managed-issue audit also corrected WI1 from its obsolete
+open and blocked planning state to its delivered closed state.

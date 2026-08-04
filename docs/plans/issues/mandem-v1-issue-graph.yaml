@@ -54,8 +54,8 @@ issues:
     plan: "docs/plans/issues/wi1-epic-issue-graph-integrity.md"
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids: ["745eda80-1e74-4866-bc95-2f2983b31025"]
-    expected_native_state: "open"
-    expected_native_labels: ["blocked"]
+    expected_native_state: "closed"
+    expected_native_labels: []
   - issue_id: "6ca36caa-37e2-447b-935e-792a6f6566b6"
     issue_key: "U7"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
