@@ -56,8 +56,12 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   retained issue's lifetime failed-review count from thirteen to fourteen.
 - [x] (2026-08-04) Preserved U2A clean-room round 2, which closed three round-1 findings, returned
   four P1 findings, and raised the retained issue's lifetime failed-review count to fifteen.
-- [ ] Repair all four round-1 findings, repeat the whole-plan readiness audit, bind the revision in
-  a fresh clean-room review manifest, and obtain a clean verdict.
+- [x] (2026-08-04) Preserved U2A clean-room round 3, which closed every round-2 finding, returned
+  three P1 and one P2 finding, raised the lifetime count to sixteen, and stopped review dispatch.
+- [x] (2026-08-04) Returned U2A to planning and reviewed the whole plan's producer, event, fold, and
+  consumer paths. Kept the reduced U2A scope because all remaining gaps belong to the same reducer.
+- [ ] Repair the common cause across interruption, reconciliation, and participant-provenance
+  values; repeat readiness; then bind a fresh clean-room review and obtain a clean verdict.
 - [ ] Obtain exact operator approval before implementation.
 
 ## Surprises & Discoveries
@@ -97,19 +101,25 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all fifteen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all sixteen failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
+  Date/Author: 2026-08-04 / Codex
+- Decision: Keep the reduced U2A scope after its third failed review instead of splitting again.
+  Rationale: Pause/cancel, reconciliation fencing, and trusted review provenance are required inputs
+  to the same closed lifecycle reducer. Moving one elsewhere would leave U2A unable to define a
+  complete event or trust boundary and would not reduce implementation scope safely.
   Date/Author: 2026-08-04 / Codex
 
 ## Outcomes & Retrospective
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. No review, approval, or
-implementation exists for the repaired revision yet. U2A clean-room round 1 is preserved as a
-four-P1 failed verdicts and lifetime failure fifteen.
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–3 are
+preserved as failed verdicts, all round-2 findings are closed, and the lifetime count is sixteen.
+Review dispatch is stopped while the author repairs the round-3 common cause. No review, approval,
+or implementation exists for the repaired revision yet.
 
 ## Context and Orientation
 
@@ -318,9 +328,9 @@ The payload union uses these exact required fields. Any field not listed is reje
 | `record-verification-failure` | `merge_sha`, `failure_code`, `evidence` |
 | `resume-planning` | `resolution_code`, `evidence` |
 | `resume-queued` | `resolution_code`, `approval`, `evidence` |
-| `pause-work` | `reason_code`, `workspace`, `lease_id`, `fencing_token` |
+| `pause-work` | `reason_code`, `workspace`, `lease_target`, `evidence` |
 | `resume-work` | `workspace`, `approval`, `gates`, `evidence` |
-| `cancel-work` | `reason_code`, `workspace`, `lease_id`, `fencing_token` |
+| `cancel-work` | `reason_code`, `workspace`, `lease_target`, `evidence` |
 | `record-reconciliation-conflict` | `conflict_code`, `evidence` |
 | `record-review-scope-response` | `response` |
 | `record-gate-decision` | `gate` |
@@ -369,7 +379,9 @@ Every payload contains only closed scalar fields or these named values:
   lineage: ReviewScopeLineageV1; choice: "split" | "redesign" | "permit-one-more";
   evidence }`. Third response requires phase-agent or operator; fifth choice requires operator.
 - `LeaseSnapshotV1 { lease_id, resource, workspace, owner_id, session_id, acquired_at, expires_at,
-  fencing_token, last_heartbeat_at, revoked_at, reason_code }`.
+  fencing_token, last_heartbeat_at, revoked_at, reason_code }`, where `resource` is `work` or
+  `integration`, `last_heartbeat_at` is nullable, and `revoked_at` and `reason_code` are both null
+  for an active lease or both non-null for the complete revoked lease.
 
 These sketches expand to required readonly TypeScript fields without optional properties. Every
 name ending `_id` is `Uuid` except finding IDs (`Sha256`); every `*_at` or `*_expires_at` is
@@ -378,7 +390,7 @@ name ending `_id` is `Uuid` except finding IDs (`Sha256`); every `*_at` or `*_ex
 every `evidence`, `gates`, `changed_artifacts`, `repair_artifacts`, and `*_artifacts` field is a
 nonempty canonically sorted bounded array of its named value. Boolean fields are required booleans.
 Nullable fields are only those explicitly shown with `null`: causation, initial revision, target
-session, active lease, last heartbeat, revoked time, current disposition and disposition links.
+session, active lease, last heartbeat, revoked time/reason, current disposition and disposition links.
 `WorkspaceTargetV1` is `{ workspace_id: Uuid; branch: string; head: GitSha;
 path_digest: Sha256 }`. `ReviewOutputTargetV1` is `{ path: RepoPath; commit: GitSha;
 digest: Sha256; verdict: "clean" | "changes-required" }`. `ReviewWriteV1` is
@@ -392,6 +404,16 @@ all three collections. `ReviewChallengeLensV1` is exactly `plans-conformance`,
 `novice-executability`, `security`, `data-integrity`, `adversarial-counterexample`,
 `pure-domain-boundary`, or `deterministic-replay`.
 
+`VerifiedReviewParticipantV1` is `{ participant: ReviewSessionIdentityV1; role: "author" |
+"reviser" | "reviewer"; context_source: "originating" | "fresh-isolated";
+attestation: ReviewWriteV1; subject_binding_digest: Sha256 }`. The later trusted Git/provider
+adapter constructs each value only after parsing the participant artifact and verifying that its
+provider session, role, context source, path, and digest match the subject. It computes
+`participant_inventory_digest` over canonical JSON containing the configured repository, exact
+plan commit/digest, every commit from the predecessor reviewed target through the reviewer parent,
+and the complete sorted participant list. Omission changes the trusted inventory digest; manifest
+claims cannot create or remove a participant.
+
 `ReviewRiskPolicyV1` is exactly `{ risk: "standard"; alternative: "not-required" }`,
 `{ risk: "high"; alternative: "used"; difference: "provider" | "model" | "both" }`, or
 `{ risk: "high"; alternative: "unavailable"; limitation: ArtifactReferenceV1 }`. The used reviewer
@@ -402,7 +424,9 @@ Standard risk rejects the high-risk-only fields; high risk rejects `not-required
 In `ReviewManifestV1`, `reviewer_role` is 1–128 NFC UTF-8 bytes, `reviewer` equals the participant
 inside `reviewer_attestation`, `challenge_lenses` is a sorted unique nonempty array of at most 8,
 `author_attestations` and `reviser_attestations` are separately sorted by session ID with at most 16
-each, `reviewer_attestation.role` is `reviewer`, and `output_path` equals the only permitted write.
+each and at most 31 combined. Authors has at least one member, `reviewer_attestation.role` is
+`reviewer`, and `output_path` equals the only permitted write. Revisers may be empty only when the trusted complete participant
+inventory contains no reviser.
 `ValidatedReviewEvidenceV1.authors` and `.revisers` are the exact sorted participant arrays derived
 from those attestations; `.reviewer`, `.challenge_lenses`, and `.risk_policy` equal the manifest;
 `.attestation_digests` is the sorted unique digest of every participant attestation plus the trusted
@@ -416,9 +440,16 @@ already validated and no other fields.
 member. `provider_session` is the exact primary `ReviewSessionIdentityV1`.
 `source_digests` is a sorted unique readonly `Sha256[]` containing the manifest, prompt, dispatch
 receipt, output, ancestry proof, participant attestations, and any risk-limitation sources, with at
-most 32 members. `transport_identity_digest` and `configured_repository_digest` are nonzero
+most 32 members; it includes `participant_inventory_digest` and every verified participant's
+subject-binding digest. `transport_identity_digest` and `configured_repository_digest` are nonzero
 `Sha256` values. All review collections participate in the 32-session, 32-write, and 640-KiB review
 validation limits; stricter exact-one rules still apply.
+
+The trusted `verified_participants` array is sorted by role then session ID, contains at least one
+author, exactly one reviewer, and zero or more revisers, and has at most 32 members. The validator
+derives the manifest author/reviser/reviewer identities and attestation path/digests from this array
+and requires exact equality; empty authors, omitted observed revisers, substituted artifacts,
+duplicate sessions, or a reviewer found among authors/revisers is `ARTIFACT_STALE`.
 
 The complete readonly shapes are:
 
@@ -456,6 +487,8 @@ The complete readonly shapes are:
       readonly provider_session: ReviewSessionIdentityV1;
       readonly transport_identity_digest: Sha256;
       readonly source_digests: readonly Sha256[];
+      readonly verified_participants: readonly VerifiedReviewParticipantV1[];
+      readonly participant_inventory_digest: Sha256;
     }
     interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256; }
     interface ValidatedReviewEvidenceV1 {
@@ -524,6 +557,32 @@ evidence: readonly ArtifactReferenceV1[] }`. Both verification commands must mat
 acquired_lease: LeaseSnapshotV1 | null }`. `FindingDispositionEffectV1` is
 `{ finding: ProcessFindingV1; invalidation: InvalidationEffectV1 | null }`.
 
+`LeaseTargetV1` is exactly `{ kind: "without-active-lease" }` or
+`{ kind: "with-active-lease"; lease_id: Uuid; fencing_token: string }`. The reducer requires the
+first variant when `snapshot.active_lease` is null and the second to match the complete current
+lease; a mismatch is `LEASE_REQUIRED`, `LEASE_NON_OWNER`, or `LEASE_FENCED` under the existing guard
+order. `LifecycleInterruptionEffectV1` is `{ reason_code: LeaseReasonCodeV1;
+workspace: WorkspaceTargetV1; evidence: readonly ArtifactReferenceV1[];
+revoked_lease: LeaseSnapshotV1 | null; resulting_last_fencing_token_by_resource:
+Readonly<{ work: string; integration: string }> }`. Pause and cancellation construct it from the
+validated `lease_target`, complete pre-transition lease, trusted observed time, exact reason, and
+prior token map. When a lease exists, the effect's lease copies every prior field, sets
+`revoked_at = observed_time.observed_at`, sets the transition's reason, and leaves the corresponding
+token value unchanged; without a lease, `revoked_lease` is null and the complete token map is
+byte-identical to the input.
+
+`LifecycleResumeEffectV1` is `{ workspace: WorkspaceTargetV1; approval: ApprovalEvidenceV1;
+gates: readonly GateDecisionV1[]; evidence: readonly ArtifactReferenceV1[];
+resulting_active_lease: null; resulting_last_fencing_token_by_resource:
+Readonly<{ work: string; integration: string }> }`. It preserves the complete token map and proves
+that resume never recreates a lease. `ReconciliationEffectV1` is `{ conflict_code: ErrorCodeV1;
+evidence: readonly ArtifactReferenceV1[]; revoked_lease: LeaseSnapshotV1 | null;
+resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }> }`.
+Reconciliation copies and revokes an active lease at trusted observed time with reason
+`reconciliation-conflict`, or records null and the unchanged complete token map. These effects are
+event values, not new snapshot fields; folding them clears or preserves `active_lease`, replaces the
+complete token map with the recorded result, and derives state and next actions.
+
 The command-payload table, these field rules, and the named interfaces are the complete JSON schema.
 An implementation may split declarations across files but may not infer another field, optionality,
 or collection shape.
@@ -586,14 +645,14 @@ The event union uses one required `value` field after `kind`, `from_state`, and 
 is fixed by kind: plan-review-submitted uses `ReviewManifestV1`; dispatch uses
 `ValidatedReviewDispatchV1`; changes-required uses `{ review: ValidatedReviewEvidenceV1;
 policy: FailedReviewPolicyV1 }`; review accepted uses `ValidatedReviewEvidenceV1`; denial and queue
-use `ApprovalEvidenceV1`; every lease acquire/revoke/heartbeat uses `LeaseSnapshotV1`; work handoff,
-pause, resume, and cancellation use `LeaseHandoffEffectV1`; review findings, review accepted, Learn
+use `ApprovalEvidenceV1`; every lease acquire/revoke/heartbeat uses `LeaseSnapshotV1`; work handoff
+uses `LeaseHandoffEffectV1`; pause and cancellation use `LifecycleInterruptionEffectV1`; resume uses
+`LifecycleResumeEffectV1`; review findings, review accepted, Learn
 accepted, and return for repair use `HandoffDecisionV1` and never mutate a lease; review invalidation and planning resume use
 `InvalidationEffectV1 { review, approval, gates, resulting_state }`; exact merge and verification
 events use `ExactMergeRecordV1` and `VerificationOutcomeV1`, respectively; review-scope response uses `ReviewScopeResponseV1`; gate uses
 `GateDecisionV1`; finding creation uses `ProcessFindingV1`; finding disposition and supersession use
-`FindingDispositionEffectV1`; reconciliation
-uses `{ conflict_code: ErrorCodeV1; evidence: ArtifactReferenceV1[] }`. This mapping is exhaustive;
+`FindingDispositionEffectV1`; reconciliation uses `ReconciliationEffectV1`. This mapping is exhaustive;
 an event with another value type is `INVALID_ENVELOPE`.
 
 `createInitialLifecycleSnapshotV1(projectId, issueId)` returns `NeedsPlanning`, null revision, the
@@ -733,10 +792,10 @@ on a phase-completion row with `PROCESS_FINDING_UNRESOLVED`.
 | `Verifying` | `record-verification-failure` | control-plane, `verify-merge` | Exact merge and failure evidence | `NeedsYou`; incident event |
 | `NeedsYou` | `resume-planning` | operator, `reconcile-sources` | Resolution changes approved intent | `NeedsPlanning`; invalidate review, approval, gates |
 | `NeedsYou` | `resume-queued` | operator, `reconcile-sources` | Runtime blocker resolved; approval still exact | `Queued`; preserve approval |
-| `Queued`, `Working`, `Reviewing`, `Learning` | `pause-work` | operator, `pause-work` | Revoke any active lease; bounded reason/workspace | `Paused`; fence prior owner |
-| `Paused` | `resume-work` | operator, `pause-work` | Workspace and approval/gates reconciled | `Queued`; require fresh lease |
-| `NeedsPlanning`, `NeedsApproval`, `Queued`, `Working`, `Reviewing`, `Learning` | `cancel-work` | operator, `cancel-work` | Revoke active lease and preserve workspace | `Cancelled`; terminal |
-| any nonterminal | `record-reconciliation-conflict` | control-plane, `reconcile-sources` | Valid ledger but authority-sensitive contradiction | `NeedsYou`; revoke unsafe lease |
+| `Queued`, `Working`, `Reviewing`, `Learning` | `pause-work` | operator, `pause-work` | Exact with/without-lease target; preserve workspace/evidence; revoke active lease when present | `Paused`; store interruption effect and fence prior owner |
+| `Paused` | `resume-work` | operator, `pause-work` | Workspace and approval/gates reconciled; no active lease | `Queued`; store resume effect and require fresh lease |
+| `NeedsPlanning`, `NeedsApproval`, `Queued`, `Working`, `Reviewing`, `Learning` | `cancel-work` | operator, `cancel-work` | Exact with/without-lease target; preserve workspace/evidence; revoke active lease when present | `Cancelled`; store interruption effect; terminal |
+| any nonterminal | `record-reconciliation-conflict` | control-plane, `reconcile-sources` | Valid ledger but authority-sensitive contradiction; revoke current lease from snapshot when present | `NeedsYou`; store reconciliation effect and fence unsafe owner |
 | any nonterminal | `record-gate-decision` | control-plane, `record-gate-decision` | Complete unique sorted gate value | same; replace only same gate ID |
 | any nonterminal | `record-process-finding` | operator/phase-agent/worker/reviewer/control-plane, `record-process-finding` | Exact origin/role matrix; ID derived from canonical tuple | same; append or deterministic duplicate result |
 | any nonterminal | `dispose-process-finding` | operator/control-plane; phase-agent only for deviation or no-change, `dispose-process-finding` | Current unresolved finding and required repair artifacts | same, or `NeedsPlanning` for contract gap |
@@ -766,8 +825,9 @@ is `Merging -> Merging` and alone clears/fences the integration lease,
 `work-lease-acquired-for-repair` is `Merging -> Working` and alone installs the work lease. Each
 event uses the prior revision and digest produced by the immediately preceding event. A
 handoff-only event never reads or writes `active_lease` or token history; an explicit lease event is
-the sole writer. Single-event work handoff, pause, resume, and cancellation apply their complete
-`LeaseHandoffEffectV1` once and have no adjacent lease event.
+the sole writer. Single-event work handoff applies its complete `LeaseHandoffEffectV1` once and has
+no adjacent lease event. Pause, resume, cancellation, and reconciliation each apply their distinct
+complete effect once and have no adjacent lease event.
 
 Every table predicate is closed as follows. A complete manifest passes the exact review-binding
 validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the plan commit and whose
@@ -814,7 +874,9 @@ manifest and output bytes plus that attestation and verifies internal consistenc
 plan and `PLANS.md` targets, prompt digest, dispatch ID, reviewer/provider/model identity, role and
 challenge lenses, distinct author/reviser/reviewer sessions, no authoring context, one declared
 output path, exactly one attested write, and risk policy. It never reads Git or a provider.
-Self-attestation and caller-provided context claims fail. High risk requires another provider or model when available; unavailable use requires
+It treats `verified_participants` and `participant_inventory_digest` as the sole authorship and
+context provenance, derives the manifest participant claims from them, and rejects an omitted or
+extra claim before testing session separation. Self-attestation and caller-provided context claims fail. High risk requires another provider or model when available; unavailable use requires
 bound limitation evidence. Standard risk alone permits `not-required`.
 
 Its complete interface is:
@@ -885,7 +947,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1 and 2 are lifetime failures fourteen and fifteen; the native issue records that count,
+verdicts. U2A clean-room rounds 1–3 are lifetime failures fourteen through sixteen; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -922,10 +984,10 @@ the complete third response and ordered fifth-choice history, so a rewrite canno
 | --- | --- | --- |
 | Interpret one request | `CommandEnvelopeV1` -> closed parser/canonical digest -> reducer decision -> `CommandResultV1`; protocol tests cover every variant and limit | Ready |
 | Reject invalid order | Lifecycle table -> ordered guard evaluation -> one `ProtocolErrorV1` and unchanged snapshot; lifecycle fixture tests every command/state boundary | Ready |
-| Control one active agent | Lease payload -> revoke/replace events -> snapshot token history -> stale-owner rejection; lease tests cover every transfer and expiry edge | Ready |
-| Bind a clean-room review | Manifest and validated external inputs -> evidence validator -> accepted-review value/event -> exact review snapshot; review-binding tests cover every substituted or stale input | Ready |
+| Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
+| Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1 and 2 as failures fourteen and fifteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–3 as failures fourteen through sixteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1017,6 +1079,12 @@ Test scenarios are prescriptive:
   Learn integration, and merge repair, assert every intermediate state/revision/digest, prove
   handoff-only events leave lease/token bytes unchanged, prove the explicit lease event is the sole
   mutation, and reject the stale owner after revocation.
+  For pause and cancellation, cover every listed source state with the required no-lease variant
+  and every lease-bearing state with the matching lease variant; reject the opposite variant,
+  replay the exact interruption effect, and compare workspace, evidence, revoked lease, and both
+  token counters byte-for-byte. Resume proves null active lease and preserved counters. Reconcile a
+  conflict in a lease-free state and with both work and integration leases, then replay and reject
+  each stale owner.
 - `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
@@ -1025,6 +1093,10 @@ Test scenarios are prescriptive:
   unsorted/duplicate/oversized collections, field mismatches between manifest, attestation, and
   derived evidence, author/reviser/reviewer session collisions, inherited reviewer context, and a
   high-risk unavailable alternative without the committed limitation artifact.
+  Require at least one independently verified author; derive all participant claims from the
+  trusted complete inventory; cover zero revisers with a complete empty trusted set; and reject an
+  empty author set, omitted observed reviser, self-review by omission, substituted subject/path or
+  digest, incomplete inventory digest, and manifest-only participant claims.
 - `freshness.test.ts`: exact approval; absent, denied, malformed, incomparable, wrong issue/action,
   wrong commit/digest, changed plan; exact gate, absent/failed/stale gate, unrelated gate preserved.
 - `gates.test.ts`: sorted unique values, duplicate rejection, replace one gate, preserve others.
@@ -1033,7 +1105,7 @@ Test scenarios are prescriptive:
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1 and 2 as failures fourteen and fifteen, and prove another plan commit in the same split lineage retains fifteen
+  rounds 1–3 as failures fourteen through sixteen, and prove another plan commit in the same split lineage retains sixteen
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
@@ -1131,3 +1203,10 @@ transition scopes with the exhaustive matrix; specified every review participant
 attestation, manifest, validated-evidence, validator-input, and result field; defined the exact
 domain-separated event-digest equation; and assigned lease mutation to one explicit event at every
 intermediate step with fixed replay fixtures.
+
+Round-3 replanning note (2026-08-04): Stopped review after U2A's third failed verdict and preserved
+lifetime failure sixteen. The whole-plan audit kept the reduced scope and repaired its common cause:
+pause/cancel now use discriminated lease targets and complete interruption effects; resume has a
+distinct no-lease effect; reconciliation records nullable complete revocation and token history;
+and trusted participant inventory independently produces every author, reviser, reviewer, context,
+and attestation fact consumed by review validation. Updated all living sections and replay tests.
