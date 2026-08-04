@@ -8,3 +8,5 @@ This directory records repeatable operational evidence and provider capability b
   native issue graph, GitHub projection, review, merge, and U2 handoff process.
 - [Provider capability baseline](./provider-capability-baseline.md) records tested Claude Code and
   Codex CLI capabilities.
+- [U2 orchestrator reset handoff](./2026-08-04-u2-orchestrator-handoff.md) records the durable U2A
+  and U2B split, pending guarded graph update, and exact resume sequence.
