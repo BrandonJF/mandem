@@ -67,3 +67,6 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   projection-rebuild test revision to a fresh reviewer and sole output path.
 - [U2 clean-room round 13 reviewer output](./2026-08-04-u2-clean-room-round-13-reviewer-output.md)
   preserves the reviewer's exact two-P1 verdict as the authoritative round-13 artifact.
+- [U2A clean-room round 1 prompt](./2026-08-04-u2a-clean-room-round-1-prompt.md) binds the split,
+  implementation-ready work-control plan, current `PLANS.md`, fresh reviewer identity, challenge
+  lens, and sole reviewer output path.
