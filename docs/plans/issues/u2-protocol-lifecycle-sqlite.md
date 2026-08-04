@@ -380,6 +380,138 @@ Every row rejects an untrusted principal, wrong role, invalid source state, acti
 
 `complete-checkpoint` is a protocol-v1 state-preserving command available whenever one outbox item is pending. Only a trusted checkpoint-writer principal with `complete-portable-checkpoint` scope may submit it. The command requires the pending checkpoint UUID, originating event UUID, immutable payload digest, external destination identity, and read-back evidence digest. Pending plus matching absent-or-identical external state emits one checkpoint-verified event and updates the outbox and checkpoint projection; a same-key retry returns the stored completion result. Already verified plus identical evidence is an idempotent success. Wrong identity, payload, destination, stale writer session, or conflicting evidence returns `CHECKPOINT_CONFLICT`, changes no prior evidence, and permits only `reconcile-sources` or `ask-operator`. No lifecycle successor becomes eligible until the verified projection is committed.
 
+`record-process-finding` is a protocol-v1 state-preserving command in every nonterminal phase. A trusted operator, phase agent, worker, reviewer, or control-plane principal may submit it with `record-process-finding` scope. Its payload carries a caller-generated finding UUID, a typed origin, the affected phase, one evidence code, artifact references, and a `deduplication_digest`. The caller computes that digest from canonical JSON containing `project_id`, `issue_id`, `origin`, `affected_phase`, `evidence_code`, and sorted artifact references. SQLite enforces one current finding per `(project_id, issue_id, deduplication_digest)`. First delivery emits `process-finding-recorded`; a duplicate digest returns the original finding ID and event without appending. Reusing the supplied finding ID with another digest returns `PROCESS_FINDING_ID_REUSED`. Evidence follows the durable limits below and never embeds prose, prompts, transcripts, or logs. The command does not change lifecycle state, but its unresolved projection blocks every phase-completion command. Plan, Work, Review, and Learn tests must each prove first delivery, duplicate delivery under another idempotency key, and blocking until disposition.
+
+### Protocol v1 Serialized Interface
+
+These definitions are prescriptive. Implementation may split them across the named files, but it may not rename fields, widen a union, add optional data, or export an infrastructure type without a protocol-version change.
+
+    type Uuid = string;
+    type Sha256 = string;
+    type GitSha = string;
+    type UtcTimestamp = string;
+    type RepoPath = string;
+
+    interface CommandEnvelopeV1 {
+      protocol_version: 1;
+      command_id: Uuid;
+      idempotency_key: Uuid;
+      project_id: Uuid;
+      issue_id: Uuid;
+      correlation_id: Uuid;
+      causation_id: Uuid | null;
+      occurred_at: UtcTimestamp;
+      requested_actor: ActorAttributionV1;
+      payload: CommandPayloadV1;
+    }
+
+    interface ActorAttributionV1 {
+      actor_id: Uuid;
+      role: "operator" | "phase-agent" | "worker" | "reviewer" | "control-plane" | "checkpoint-writer";
+      session_id: Uuid;
+      authority_scopes: AuthorityScopeV1[];
+    }
+
+    interface ArtifactReferenceV1 {
+      kind: "issue-ref" | "plan" | "review-prompt" | "review-output" | "approval" | "commit" | "pull-request" | "check" | "handoff" | "learn" | "process-contract";
+      path: RepoPath | null;
+      commit: GitSha | null;
+      digest: Sha256;
+      provider: string | null;
+      external_id: string | null;
+    }
+
+`AuthorityScopeV1`, `LifecycleStateV1`, `PhaseV1`, `ProcessFindingOriginV1`, `ProcessFindingDispositionV1`, `NextActionV1`, `ErrorCodeV1`, `CommandKindV1`, and `EventKindV1` are closed string unions generated from checked catalogs. Parsers reject unknown values. The command payload union uses `kind` as its discriminator and contains exactly these variants:
+
+| `kind` | Required variant fields beyond `kind` |
+| --- | --- |
+| `submit-plan-review` | `plan`, `governing_contract`, `planning_pull_request`, `review_manifest`, `self_check` |
+| `reject-plan-review` | `review_session_id`, `plan`, `review_output`, `blocker_codes` |
+| `accept-plan-review` | `review_session_id`, `plan`, `governing_contract`, `review_output`, `verdict: "executor-safe"`, `reviewer_provenance` |
+| `record-plan-decision` | `decision: "denied"`, `approval` |
+| `queue-approved-plan` | `approval`, `plan`, `review_output` |
+| `acquire-work-lease` | `worker_id`, `worker_session_id`, `workspace_id`, `expires_at` |
+| `submit-work-handoff` | `lease_id`, `fencing_token`, `iteration_commit`, `pull_request`, `validation_evidence` |
+| `record-review-findings` | `review_session_id`, `review_output`, `reviewed_head`, `repair_worker_id`, `repair_session_id`, `repair_lease_expires_at` |
+| `accept-review` | `review_session_id`, `review_output`, `pull_request`, `reviewed_head`, `verdict: "clean"` |
+| `invalidate-review` | `review_session_id`, `changed_artifacts` |
+| `accept-learn` | `learn_session_id`, `learn_handoff`, `integration_owner_id`, `integration_session_id`, `integration_lease_expires_at` |
+| `return-for-repair` | `lease_id`, `fencing_token`, `provider_evidence`, `repair_worker_id`, `repair_session_id`, `repair_lease_expires_at` |
+| `record-exact-merge` | `lease_id`, `fencing_token`, `approved_head`, `provider_evidence`, `merge_sha` |
+| `record-verification-success` | `merge_sha`, `verification_evidence` |
+| `record-verification-failure` | `merge_sha`, `verification_evidence`, `failure_code` |
+| `resume-planning` | `resolution_code`, `resolution_artifacts` |
+| `resume-queued` | `resolution_code`, `resolution_artifacts`, `approval` |
+| `pause-work` | `reason_code`, `workspace`, `lease_id`, `fencing_token` |
+| `resume-work` | `workspace`, `reconciliation_evidence` |
+| `cancel-work` | `reason_code`, `workspace`, `lease_id`, `fencing_token` |
+| `record-reconciliation-conflict` | `conflict_code`, `source_evidence` |
+| `complete-checkpoint` | `checkpoint_id`, `originating_event_id`, `payload_digest`, `destination`, `read_back_digest` |
+| `record-process-finding` | `finding_id`, `origin`, `affected_phase`, `evidence_code`, `evidence_artifacts`, `deduplication_digest` |
+| `dispose-process-finding` | `finding_id`, `disposition`, `repair_artifacts`, `reason_code` |
+| `supersede-process-finding-disposition` | `finding_id`, `prior_disposition_event_id`, `disposition`, `repair_artifacts`, `reason_code` |
+
+Every artifact-valued field is `ArtifactReferenceV1`; every evidence-valued field is a nonempty bounded array of `ArtifactReferenceV1`. `blocker_codes` is a nonempty bounded array of catalog codes. `reviewer_provenance` is a closed object with `reviewer_session_id`, `author_session_ids`, `provider`, `model`, `received_authoring_context`, `wrote_only_manifest_output`, and `challenge_lenses`. Lease fencing tokens are decimal strings that parse to positive 64-bit integers. Destination is a closed object with `kind: "issue-ref" | "exec-plan"`, `identity`, and `path`.
+
+Successful policy emits one or more event envelopes:
+
+    interface EventEnvelopeV1 {
+      protocol_version: 1;
+      event_id: Uuid;
+      project_id: Uuid;
+      issue_id: Uuid;
+      sequence: string;
+      correlation_id: Uuid;
+      causation_id: Uuid;
+      command_id: Uuid;
+      occurred_at: UtcTimestamp;
+      actor: ActorAttributionV1;
+      payload: EventPayloadV1;
+    }
+
+`EventPayloadV1` uses `kind` as its discriminator. Each successful lifecycle command emits the past-tense event named by its command (`plan-review-submitted`, `plan-review-rejected`, `plan-review-accepted`, `plan-decision-recorded`, `approved-plan-queued`, `work-lease-acquired`, `work-handoff-submitted`, `review-findings-recorded`, `review-accepted`, `review-invalidated`, `learn-accepted`, `work-returned-for-repair`, `exact-merge-recorded`, `verification-succeeded`, `verification-failed`, `planning-resumed`, `queue-resumed`, `work-paused`, `work-resumed`, `work-cancelled`, or `reconciliation-conflict-recorded`). Its data repeats the command's governed references plus `from_state` and `to_state`. Lease-changing events also require `lease_id`, `session_id`, `fencing_token`, and `expires_at` or `revoked_at`. Portable transitions also emit `portable-checkpoint-requested` with `checkpoint_id`, `originating_event_id`, `payload_digest`, and `destination`. The three state-preserving families use these exact forms:
+
+    type StatePreservingEventPayloadV1 =
+      | { kind: "portable-checkpoint-verified"; checkpoint_id: Uuid; originating_event_id: Uuid; payload_digest: Sha256; destination: CheckpointDestinationV1; read_back_digest: Sha256 }
+      | { kind: "process-finding-recorded"; finding_id: Uuid; origin: ProcessFindingOriginV1; affected_phase: PhaseV1; evidence_code: string; evidence_artifacts: ArtifactReferenceV1[]; deduplication_digest: Sha256 }
+      | { kind: "process-finding-disposition-recorded"; finding_id: Uuid; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: string }
+      | { kind: "process-finding-disposition-superseded"; finding_id: Uuid; prior_disposition_event_id: Uuid; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: string };
+
+Results and errors have one wire shape each:
+
+    type CommandResultV1 =
+      | { protocol_version: 1; status: "completed"; command_id: Uuid; correlation_id: Uuid; issue_id: Uuid; event_ids: Uuid[]; current_state: LifecycleStateV1; pending_checkpoint_id: null; duplicate_of_event_id: Uuid | null; next_actions: NextActionV1[] }
+      | { protocol_version: 1; status: "accepted"; command_id: Uuid; correlation_id: Uuid; issue_id: Uuid; event_ids: Uuid[]; current_state: LifecycleStateV1; pending_checkpoint_id: Uuid; duplicate_of_event_id: Uuid | null; next_actions: NextActionV1[] }
+      | { protocol_version: 1; status: "rejected"; command_id: Uuid | null; correlation_id: Uuid | null; issue_id: Uuid | null; error: ProtocolErrorV1 };
+
+    interface ProtocolErrorV1 {
+      code: ErrorCodeV1;
+      retryable: boolean;
+      evidence: ArtifactReferenceV1[];
+      next_actions: NextActionV1[];
+    }
+
+A command receipt stores `idempotency_key`, `command_kind`, `canonical_payload_digest`, `correlation_id`, `result_bytes`, and `created_at`. A checkpoint record stores `checkpoint_id`, `originating_event_id`, `payload_digest`, `destination`, `state: "pending" | "verified" | "conflict"`, `read_back_digest`, and the creating and verifying sequence values. Optional database columns represent absence only for fields that the wire schema marks nullable.
+
+Canonical bytes are UTF-8 JSON with lexicographically sorted object keys at every depth, array order preserved, no insignificant whitespace, LF only, no byte-order mark, and one trailing LF. Parsers reject duplicate keys, unknown keys, non-integer or unsafe JSON numbers, lone surrogates, non-NFC strings, and noncanonical timestamps, UUIDs, hashes, and paths. Serializers emit nullable fields as `null` and never omit them. Digests cover the canonical bytes including the trailing LF. Receipt lookup occurs only after envelope validation, canonicalization, and trusted-principal comparison.
+
+The public ports use these signatures:
+
+    interface EventStorePort {
+      loadIssue(projectId: Uuid, issueId: Uuid): Promise<IssueLedgerSnapshotV1>;
+      findReceipt(idempotencyKey: Uuid): Promise<CommandReceiptV1 | null>;
+      commitCommand(input: AtomicCommandCommitV1): Promise<CommandResultV1>;
+      readEvents(projectId: Uuid, issueId: Uuid, afterSequence: string): AsyncIterable<EventEnvelopeV1>;
+      replaceProjections(input: VerifiedProjectionReplacementV1): Promise<void>;
+    }
+    interface PortableCheckpointPort { observe(destination: CheckpointDestinationV1): Promise<ObservedCheckpointV1>; writeIfAbsent(checkpoint: PendingCheckpointV1): Promise<ObservedCheckpointV1>; }
+    interface PlanContentPort { readExact(commit: GitSha, path: RepoPath): Promise<Uint8Array>; }
+    interface CommandPrincipalPort { requirePrincipal(): Promise<TrustedPrincipalV1>; }
+    interface DatabaseSupervisorPort { openShared<T>(work: () => Promise<T>): Promise<T>; openExclusive<T>(work: () => Promise<T>): Promise<T>; }
+    interface ClockPort { now(): UtcTimestamp; }
+
+`src/modules/runtime/index.ts` exports the envelopes, closed catalogs, parsers, serializers, digest functions, receipt/checkpoint values, and all six port interfaces through the domain and application barrels. It does not export SQLite, filesystem, locking, migration, or composition implementations. `src/modules/execution/index.ts` exports the lifecycle catalog, reducer, freshness and lease values, routed-item policy, and command/checkpoint/replay use cases through its domain and application barrels. Its infrastructure barrel remains empty, and consumers never import either module through a subpath.
+
 ### Protocol and Durable Data Limits
 
 Protocol v1 applies these limits before canonicalization, hashing, receipt lookup, or policy. UTF-8 byte counts include encoded content. Parsers reject excessive nesting or collection sizes without partially materializing durable values. Infrastructure rechecks the same validated value before persistence.
@@ -423,6 +555,14 @@ The adapter must use one write transaction for a command receipt, every derived 
 
 Linux v1 stores the active database at `.mandem/runtime/mandem.sqlite`, the advisory lock at `.mandem/runtime/mandem.sqlite.migrate.lock`, and immutable backups below `.mandem/runtime/backups/`. The runtime directory and backup directory are created with mode `0700`; database, lock, backup, WAL, and shared-memory files are restricted to the Mandem service account with mode `0600` where SQLite and the host permit it. U3 must run the container and resident process with a configured shared project-service identity that can access this project-local runtime directory. Other local users and untrusted processes are outside the supported trust boundary; detected ownership or permission drift stops opening with `DATABASE_PERMISSIONS_INVALID`.
 
+The executor must use Bun 1.3.14's API exactly as follows. `database.ts` imports `Database` from `bun:sqlite` and opens writable files with `new Database(path, { create: true, strict: true, safeIntegers: true })`. It immediately runs `PRAGMA foreign_keys = ON`, `PRAGMA journal_mode = WAL`, and `PRAGMA busy_timeout = 5000`, then reads each value back and rejects the connection unless foreign keys equal `1`, journal mode equals `wal`, and busy timeout equals `5000`. Read-only backup validation uses `new Database(path, { readonly: true, strict: true, safeIntegers: true })`. The adapter prepares SQL with `database.query(sql)` and calls the returned statement's `get`, `all`, or `run` method with named parameters. Strict mode must reject missing or unknown bindings; safe-integer tests must round-trip the largest supported sequence and fencing values without a JavaScript-number conversion.
+
+Create each write unit with `const transaction = database.transaction(callback)` and invoke `transaction.immediate(input)`. The callback checks or creates the receipt, allocates sequences, inserts events and any outbox row, updates projections and the replay anchor, and inserts the exact result bytes. It performs no filesystem, Git, provider, or network I/O. Throwing from any step rolls the whole unit back. Read-only replay may use a deferred transaction. Migration uses one immediate transaction only after the backup passes separate validation. Code must close every prepared statement and database handle in `finally` blocks.
+
+WAL is a runtime concurrency mode, not a backup format. All database users and the `-wal` and `-shm` sidecars stay on one host. The shared supervisor lock admits ordinary readers and the single SQLite writer; the exclusive supervisor lock admits migration and backup only after every ordinary connection closes. `PRAGMA wal_checkpoint(FULL)` may return busy, so the migration service retries only within the five-second startup budget and otherwise returns `DATABASE_BUSY` without creating a candidate backup. It then calls `database.serialize()` while exclusivity still holds. The resulting `Uint8Array`, not a filesystem copy of the live database or its sidecars, is the candidate backup image.
+
+The filesystem port creates a same-directory temporary file with exclusive creation and mode `0600`, writes every serialized byte, syncs the file, closes it, computes SHA-256 from bytes read back from that file, renames it atomically to `mandem-v<from>-<sha256>.sqlite`, and syncs the backup directory. The migration service opens that final path through a separate read-only `Database`, verifies `PRAGMA integrity_check` returns only `ok`, verifies `PRAGMA foreign_key_check` returns no rows, and compares `user_version`, every migration version and checksum, the ledger anchor, and the file digest with the active source. It never treats successful serialization or rename alone as proof.
+
 The migration service follows this exact order:
 
 1. Acquire exclusive nonblocking util-linux `flock` on the lock path through an infrastructure database-supervisor port. Missing `flock` or contention returns `MIGRATION_LOCK_UNAVAILABLE`; normal runtime opening waits or retries only within the configured bounded startup policy.
@@ -437,6 +577,8 @@ The migration service follows this exact order:
 Every failure stage closes connections, releases the advisory lock, preserves the active or rejected database and verified backup, and exposes one recovery action. Tests inject failure before backup rename, after backup validation, during each migration, during pre-commit validation, after commit, during reopen validation, and during restoration.
 
 Every ordinary event-store process must enter through the same database-supervisor port. It acquires a shared `flock` before opening SQLite and retains the supervisor handle for the complete connection lifetime. Migration requires the exclusive lock and therefore cannot start while a writer connection exists; a writer cannot open while migration holds the lock. The supervisor releases the lock automatically when its owning process exits. U2 implements and tests the lock protocol with disposable subprocess workers. U3 must wrap the long-running server startup with this same supervisor rather than opening the database directly.
+
+Restoration also runs under the exclusive lock. The service closes every handle, renames the rejected active database to a unique preserved recovery path, writes and syncs the verified backup bytes to a new same-directory temporary active file, atomically renames that file to the active path, syncs the runtime directory, and validates the restored database through a fresh connection. It never deletes the rejected database, verified backup, or sidecars during this operation. Failure to restore leaves startup stopped with both artifacts preserved and the exact failed step in bounded external evidence.
 
 ### Protocol Error Catalog
 
@@ -471,7 +613,7 @@ Each error includes one stable code, retryability, issue and correlation IDs whe
 
 ### External Research
 
-Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supports strict parameter binding, safe 64-bit integers, explicit transactions, serialization, and WAL configuration. SQLite's official WAL documentation requires all WAL users to remain on one host and notes the extra checkpoint operation and possible `SQLITE_BUSY` results. SQLite's PRAGMA documentation supports explicit foreign-key enforcement, busy timeout, `user_version`, and integrity checks. These constraints support KTD10 and KTD11; they do not change the epic's selected SQLite/WAL architecture.
+The links under Artifacts and Notes preserve the provenance for the embedded API and database rules. An executor need not open them to implement this plan. If the pinned Bun or SQLite behavior differs from the contract in a focused test, stop and record the evidence instead of silently redesigning the adapter.
 
 ---
 
@@ -493,6 +635,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   4. Error envelopes preserve retryability and permitted next actions without presentation formatting.
   5. Credential, transcript, prompt, and unbounded log fields cannot be represented by the closed event types.
 - **Verification:** The protocol suite proves exact serialized fixtures and the public runtime barrel exports no infrastructure.
+- **Concrete red/green proof:** From the repository root, first create `protocol.test.ts` tests named `parses every protocol-v1 command fixture`, `rejects every unknown protocol field`, and `exports only the runtime public contract`, plus `serialization.test.ts` tests named `emits canonical bytes for every envelope` and `binds digest to command kind and payload`. Run `bunx vitest run src/modules/runtime/domain/protocol.test.ts src/modules/runtime/domain/serialization.test.ts`; it must fail because `parseCommandEnvelopeV1`, `serializeCommandEnvelopeV1`, `serializeCommandResultV1`, `serializeEventEnvelopeV1`, and `digestCanonicalValueV1` do not exist. Add the listed runtime files, closed catalogs, schemas, fixtures, functions, and barrel exports. Run the same command again; all named tests must pass with no snapshot update. Then run `bun run architecture:check` and confirm no runtime infrastructure export appears.
 
 ### Milestone 2. Implement lifecycle, lease, handoff, freshness, and disposition policy
 
@@ -518,6 +661,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   12. `Done` rejects zero, duplicate-current, unresolved, or conflicting dispositions and accepts exactly one current terminal disposition per routed item.
   13. The transition-fixture inventory has exact row and deterministic-order parity with the catalog.
 - **Verification:** A pure deterministic suite covers every transition row, guard category, lease boundary, and terminal-state invariant without SQLite or I/O.
+- **Concrete red/green proof:** First add the exact catalog rows as data fixtures in `lifecycle.test.ts`, then add tests named `covers every transition and rejection boundary`, `blocks phase completion on unresolved process findings`, and `keeps process finding creation idempotent in every phase`. Add focused boundary tests to `leases.test.ts`, `freshness.test.ts`, `handoffs.test.ts`, and `routed-items.test.ts` before their implementations. Run `bunx vitest run src/modules/execution/domain`; it must fail on missing `evaluateLifecycleCommand`, `acquireLease`, `evaluateFreshness`, `acceptHandoff`, `recordProcessFinding`, and `disposeProcessFinding` exports. Implement those pure functions and the `execution` barrels in the file order above. Rerun the same command until all named tests pass, then run `bun run architecture:check` to prove the one-way `execution -> runtime` dependency.
 
 ### Milestone 3. Add command handling, event-store ports, and checkpoint orchestration
 
@@ -538,6 +682,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   7. Replay rejects an unknown event version, malformed canonical payload, digest mismatch, and sequence gap.
   8. Replay from a valid stream yields byte-equivalent staging projections, matches the append-ledger anchor, atomically replaces live lifecycle, lease, gate, routed-item, and checkpoint projections, and exposes one next permitted action.
 - **Verification:** Port-contract tests prove orchestration and recovery independently of a database or Git implementation.
+- **Concrete red/green proof:** Create the six port interfaces and their in-memory fakes first. Then add tests named `returns stored bytes after a lost response`, `blocks a successor while checkpoint evidence is pending`, `observes before writing a checkpoint`, `reads plan bytes from the approved commit`, and `replaces projections only after anchor verification`. Run `bunx vitest run src/modules/execution/application/use-cases`; it must fail because `executeCommand`, `completeCheckpoint`, and `rebuildProjections` are absent. Implement those named exports, re-export them through `src/modules/execution/application/index.ts` and the root barrel, and rerun the command until every test passes. Run `bun run typecheck` afterward to prove each fake satisfies the public port without a cast.
 
 ### Milestone 4. Implement the SQLite ledger, migrations, receipts, outbox, and projections
 
@@ -547,7 +692,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
 - **Files:** `src/modules/runtime/infrastructure/sqlite/database.ts`, `src/modules/runtime/infrastructure/sqlite/schema.ts`, `src/modules/runtime/infrastructure/sqlite/migrations.ts`, `src/modules/runtime/infrastructure/sqlite/event-store.ts`, `src/modules/runtime/infrastructure/sqlite/projections.ts`, `src/modules/runtime/infrastructure/sqlite/backup.ts`, `src/modules/runtime/infrastructure/services/flock-database-supervisor.ts`, `src/modules/runtime/infrastructure/repositories/runtime-files.ts`, `src/modules/runtime/infrastructure/sqlite/index.ts`, `src/modules/runtime/infrastructure/index.ts`, `src/modules/runtime/tests/sqlite/event-store.test.ts`, `src/modules/runtime/tests/sqlite/migrations.test.ts`, `src/modules/runtime/tests/sqlite/replay.test.ts`, `src/modules/runtime/tests/sqlite/database-supervisor.test.ts`, `src/modules/runtime/tests/fixtures/database-lock-worker.ts`, `src/modules/runtime/api/composition.ts`.
 - **Approach:** Open strict, safe-integer connections; set foreign keys, WAL, and busy timeout; prepare statements once per adapter; and use one immediate write transaction per command. Allocate per-issue sequences inside that transaction. Use the idempotency key as the only receipt uniqueness key. Hold the cross-process migration lock before reading version or snapshotting; use a SQLite-consistent backup mechanism, validate it in a separate connection, compare authoritative applied-history checksums with `user_version`, and run transactional validation before commit. Rebuild into staging projections and swap only after the append-ledger checksum matches.
 - **Execution note:** Start with real temporary database tests that fail against an unimplemented port. Do not substitute mocks for transaction, WAL, concurrency, migration, or replay proof.
-- **Patterns to follow:** The runtime port contract from Milestone 3 and Bun 1.3.14's official `bun:sqlite` transaction and WAL behavior.
+- **Patterns to follow:** Use the runtime port contract from Milestone 3 and the embedded Bun transaction, WAL, backup, and restoration instructions in this plan. External links preserve provenance only.
 - **Test scenarios:**
   1. A new temporary database opens with the expected schema version, foreign keys enabled, WAL active, strict binding, and safe integer round-trips.
   2. First delivery atomically writes receipt, ordered events, projections, outbox, and stored result; an injected failure rolls back every record.
@@ -560,6 +705,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
   9. Closing the final Linux connection leaves a recoverable database and does not require WAL sidecars to reconstruct state.
   10. Oversized, free-text, personal, credential-like, path-content, transcript, prompt, log, and unknown nested fields are rejected before persistence. After storage-integrity failure, attempted recovery appends nothing to the untrusted ledger.
 - **Verification:** Real temporary-file suites prove atomicity, concurrency, reopen retry, backup-first migration, integrity checks, and projection rebuild under Bun 1.3.14.
+- **Concrete red/green proof:** Add `event-store.test.ts`, `migrations.test.ts`, `replay.test.ts`, and `database-supervisor.test.ts` before adapter code. Name their first tests `commits receipt events projections and outbox atomically`, `restores a separately verified backup after failed reopen`, `rebuilds byte-equivalent projections from the ledger`, and `serializes migration against live writers`. Run `bunx vitest run src/modules/runtime/tests/sqlite`; it must fail because `openRuntimeDatabase`, `SqliteEventStore`, `migrateRuntimeDatabase`, `rebuildSqliteProjections`, and `FlockDatabaseSupervisor` do not exist. Implement `database.ts`, `schema.ts`, `migrations.ts`, `event-store.ts`, `projections.ts`, `backup.ts`, the supervisor, filesystem repository, and composition in that order. Rerun the focused command until all temporary-file and subprocess tests pass. Confirm each test removes its own temporary directory only after every handle closes; preserve injected-failure artifacts until assertions finish.
 
 ### Milestone 5. Document the control protocol and complete repository integration
 
@@ -572,6 +718,7 @@ Bun's official SQLite documentation confirms that `bun:sqlite` is built in, supp
 - **Patterns to follow:** `docs/architecture/architecture-standard-v1.md`, `docs/architecture/mandem-system.md`, and the indexed documentation rules established by U1A.
 - **Test scenarios:** Test expectation: none for prose itself because repository documentation and vocabulary checks provide deterministic validation. Existing protocol and integration tests remain the behavioral evidence.
 - **Verification:** `docs:audit`, authored-source checks, architecture checks, typecheck, lint, the full test suite, and the composite repository gate pass from the implementation commit.
+- **Concrete completion proof:** Draft `docs/architecture/control-protocol.md` from the implemented catalogs and public types, then update each listed README and plan index. Run `bun run docs:audit`, `bun run authored-files:check`, `bun run architecture:check`, `bun run typecheck`, `bun run lint`, and `bun run test:run` from the repository root; each command must exit zero. Commit all implementation and documentation, confirm `git status --short` is empty, and run `bun run check` from that clean commit. Record the commit SHA and gate result in Progress. If any contract example differs from implemented public types, fix the implementation or return to planning; do not document a second protocol.
 
 ---
 
@@ -627,6 +774,7 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - [x] (2026-08-03) Bound clean-room freshness to both the exact plan and current `PLANS.md`, and required reviewers to prove complete governing-contract conformance before supplemental lenses.
 - [x] (2026-08-03) Required reviewers to author one manifest-bound output file directly, preserved its exact digest, and separated optional synthesis from the authoritative review artifact.
 - [x] (2026-08-03) Required a fresh session that did not author the artifact or receive its authoring context, gave it challenge-oriented instructions, and used another provider or model for high-risk work when available.
+- [x] (2026-08-04) Repaired the first clean-room round's four P1 findings by specifying every protocol wire shape and public port, adding the state-preserving process-finding command, giving each milestone exact red/green commands, and embedding the Bun/SQLite execution contract.
 - [ ] Run clean-room review of the exact plan revision, address every finding, and re-review until executor-safe.
 - [ ] State the immutable `execute-plan` approval target and obtain standalone operator `APPROVED` or `DENIED`.
 - [ ] Record and push the exact approval in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`; set `execution_authorized: true` only after verified approval.
@@ -691,6 +839,9 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - Decision: Reject verdicts from artifact authors and require a fresh reviewer to seek counterexamples.
   Rationale: Authors, including agent systems, tend to accept their own outputs and preserve the same hidden assumptions during self-review. Another provider or model adds a further independent view for high-risk work when available.
   Date/Author: 2026-08-03 / Brandon John-Freso and Codex
+- Decision: Put executable protocol, process-finding, milestone, and SQLite details in the plan instead of requiring implementation-time research.
+  Rationale: A novice executor must be able to act from the ExecPlan alone. External documentation may explain provenance, but it cannot carry required decisions that a reviewer cannot verify in the bound plan.
+  Date/Author: 2026-08-04 / Codex, responding to clean-room review
 
 ---
 
@@ -712,7 +863,7 @@ During implementation, use temporary directories for SQLite integration tests an
 
 The exact consumed dependency commits are listed under Dependency Snapshot. Implementation evidence belongs in this plan's living sections, focused test transcripts, commits, and the pull request. Do not paste raw logs or provider transcripts into this document.
 
-Primary external references for the implementation are the official [Bun SQLite documentation](https://bun.com/docs/runtime/sqlite), [SQLite WAL documentation](https://sqlite.org/wal.html), [SQLite transaction documentation](https://sqlite.org/lang_transaction.html), and [SQLite PRAGMA documentation](https://sqlite.org/pragma.html). The plan embeds the decisions derived from them so execution does not depend on rediscovering the design.
+Optional provenance links are the official [Bun SQLite documentation](https://bun.com/docs/runtime/sqlite), [SQLite WAL documentation](https://sqlite.org/wal.html), [SQLite transaction documentation](https://sqlite.org/lang_transaction.html), and [SQLite PRAGMA documentation](https://sqlite.org/pragma.html). The plan states every required implementation choice; these links do not carry hidden instructions.
 
 Revision note (2026-07-31): Replaced the dependency scaffold with a self-contained U2 ExecPlan after U1, U1C, U1A, and WI1 merged. The revision resolves protocol identity, module ownership, approval reuse, lifecycle guards, lease fencing, idempotency, portable checkpoint recovery, SQLite transactions, replay, migrations, verification, and downstream boundaries. A confidence pass then corrected the module dependency direction, made command receipts immutable, required observe-before-write checkpoint completion, locked and validated migrations safely, anchored replay outside disposable projections, and separated safe source conflicts from storage corruption. It does not authorize implementation.
 
@@ -727,3 +878,5 @@ Governing-review-contract revision note (2026-08-03): Bound each clean-room revi
 Lossless-review-artifact revision note (2026-08-03): Replaced terminal-return review authority with one manifest-bound reviewer output path. Mandem validates that the reviewer changed only that file, hashes and commits its exact bytes, and requires any orchestrator synthesis to remain separate, source-linked, and explicitly derived.
 
 Independent-review-control revision note (2026-08-03): Required a fresh reviewer that did not author or revise the artifact and did not receive the authoring conversation. Manifests name all involved sessions and providers, prompts require active challenge and counterexamples, Mandem rejects self-review, and higher-risk work uses another provider or model when available.
+
+Executor-safety revision note (2026-08-04): Repaired the first review round without altering its exact artifact. Added prescriptive protocol-v1 envelopes, variants, events, results, errors, receipts, checkpoints, ports, and exports; defined deterministic process-finding creation and deduplication; added exact red/green work for every milestone; and embedded Bun/SQLite connection, transaction, WAL, backup, validation, and restoration behavior. This revision requires a new clean-room manifest and verdict before approval.
