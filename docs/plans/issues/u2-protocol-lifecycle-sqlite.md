@@ -375,12 +375,17 @@ Every row below is part of protocol v1. `portable` means the transition commits 
 | `Paused` | `resume-work` | operator | No active mutation lease | Reconciliation proves workspace and approval/gates remain usable | `Queued` | Work resumed for fresh dispatch; accepted | portable resume checkpoint |
 | `NeedsPlanning`, `NeedsApproval`, `Queued`, `Working`, `Reviewing`, or `Learning` | `cancel-work` | operator | Revoke active lease and preserve workspace | Cancellation allowed only before exact merge attempt | `Cancelled` | Work cancelled and lease revoked; accepted | portable cancellation checkpoint |
 | Any nonterminal state except integrity-failed storage | `record-reconciliation-conflict` | control plane | Revoke unsafe mutation lease | Ledger is valid; bounded source evidence is ambiguous or authority-sensitive | `NeedsYou` | Conflict recorded; accepted | portable incident checkpoint |
+| Any nonterminal state | `record-process-finding` | operator, phase agent, worker, reviewer, or control plane | State-preserving; an active lease neither grants nor blocks authority | `record-process-finding` scope; typed origin matches actor or observed event; affected phase exists; bounded evidence tuple computes a valid finding ID | unchanged | `process-finding-recorded`; completed, or duplicate completed with original event ID | local |
+| Any nonterminal state | `dispose-process-finding` | operator or control plane; current phase agent only for `execution-deviation` or `no-reusable-change` | State-preserving; no lease requirement | Existing unresolved finding; one of five dispositions; issue-, product-, or operating-contract gaps link the required repair artifact | unchanged unless changed approved intent, then `NeedsPlanning` | `process-finding-disposition-recorded`; completed | portable when intent changes, otherwise local |
+| Any nonterminal state | `supersede-process-finding-disposition` | operator or control plane | State-preserving; no lease requirement | Existing current disposition, exact prior event ID, different valid disposition, reason code, and required repair artifacts | unchanged unless changed approved intent, then `NeedsPlanning` | `process-finding-disposition-superseded`; completed | portable when intent changes, otherwise local |
 
 Every row rejects an untrusted principal, wrong role, invalid source state, active or missing lease contrary to the rule, stale fencing token, absent or stale named input, unresolved required disposition, or pending checkpoint. Errors name the failed guard and one of these next actions: refresh plan approval, refresh gate, complete checkpoint, release or reacquire lease, reconcile sources, return to planning, or ask the operator. A `Merging` interruption never accepts cancel; reconciliation must observe Git and provider state and select `Working`, `Verifying`, or `NeedsYou` through the corresponding row.
 
+For process-finding creation, origin and role must match this table: an operator may submit `operator-correction`; a phase agent, worker, reviewer, or control plane may submit `agent-error` for its own session; only a reviewer may submit `review-finding`; the active phase principal or control plane may submit `interruption`; and only the control plane may submit `unexpected-delay` from clock evidence. A principal may report an observed error by another actor only through `operator-correction` or `review-finding`; it may not impersonate that actor's `agent-error`. `Plan` permits operator, phase agent, and control plane; `PlanReview` permits operator, reviewer, phase agent, and control plane; `Work` permits operator, worker, reviewer, and control plane; `Review` permits operator, reviewer, worker, and control plane; `Learn` permits operator, phase agent, reviewer, and control plane. Other nonterminal phases permit only operator and control plane. `ACTOR_ROLE_FORBIDDEN` plus `ask-operator` rejects a disallowed role or origin, and `AUTHORITY_SCOPE_MISSING` plus `ask-operator` rejects a missing scope without appending.
+
 `complete-checkpoint` is a protocol-v1 state-preserving command available whenever one outbox item is pending. Only a trusted checkpoint-writer principal with `complete-portable-checkpoint` scope may submit it. The command requires the pending checkpoint UUID, originating event UUID, immutable payload digest, external destination identity, and read-back evidence digest. Pending plus matching absent-or-identical external state emits one checkpoint-verified event and updates the outbox and checkpoint projection; a same-key retry returns the stored completion result. Already verified plus identical evidence is an idempotent success. Wrong identity, payload, destination, stale writer session, or conflicting evidence returns `CHECKPOINT_CONFLICT`, changes no prior evidence, and permits only `reconcile-sources` or `ask-operator`. No lifecycle successor becomes eligible until the verified projection is committed.
 
-`record-process-finding` is a protocol-v1 state-preserving command in every nonterminal phase. A trusted operator, phase agent, worker, reviewer, or control-plane principal may submit it with `record-process-finding` scope. Its payload carries a caller-generated finding UUID, a typed origin, the affected phase, one evidence code, artifact references, and a `deduplication_digest`. The caller computes that digest from canonical JSON containing `project_id`, `issue_id`, `origin`, `affected_phase`, `evidence_code`, and sorted artifact references. SQLite enforces one current finding per `(project_id, issue_id, deduplication_digest)`. First delivery emits `process-finding-recorded`; a duplicate digest returns the original finding ID and event without appending. Reusing the supplied finding ID with another digest returns `PROCESS_FINDING_ID_REUSED`. Evidence follows the durable limits below and never embeds prose, prompts, transcripts, or logs. The command does not change lifecycle state, but its unresolved projection blocks every phase-completion command. Plan, Work, Review, and Learn tests must each prove first delivery, duplicate delivery under another idempotency key, and blocking until disposition.
+`record-process-finding` is a protocol-v1 state-preserving command in every nonterminal phase. A trusted operator, phase agent, worker, reviewer, or control-plane principal may submit it with `record-process-finding` scope. Its payload carries a typed origin, the affected phase, one evidence code, and artifact references. The parser sorts artifact references by their canonical bytes and computes `finding_id` as the lowercase SHA-256 of canonical JSON containing exactly `protocol_version`, `project_id`, `issue_id`, `origin`, `affected_phase`, `evidence_code`, and the sorted artifact references. The client does not supply the ID. SQLite enforces `UNIQUE(project_id, issue_id, finding_id)`. First delivery emits `process-finding-recorded`; the same tuple under another idempotency key returns `completed` with the original event in `duplicate_of_event_id` and appends nothing. A request with the same origin, phase, and evidence code but different artifact bytes is a different finding rather than a conflicting duplicate. The ordinary same-key/different-command rule still returns `IDEMPOTENCY_KEY_REUSED`. Evidence follows the durable limits below and never embeds prose, prompts, transcripts, or logs. The command does not change lifecycle state, but its unresolved projection blocks every phase-completion command. Plan, Work, Review, and Learn tests must each prove first delivery, tuple deduplication, changed-evidence identity, authorization rejection, blocking until disposition, and restart replay.
 
 ### Protocol v1 Serialized Interface
 
@@ -391,6 +396,7 @@ These definitions are prescriptive. Implementation may split them across the nam
     type GitSha = string;
     type UtcTimestamp = string;
     type RepoPath = string;
+    type FindingId = Sha256;
 
     interface CommandEnvelopeV1 {
       protocol_version: 1;
@@ -421,7 +427,24 @@ These definitions are prescriptive. Implementation may split them across the nam
       external_id: string | null;
     }
 
-`AuthorityScopeV1`, `LifecycleStateV1`, `PhaseV1`, `ProcessFindingOriginV1`, `ProcessFindingDispositionV1`, `NextActionV1`, `ErrorCodeV1`, `CommandKindV1`, and `EventKindV1` are closed string unions generated from checked catalogs. Parsers reject unknown values. The command payload union uses `kind` as its discriminator and contains exactly these variants:
+The checked catalogs contain exactly these values:
+
+    type LifecycleStateV1 = "NeedsPlanning" | "PlanReview" | "NeedsApproval" | "Queued" | "Working" | "Reviewing" | "Learning" | "Merging" | "Verifying" | "NeedsYou" | "Paused" | "Cancelled" | "Done";
+    type PhaseV1 = "Plan" | "PlanReview" | "Approval" | "Queue" | "Work" | "Review" | "Learn" | "Merge" | "Verify";
+    type ProcessFindingOriginV1 = "operator-correction" | "agent-error" | "review-finding" | "interruption" | "unexpected-delay";
+    type ProcessFindingDispositionV1 = "execution-deviation" | "issue-contract-gap" | "product-contract-gap" | "operating-contract-gap" | "no-reusable-change";
+    type ProcessFindingEvidenceCodeV1 = "required-pr-missing" | "review-boundary-violated" | "governing-contract-drift" | "unauthorized-action" | "lease-or-session-error" | "checkpoint-error" | "gate-error" | "implementation-error" | "agent-interrupted" | "operator-interrupted" | "dependency-delay" | "provider-delay";
+    type ProcessFindingReasonCodeV1 = "enforcement-added" | "issue-plan-repaired" | "epic-contract-repaired" | "operating-contract-repaired" | "behavior-corrected" | "isolated-occurrence" | "superseded-by-stronger-evidence";
+    type PauseOrCancelReasonCodeV1 = "operator-request" | "dependency-blocked" | "workspace-unsafe" | "authority-revoked" | "scope-cancelled";
+    type ResolutionCodeV1 = "contract-repaired" | "authority-restored" | "source-reconciled" | "runtime-blocker-cleared";
+    type AuthorityScopeV1 = "submit-plan-review" | "decide-plan" | "dispatch-work" | "mutate-work" | "review-work" | "record-learn" | "integrate" | "verify-merge" | "pause-work" | "cancel-work" | "reconcile-sources" | "complete-portable-checkpoint" | "record-process-finding" | "dispose-process-finding";
+    type NextActionV1 = "refresh-plan-review" | "refresh-plan-approval" | "refresh-gate" | "complete-checkpoint" | "release-lease" | "reacquire-lease" | "dispose-process-finding" | "reconcile-sources" | "return-to-planning" | "retry-command" | "inspect-database" | "restore-backup" | "ask-operator";
+    type ErrorCodeV1 = "INVALID_ENVELOPE" | "UNSUPPORTED_PROTOCOL_VERSION" | "PROTOCOL_LIMIT_EXCEEDED" | "UNTRUSTED_PRINCIPAL" | "ACTOR_ATTRIBUTION_MISMATCH" | "ACTOR_ROLE_FORBIDDEN" | "AUTHORITY_SCOPE_MISSING" | "UNKNOWN_ISSUE" | "INVALID_TRANSITION" | "ARTIFACT_MISSING" | "ARTIFACT_STALE" | "APPROVAL_ABSENT" | "APPROVAL_DENIED" | "APPROVAL_STALE" | "GATE_ABSENT" | "GATE_FAILED" | "GATE_STALE" | "LEASE_HELD" | "LEASE_REQUIRED" | "LEASE_EXPIRED" | "LEASE_NON_OWNER" | "LEASE_FENCED" | "HANDOFF_INVALID" | "HANDOFF_LATE" | "PROCESS_FINDING_UNRESOLVED" | "PROCESS_FINDING_UNKNOWN" | "PROCESS_FINDING_DISPOSITION_CONFLICT" | "CHECKPOINT_PENDING" | "CHECKPOINT_CONFLICT" | "IDEMPOTENCY_KEY_REUSED" | "DATABASE_BUSY" | "DATABASE_PERMISSIONS_INVALID" | "MIGRATION_LOCK_UNAVAILABLE" | "MIGRATION_UNSUPPORTED" | "MIGRATION_FAILED" | "MIGRATION_RESTORED_FROM_BACKUP" | "EVENT_INTEGRITY_FAILED" | "PROJECTION_MISMATCH" | "RECONCILIATION_REQUIRED";
+
+    type CommandKindV1 = "submit-plan-review" | "reject-plan-review" | "accept-plan-review" | "record-plan-decision" | "queue-approved-plan" | "acquire-work-lease" | "submit-work-handoff" | "record-review-findings" | "accept-review" | "invalidate-review" | "accept-learn" | "return-for-repair" | "record-exact-merge" | "record-verification-success" | "record-verification-failure" | "resume-planning" | "resume-queued" | "pause-work" | "resume-work" | "cancel-work" | "record-reconciliation-conflict" | "complete-checkpoint" | "record-process-finding" | "dispose-process-finding" | "supersede-process-finding-disposition";
+    type EventKindV1 = "plan-review-submitted" | "plan-review-rejected" | "plan-review-accepted" | "plan-decision-recorded" | "approved-plan-queued" | "work-lease-acquired" | "work-handoff-submitted" | "review-findings-recorded" | "review-accepted" | "review-invalidated" | "learn-accepted" | "work-returned-for-repair" | "exact-merge-recorded" | "verification-succeeded" | "verification-failed" | "planning-resumed" | "queue-resumed" | "work-paused" | "work-resumed" | "work-cancelled" | "reconciliation-conflict-recorded" | "portable-checkpoint-requested" | "portable-checkpoint-verified" | "process-finding-recorded" | "process-finding-disposition-recorded" | "process-finding-disposition-superseded";
+
+Define these unions in `src/modules/runtime/domain/protocol.ts`; define lifecycle states, phases, transition rows, and process-finding catalogs in `src/modules/execution/domain/types.ts`; export them from their module root barrels. Parsers reject unknown values. The command payload union uses `kind` as its discriminator and contains exactly these variants:
 
 | `kind` | Required variant fields beyond `kind` |
 | --- | --- |
@@ -447,11 +470,25 @@ These definitions are prescriptive. Implementation may split them across the nam
 | `cancel-work` | `reason_code`, `workspace`, `lease_id`, `fencing_token` |
 | `record-reconciliation-conflict` | `conflict_code`, `source_evidence` |
 | `complete-checkpoint` | `checkpoint_id`, `originating_event_id`, `payload_digest`, `destination`, `read_back_digest` |
-| `record-process-finding` | `finding_id`, `origin`, `affected_phase`, `evidence_code`, `evidence_artifacts`, `deduplication_digest` |
+| `record-process-finding` | `origin`, `affected_phase`, `evidence_code`, `evidence_artifacts` |
 | `dispose-process-finding` | `finding_id`, `disposition`, `repair_artifacts`, `reason_code` |
 | `supersede-process-finding-disposition` | `finding_id`, `prior_disposition_event_id`, `disposition`, `repair_artifacts`, `reason_code` |
 
-Every artifact-valued field is `ArtifactReferenceV1`; every evidence-valued field is a nonempty bounded array of `ArtifactReferenceV1`. `blocker_codes` is a nonempty bounded array of catalog codes. `reviewer_provenance` is a closed object with `reviewer_session_id`, `author_session_ids`, `provider`, `model`, `received_authoring_context`, `wrote_only_manifest_output`, and `challenge_lenses`. Lease fencing tokens are decimal strings that parse to positive 64-bit integers. Destination is a closed object with `kind: "issue-ref" | "exec-plan"`, `identity`, and `path`.
+Every artifact-valued field is `ArtifactReferenceV1`; every evidence-valued field is a nonempty bounded array of `ArtifactReferenceV1`. `blocker_codes` is a nonempty bounded array of `ErrorCodeV1`. `reviewer_provenance` is a closed object with `reviewer_session_id`, `author_session_ids`, `provider`, `model`, `received_authoring_context`, `wrote_only_manifest_output`, and `challenge_lenses`. Lease fencing tokens are decimal strings that parse to positive 64-bit integers. Destination is a closed object with `kind: "issue-ref" | "exec-plan"`, `identity`, and `path`.
+
+The named nested values have these complete shapes. No command may substitute free-form JSON for them.
+
+    interface PlanTargetV1 { path: RepoPath; commit: GitSha; digest: Sha256; }
+    interface GoverningContractTargetV1 { path: "PLANS.md"; commit: GitSha; digest: Sha256; }
+    interface PullRequestTargetV1 { provider: "github"; repository: string; number: string; head: GitSha; }
+    interface ReviewManifestTargetV1 { path: RepoPath; commit: GitSha; digest: Sha256; output_path: RepoPath; }
+    interface ReviewOutputTargetV1 { path: RepoPath; commit: GitSha; digest: Sha256; verdict: "clean" | "changes-required" | "executor-safe"; }
+    interface ApprovalTargetV1 { path: RepoPath; commit: GitSha; digest: Sha256; decision: "approved" | "denied"; subject_kind: "execute-plan"; subject_commit: GitSha; subject_digest: Sha256; }
+    interface WorkspaceTargetV1 { workspace_id: Uuid; branch: string; head: GitSha; path_digest: Sha256; }
+    interface CheckpointDestinationV1 { kind: "issue-ref" | "exec-plan"; identity: string; path: RepoPath; }
+    interface ReviewerProvenanceV1 { reviewer_session_id: Uuid; author_session_ids: Uuid[]; provider: string; model: string | null; received_authoring_context: false; wrote_only_manifest_output: true; challenge_lenses: ("plans-conformance" | "executor-safety" | "counterexample" | "security" | "feasibility")[]; }
+
+Fields named `plan`, `governing_contract`, `planning_pull_request` or `pull_request`, `review_manifest`, `review_output`, `approval`, and `workspace` use the matching shape above. Fields named `self_check`, `validation_evidence`, `provider_evidence`, `verification_evidence`, `reconciliation_evidence`, `source_evidence`, `resolution_artifacts`, `changed_artifacts`, `repair_artifacts`, `evidence_artifacts`, or `learn_handoff` use `ArtifactReferenceV1[]`. Fields named `iteration_commit`, `reviewed_head`, `approved_head`, or `merge_sha` use `GitSha`. `destination` uses `CheckpointDestinationV1`; `reviewer_provenance` uses `ReviewerProvenanceV1`. Every `*_id` uses `Uuid` except `finding_id`, which uses `FindingId`. Every `*_at` and `*_expires_at` uses `UtcTimestamp`. `evidence_code` uses `ProcessFindingEvidenceCodeV1`; process-finding `reason_code` uses `ProcessFindingReasonCodeV1`; `reason_code` on pause or cancel uses `PauseOrCancelReasonCodeV1`; `resolution_code` uses `ResolutionCodeV1`; and blocker, failure, or conflict codes use `ErrorCodeV1`. No code contains prose. Array and string limits come from Protocol and Durable Data Limits.
 
 Successful policy emits one or more event envelopes:
 
@@ -469,13 +506,15 @@ Successful policy emits one or more event envelopes:
       payload: EventPayloadV1;
     }
 
-`EventPayloadV1` uses `kind` as its discriminator. Each successful lifecycle command emits the past-tense event named by its command (`plan-review-submitted`, `plan-review-rejected`, `plan-review-accepted`, `plan-decision-recorded`, `approved-plan-queued`, `work-lease-acquired`, `work-handoff-submitted`, `review-findings-recorded`, `review-accepted`, `review-invalidated`, `learn-accepted`, `work-returned-for-repair`, `exact-merge-recorded`, `verification-succeeded`, `verification-failed`, `planning-resumed`, `queue-resumed`, `work-paused`, `work-resumed`, `work-cancelled`, or `reconciliation-conflict-recorded`). Its data repeats the command's governed references plus `from_state` and `to_state`. Lease-changing events also require `lease_id`, `session_id`, `fencing_token`, and `expires_at` or `revoked_at`. Portable transitions also emit `portable-checkpoint-requested` with `checkpoint_id`, `originating_event_id`, `payload_digest`, and `destination`. The three state-preserving families use these exact forms:
+`EventPayloadV1` uses `kind` as its discriminator. The transition table maps each lifecycle command to exactly one past-tense event kind. Every such payload has exactly `{ kind, from_state, to_state, command_payload, lease_change }`: `command_payload` is the complete accepted `CommandPayloadV1` variant, including its original discriminator; `lease_change` is `null` unless the transition changes a lease, otherwise it is `{ lease_id, owner_id, session_id, fencing_token, expires_at, revoked_at, reason_code }`, with every absent timestamp or code emitted as `null`. Portable transitions then emit `portable-checkpoint-requested` with exactly `{ kind, checkpoint_id, originating_event_id, payload_digest, destination }`. This reuse of the closed command variant is the event's complete governed data shape; an implementation may not flatten, omit, or add fields. The state-preserving families use these exact forms:
 
     type StatePreservingEventPayloadV1 =
       | { kind: "portable-checkpoint-verified"; checkpoint_id: Uuid; originating_event_id: Uuid; payload_digest: Sha256; destination: CheckpointDestinationV1; read_back_digest: Sha256 }
-      | { kind: "process-finding-recorded"; finding_id: Uuid; origin: ProcessFindingOriginV1; affected_phase: PhaseV1; evidence_code: string; evidence_artifacts: ArtifactReferenceV1[]; deduplication_digest: Sha256 }
-      | { kind: "process-finding-disposition-recorded"; finding_id: Uuid; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: string }
-      | { kind: "process-finding-disposition-superseded"; finding_id: Uuid; prior_disposition_event_id: Uuid; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: string };
+      | { kind: "process-finding-recorded"; finding_id: FindingId; origin: ProcessFindingOriginV1; affected_phase: PhaseV1; evidence_code: ProcessFindingEvidenceCodeV1; evidence_artifacts: ArtifactReferenceV1[] }
+      | { kind: "process-finding-disposition-recorded"; finding_id: FindingId; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: ProcessFindingReasonCodeV1 }
+      | { kind: "process-finding-disposition-superseded"; finding_id: FindingId; prior_disposition_event_id: Uuid; disposition: ProcessFindingDispositionV1; repair_artifacts: ArtifactReferenceV1[]; reason_code: ProcessFindingReasonCodeV1 };
+
+For every event, `causation_id` equals the accepted command's `command_id`; it never copies the nullable command-envelope `causation_id`. The command envelope's nullable value links a command to a prior command when one exists. For a root command it is `null`. Every event from either case still has the current command UUID as its non-null causation ID. Within one event batch, later events do not point to earlier event IDs.
 
 Results and errors have one wire shape each:
 
@@ -496,6 +535,16 @@ A command receipt stores `idempotency_key`, `command_kind`, `canonical_payload_d
 Canonical bytes are UTF-8 JSON with lexicographically sorted object keys at every depth, array order preserved, no insignificant whitespace, LF only, no byte-order mark, and one trailing LF. Parsers reject duplicate keys, unknown keys, non-integer or unsafe JSON numbers, lone surrogates, non-NFC strings, and noncanonical timestamps, UUIDs, hashes, and paths. Serializers emit nullable fields as `null` and never omit them. Digests cover the canonical bytes including the trailing LF. Receipt lookup occurs only after envelope validation, canonicalization, and trusted-principal comparison.
 
 The public ports use these signatures:
+
+    interface TrustedPrincipalV1 { actor_id: Uuid; role: ActorAttributionV1["role"]; session_id: Uuid; authority_scopes: AuthorityScopeV1[]; authenticated_at: UtcTimestamp; }
+    interface CommandReceiptV1 { idempotency_key: Uuid; command_kind: CommandKindV1; canonical_payload_digest: Sha256; correlation_id: Uuid; result_bytes: Uint8Array; created_at: UtcTimestamp; }
+    interface PendingCheckpointV1 { checkpoint_id: Uuid; originating_event_id: Uuid; payload_digest: Sha256; destination: CheckpointDestinationV1; }
+    interface ObservedCheckpointV1 { state: "absent" | "matching" | "conflicting"; destination: CheckpointDestinationV1; read_back_digest: Sha256 | null; }
+    interface IssueLedgerSnapshotV1 { project_id: Uuid; issue_id: Uuid; state: LifecycleStateV1; last_sequence: string; events_digest: Sha256; pending_checkpoint: PendingCheckpointV1 | null; active_lease: LeaseSnapshotV1 | null; unresolved_finding_ids: FindingId[]; }
+    interface LeaseSnapshotV1 { lease_id: Uuid; owner_id: Uuid; session_id: Uuid; fencing_token: string; expires_at: UtcTimestamp; }
+    interface AtomicCommandCommitV1 { envelope: CommandEnvelopeV1; canonical_payload_digest: Sha256; events: EventEnvelopeV1[]; result_bytes: Uint8Array; expected_last_sequence: string; projection: IssueProjectionV1; pending_checkpoint: PendingCheckpointV1 | null; }
+    interface IssueProjectionV1 { state: LifecycleStateV1; last_sequence: string; next_actions: NextActionV1[]; active_lease: LeaseSnapshotV1 | null; pending_checkpoint_id: Uuid | null; unresolved_finding_ids: FindingId[]; projection_digest: Sha256; }
+    interface VerifiedProjectionReplacementV1 { project_id: Uuid; issue_id: Uuid; expected_events_digest: Sha256; expected_last_sequence: string; lifecycle: IssueProjectionV1; leases_digest: Sha256; gates_digest: Sha256; routed_items_digest: Sha256; checkpoints_digest: Sha256; }
 
     interface EventStorePort {
       loadIssue(projectId: Uuid, issueId: Uuid): Promise<IssueLedgerSnapshotV1>;
@@ -523,7 +572,8 @@ Protocol v1 applies these limits before canonicalization, hashing, receipt looku
 | Generic identifier | Lowercase ASCII UUID unless a named type says otherwise | 36 bytes | All records |
 | Project and issue identity | UUID | 36 bytes each | All issue-scoped records |
 | Actor, role, authority scope, command, event, error, and next-action code | Versioned lowercase kebab token | 64 bytes; at most 16 scopes and 8 next actions | Envelopes, events, receipts, projections |
-| Correlation, causation, lease, session, checkpoint, finding, and gate identity | UUID | 36 bytes each | Envelopes and governed projections |
+| Correlation, causation, lease, session, checkpoint, and gate identity | UUID | 36 bytes each | Envelopes and governed projections |
+| Process-finding identity | Lowercase SHA-256 of the prescribed canonical tuple | 64 bytes | Finding events and routed-item projection |
 | Git commit | Lowercase hexadecimal | 40 bytes | Artifact and evidence references |
 | SHA-256 digest | Lowercase hexadecimal | 64 bytes | Events, approvals, gates, receipts, replay anchors, checkpoints |
 | RFC 3339 UTC timestamp | `YYYY-MM-DDTHH:MM:SSZ` | 20 bytes | Events, leases, evidence |
@@ -546,7 +596,7 @@ The first schema must represent these logical records. Exact SQL and index names
 - **Lifecycle projection:** Current state, last sequence, current phase context, plan and approval references, next permitted actions, and projection checksum. The append ledger, not this disposable table, stores the expected replay anchor.
 - **Lease projection:** Current lease, session, fencing token, expiry, and revocation reason per protected resource.
 - **Gate projection:** Latest decision and freshness inputs per gate and issue.
-- **Routed-item projection:** Stable finding identity, kind, typed origin, affected phase, bounded evidence references, current disposition, linked repair artifacts, supersession link, and unresolved count.
+- **Routed-item projection:** Stable finding identity, kind, typed origin, affected phase, bounded evidence references, current disposition, linked repair artifacts, supersession link, and unresolved count. `UNIQUE(project_id, issue_id, finding_id)` enforces tuple deduplication; replay rejects a second `process-finding-recorded` event with the same identity and different canonical fields as `EVENT_INTEGRITY_FAILED`.
 - **Schema metadata:** One transactional applied-migration history with immutable version and checksum rows plus a matching `user_version`. Any disagreement stops opening.
 
 The adapter must use one write transaction for a command receipt, every derived event, the per-issue sequence update, affected projection rows, the immutable replay anchor, any outbox item, and the stored result. It must roll back all of them on any failure. Database-busy exhaustion returns a retryable error and no partial receipt. A ledger that fails storage or event-integrity validation becomes read-only; Mandem reports the recovery condition outside that untrusted ledger and preserves the database and backup.
@@ -582,9 +632,46 @@ Restoration also runs under the exclusive lock. The service closes every handle,
 
 ### Protocol Error Catalog
 
-At minimum, the stable catalog must distinguish invalid envelope or schema version, idempotency-key reuse, unknown issue, invalid transition, missing or stale artifact, approval absent/denied/stale, gate absent/failed/stale, lease held/expired/non-owner/fenced, handoff invalid or late, unresolved routed items, checkpoint pending or conflicting, database busy, migration unsupported or failed, event integrity failure, projection mismatch, and authority-sensitive reconciliation required.
+The reducer and adapter use this complete guard mapping. When several guards fail, evaluate them in this table's order and return the first failure. The transition catalog supplies the named artifact, approval, gate, lease, handoff, finding, and checkpoint guards for each row; it may not invent another code.
 
-Each error includes one stable code, retryability, issue and correlation IDs when known, bounded evidence references, and a finite list of next-action identifiers. Error messages are presentation-neutral and contain no terminal formatting.
+| Order and failed guard | Error code | Retryable | Exact next actions |
+| --- | --- | --- | --- |
+| Envelope syntax, closed field, canonical value, or limit | `INVALID_ENVELOPE` or `PROTOCOL_LIMIT_EXCEEDED` | no | `return-to-planning` |
+| Protocol version | `UNSUPPORTED_PROTOCOL_VERSION` | no | `return-to-planning` |
+| Trusted principal absent or unverifiable | `UNTRUSTED_PRINCIPAL` | no | `ask-operator` |
+| Requested attribution differs from trusted principal | `ACTOR_ATTRIBUTION_MISMATCH` | no | `ask-operator` |
+| Role not permitted by the transition row | `ACTOR_ROLE_FORBIDDEN` | no | `ask-operator` |
+| Required authority scope absent | `AUTHORITY_SCOPE_MISSING` | no | `ask-operator` |
+| Issue absent | `UNKNOWN_ISSUE` | no | `ask-operator` |
+| Same idempotency key binds different kind or payload digest | `IDEMPOTENCY_KEY_REUSED` | no | `ask-operator` |
+| Source state has no row for command | `INVALID_TRANSITION` | no | `reconcile-sources` |
+| Required artifact absent | `ARTIFACT_MISSING` | no | `refresh-plan-review` for plan-review evidence, otherwise `reconcile-sources` |
+| Required artifact commit or digest differs | `ARTIFACT_STALE` | no | `refresh-plan-review` for plan/review evidence, otherwise `reconcile-sources` |
+| Approval absent, denied, or mismatched | `APPROVAL_ABSENT`, `APPROVAL_DENIED`, or `APPROVAL_STALE` | no | `refresh-plan-approval` |
+| Gate absent, failed, or mismatched | `GATE_ABSENT`, `GATE_FAILED`, or `GATE_STALE` | no | `refresh-gate` |
+| A conflicting lease exists | `LEASE_HELD` | yes | `release-lease` |
+| Required lease absent | `LEASE_REQUIRED` | yes | `reacquire-lease` |
+| Lease expired | `LEASE_EXPIRED` | yes | `reacquire-lease` |
+| Principal does not own lease | `LEASE_NON_OWNER` | no | `ask-operator` |
+| Fencing token is not current | `LEASE_FENCED` | no | `reacquire-lease` |
+| Handoff shape or evidence invalid | `HANDOFF_INVALID` | no | `reconcile-sources` |
+| Handoff session or revision is late | `HANDOFF_LATE` | no | `reacquire-lease` |
+| Finding ID absent | `PROCESS_FINDING_UNKNOWN` | no | `reconcile-sources` |
+| Current finding lacks a disposition | `PROCESS_FINDING_UNRESOLVED` | no | `dispose-process-finding` |
+| Disposition conflicts with current event or required repair link | `PROCESS_FINDING_DISPOSITION_CONFLICT` | no | `reconcile-sources`, `ask-operator` |
+| Required portable checkpoint remains pending | `CHECKPOINT_PENDING` | yes | `complete-checkpoint` |
+| Observed checkpoint bytes or identity conflict | `CHECKPOINT_CONFLICT` | no | `reconcile-sources`, `ask-operator` |
+| SQLite busy budget exhausted | `DATABASE_BUSY` | yes | `retry-command` |
+| Runtime path ownership or mode invalid | `DATABASE_PERMISSIONS_INVALID` | no | `ask-operator` |
+| Migration lock unavailable | `MIGRATION_LOCK_UNAVAILABLE` | yes | `retry-command` |
+| Future or incompatible migration catalog | `MIGRATION_UNSUPPORTED` | no | `ask-operator` |
+| Migration fails before safe commit | `MIGRATION_FAILED` | no | `inspect-database`, `restore-backup` |
+| Post-commit validation fails and backup is restored | `MIGRATION_RESTORED_FROM_BACKUP` | no | `inspect-database`, `ask-operator` |
+| Event bytes, digest, or sequence invalid | `EVENT_INTEGRITY_FAILED` | no | `inspect-database`, `restore-backup` |
+| Rebuilt projection misses ledger anchor | `PROJECTION_MISMATCH` | no | `inspect-database` |
+| Valid sources disagree and policy cannot choose | `RECONCILIATION_REQUIRED` | no | `reconcile-sources`, `ask-operator` |
+
+Each error includes the stable code above, its fixed retryability, issue and correlation IDs when known, bounded evidence references, and exactly the listed next actions in table order. Error messages are presentation-neutral and contain no terminal formatting. Protocol fixtures enumerate every row and fail if the catalog, union, reducer, or documentation differs.
 
 ### Alternatives Considered
 
@@ -775,6 +862,7 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - [x] (2026-08-03) Required reviewers to author one manifest-bound output file directly, preserved its exact digest, and separated optional synthesis from the authoritative review artifact.
 - [x] (2026-08-03) Required a fresh session that did not author the artifact or receive its authoring context, gave it challenge-oriented instructions, and used another provider or model for high-risk work when available.
 - [x] (2026-08-04) Repaired the first clean-room round's four P1 findings by specifying every protocol wire shape and public port, adding the state-preserving process-finding command, giving each milestone exact red/green commands, and embedding the Bun/SQLite execution contract.
+- [x] (2026-08-04) Repaired round two's two P1 findings by replacing named-but-undefined protocol values with literal catalogs and shapes, mapping every guard to an error and next action, and adding deterministic process-finding identity and state-preserving lifecycle rows.
 - [ ] Run clean-room review of the exact plan revision, address every finding, and re-review until executor-safe.
 - [ ] State the immutable `execute-plan` approval target and obtain standalone operator `APPROVED` or `DENIED`.
 - [ ] Record and push the exact approval in issue `cb67d131-975c-4d97-9a6f-4934be991ac6`; set `execution_authorized: true` only after verified approval.
@@ -842,6 +930,9 @@ Behavioral acceptance additionally requires a test transcript showing this scena
 - Decision: Put executable protocol, process-finding, milestone, and SQLite details in the plan instead of requiring implementation-time research.
   Rationale: A novice executor must be able to act from the ExecPlan alone. External documentation may explain provenance, but it cannot carry required decisions that a reviewer cannot verify in the bound plan.
   Date/Author: 2026-08-04 / Codex, responding to clean-room review
+- Decision: Derive a process-finding ID from its canonical evidence tuple instead of accepting a caller-generated UUID.
+  Rationale: Independent reporters must converge on one durable finding without sharing local state. A server-verified SHA-256 identity, backed by a database uniqueness constraint, makes duplicate and changed-evidence behavior deterministic.
+  Date/Author: 2026-08-04 / Codex, responding to clean-room review
 
 ---
 
@@ -880,3 +971,5 @@ Lossless-review-artifact revision note (2026-08-03): Replaced terminal-return re
 Independent-review-control revision note (2026-08-03): Required a fresh reviewer that did not author or revise the artifact and did not receive the authoring conversation. Manifests name all involved sessions and providers, prompts require active challenge and counterexamples, Mandem rejects self-review, and higher-risk work uses another provider or model when available.
 
 Executor-safety revision note (2026-08-04): Repaired the first review round without altering its exact artifact. Added prescriptive protocol-v1 envelopes, variants, events, results, errors, receipts, checkpoints, ports, and exports; defined deterministic process-finding creation and deduplication; added exact red/green work for every milestone; and embedded Bun/SQLite connection, transaction, WAL, backup, validation, and restoration behavior. This revision requires a new clean-room manifest and verdict before approval.
+
+Protocol-closure revision note (2026-08-04): Repaired round two's remaining protocol and process-finding gaps. The plan now lists every closed union, defines nested command and port values, binds event causation and payloads, orders every guard-to-error result, derives finding identity from canonical evidence, enforces uniqueness, and grants phase-specific authority for creation and disposition. This revision requires another bound clean-room verdict.
