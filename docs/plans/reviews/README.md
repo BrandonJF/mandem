@@ -39,3 +39,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   evidence and merge-repair revision to a fresh reviewer and sole output path.
 - [U2 clean-room round 6 reviewer output](./2026-08-04-u2-clean-room-round-6-reviewer-output.md)
   preserves the reviewer’s exact two-P1 verdict as the authoritative round-6 artifact.
+- [U2 clean-room round 7 prompt](./2026-08-04-u2-clean-room-round-7-prompt.md) binds the complete
+  prompt and reviewer-authored verdict revision to a fresh reviewer and sole output path.
