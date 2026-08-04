@@ -19,3 +19,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   `PLANS.md` conformance findings as a non-authoritative orchestrator synthesis.
 - [U2 clean-room round 1 reviewer output](./2026-08-03-u2-clean-room-round-1-reviewer-output.md)
   preserves the reviewer's exact output and is the authoritative round-1 review artifact.
+- [U2 clean-room round 2 prompt](./2026-08-04-u2-clean-room-round-2-prompt.md) binds the repaired
+  plan, current `PLANS.md`, fresh reviewer identity, challenge lens, and sole reviewer output path.
