@@ -2,6 +2,9 @@
 
 This directory records independent reviews of Mandem's epic and issue ExecPlans.
 
+- [Canonical clean-room prompt](./CLEAN_ROOM_PROMPT.md) defines the plan-agnostic novice-executor
+  review and stable output criteria used verbatim for every dispatch.
+
 - [Mandem epic review](./2026-07-24-mandem-epic-clean-room.md) reviews the epic plan.
 - [U1 review](./2026-07-24-u1-clean-room.md) reviews the bootstrap plan.
 - [U1A refresh review](./2026-07-25-u1a-clean-room-refresh.md) reviews the refreshed U1A plan.
@@ -90,4 +93,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   preserves the reviewer's exact three-P1 verdict as the authoritative U2A round-4 artifact.
 - [U2A clean-room round 5 prompt](./2026-08-04-u2a-clean-room-round-5-prompt.md) binds the immutable
   lineage, complete rejection/workspace repair, current `PLANS.md`, a new independent reviewer, and
-  one sole output path.
+  one sole output path. The operator invalidated this tailored prompt before verdict; it does not
+  count as a failed review and must not be reused.

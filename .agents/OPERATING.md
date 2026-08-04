@@ -72,12 +72,15 @@ scaffold, epic summary, chat summary, issue, or partial plan.
 
 A clean-room plan reviewer uses the complete current `PLANS.md` as the primary review contract, not
 a copied checklist or remembered convention. Before dispatch, commit a review manifest that binds
-the plan path, plan commit and digest, `PLANS.md` path, governing commit and digest, complete
-sanitized prompt, reviewer role, and one repo-relative output path. The reviewer is read-only except
-for that file and must write the complete review there directly. The reviewer must inspect those
-exact bytes, verify every applicable `PLANS.md` requirement, and determine whether a fresh novice
-can execute the plan from the repository and plan alone. Additional security, feasibility, or
-product lenses supplement that contract. They do not replace it.
+the plan path, plan commit and digest, `PLANS.md` path, governing commit and digest, the canonical
+`docs/plans/reviews/CLEAN_ROOM_PROMPT.md` path, commit and digest, reviewer role, and one
+repo-relative output path. The canonical prompt is the complete review prompt. A dispatch may add
+only those immutable bindings and reviewer identity; it must not name prior findings, describe
+repairs, request expected closures, add a plan-specific lens, or otherwise steer the verdict. The
+reviewer does not receive prior review prompts or outputs. The reviewer is read-only except for the
+sole output file and must write the complete review there directly. The reviewer inspects the bound
+bytes, verifies every applicable `PLANS.md` requirement, and determines whether a fresh novice can
+execute the plan from the repository and plan alone.
 
 Terminal output, an orchestrator-authored transcription, or a summary is not a review artifact.
 After the reviewer finishes, hash and commit the exact file unchanged. Any synthesis must be a
@@ -88,10 +91,11 @@ output bytes invalidates the verdict and requires a fresh manifest and reviewer.
 The reviewer must be independent of the governed output. At minimum, use a fresh session that did
 not author or revise the plan or implementation and does not receive the originating conversation.
 Record which sessions authored or revised the artifact, which session reviewed it, the provider
-and model when available, and the named review lens. For high-risk work, use another provider or
+and model when available. The review lens is always the canonical prompt's novice autonomous
+executor plan-quality review. For high-risk work, use another provider or
 model when available. Never weaken the fresh-context and non-author rules to do so. The review
-prompt must ask the reviewer to challenge assumptions and seek falsifying cases rather than confirm
-the author's conclusion. The originating agent may repair findings or write a separate synthesis;
+canonical prompt asks the reviewer to challenge assumptions and seek falsifying cases rather than
+confirm the author's conclusion. The originating agent may repair findings or write a separate synthesis;
 it may not act as the independent reviewer or replace the reviewer's verdict. If no independent
 reviewer is available, block the transition instead of substituting self-review.
 

@@ -62,6 +62,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   consumer paths. Kept the reduced U2A scope because all remaining gaps belong to the same reducer.
 - [x] (2026-08-04) Preserved U2A clean-room round 4, which closed every round-3 finding, returned
   three P1 findings, and raised the retained issue's lifetime failed-review count to seventeen.
+- [x] (2026-08-04) Invalidated the tailored round-5 prompt before verdict after operator correction;
+  it does not increment the failed-review count. Adopted the plan-agnostic canonical prompt.
 - [ ] Repair stable lineage, exhaustive rejection results, and trusted workspace observations;
   repeat readiness; then bind a fresh clean-room review and obtain a clean verdict.
 - [ ] Obtain exact operator approval before implementation.
@@ -80,6 +82,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Observation: A complete pre-apply audit is necessary when a guarded writer reports only the first
   mismatch.
   Evidence: Process finding `39099bed-08e5-4c80-a9de-d1fd4308e226` records the U2 graph repair.
+- Observation: Tailoring each clean-room prompt to prior findings biases an otherwise independent
+  plan-quality review.
+  Evidence: Process finding `afb5ca4f-512f-4570-8866-55203106fa95` records the operator correction,
+  the interrupted U2A round-5 dispatch, and the canonical prompt repair.
 
 ## Decision Log
 
@@ -112,6 +118,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   Rationale: Pause/cancel, reconciliation fencing, and trusted review provenance are required inputs
   to the same closed lifecycle reducer. Moving one elsewhere would leave U2A unable to define a
   complete event or trust boundary and would not reduce implementation scope safely.
+  Date/Author: 2026-08-04 / Codex
+- Decision: Use one canonical plan-agnostic clean-room prompt for every future review.
+  Rationale: The reviewer must judge the whole plan as a context-free novice executor, not confirm
+  that the author closed a supplied list of findings.
   Date/Author: 2026-08-04 / Codex
 
 ## Outcomes & Retrospective
