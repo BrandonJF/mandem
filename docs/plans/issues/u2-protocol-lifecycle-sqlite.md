@@ -64,8 +64,12 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   three P1 findings, and raised the retained issue's lifetime failed-review count to seventeen.
 - [x] (2026-08-04) Invalidated the tailored round-5 prompt before verdict after operator correction;
   it does not increment the failed-review count. Adopted the plan-agnostic canonical prompt.
-- [ ] Repair stable lineage, exhaustive rejection results, and trusted workspace observations;
-  repeat readiness; then bind a fresh clean-room review and obtain a clean verdict.
+- [x] (2026-08-04) Preserved the canonical U2A round-5 review, which returned three P1 blockers and
+  raised the retained issue's lifetime failed-review count to eighteen.
+- [x] (2026-08-04) Repaired stable lineage, exhaustive rejection results, and trusted workspace
+  observations; the canonical reviewer found no blocker in those contracts.
+- [ ] Repair alias grammars, parser composition, and exhaustive successful folds; repeat readiness. Another
+  review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
 
 ## Surprises & Discoveries
@@ -109,7 +113,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all seventeen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all eighteen failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -128,9 +132,9 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–4 are
-preserved as failed verdicts, all round-3 findings are closed, and the lifetime count is seventeen.
-The author is repairing the round-4 findings. No review, approval,
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–5 are
+preserved as failed verdicts, and the lifetime count is eighteen. Another review is blocked until
+the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 or implementation exists for the repaired revision yet.
 
 ## Context and Orientation
@@ -233,6 +237,27 @@ required to rename a field, add a union member, or make a required field optiona
 `execution`. It defines validated aliases `Uuid`, `Sha256`, `GitSha`, `UtcTimestamp`, and `RepoPath`;
 `ActorRoleV1`; `AuthorityScopeV1`; `ActorAttributionV1`; `TrustedPrincipalV1`; and
 `ArtifactReferenceV1`. Human prose lives in a referenced artifact, never in a protocol value.
+
+The validated alias grammars are exact:
+
+- `Uuid` is 36 lowercase ASCII bytes matching
+  `[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}`. Only RFC 4122 version 4
+  and its canonical variant are accepted; braces, uppercase, nil UUIDs, and other versions fail.
+- `Sha256` is exactly 64 lowercase hexadecimal ASCII bytes. `GitSha` is exactly 40 lowercase
+  hexadecimal ASCII bytes because this repository uses Git SHA-1 object IDs. All-zero values fail
+  for both aliases.
+- `UtcTimestamp` is exactly 24 ASCII bytes in `YYYY-MM-DDTHH:mm:ss.sssZ` form. It uses a real
+  Gregorian date, 24-hour time, exactly millisecond precision, UTC `Z` only, and no leap second;
+  parsing then formatting must reproduce identical bytes.
+- `RepoPath` is NFC UTF-8, 1–1,024 bytes, relative, and slash-separated. Each segment is 1–255
+  bytes and may not be `.`, `..`, or `.git`; empty segments, leading/trailing slash, backslash,
+  NUL/control bytes, drive prefixes, percent-encoded traversal, and non-NFC text fail. Printable
+  Unicode is allowed after NFC normalization, but normalization must not change the input bytes.
+
+Alias validators return `ParseResultV1`-compatible errors and fixed fixtures cover every accepted
+boundary plus uppercase, wrong UUID version/variant, wrong hash length/all-zero hash, timestamp
+offset/precision/date/leap-second errors, traversal, separators, controls, normalization, and byte
+limits.
 
     type ActorRoleV1 = "operator" | "phase-agent" | "worker" | "reviewer" | "control-plane";
     type AuthorityScopeV1 =
@@ -612,6 +637,12 @@ evidence: readonly ArtifactReferenceV1[] }`. `VerificationOutcomeV1` is
 evidence: readonly ArtifactReferenceV1[] }`. Both verification commands must match
 `snapshot.exact_merge.merge_sha`; mismatch returns `ARTIFACT_STALE`, emits no event, and offers
 `reconcile-sources`.
+`ExactMergeEffectV1` is `{ merge: ExactMergeRecordV1; revoked_lease: LeaseSnapshotV1;
+resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }> }`.
+`record-exact-merge` requires the active integration lease, copies it completely, sets its
+`revoked_at` to trusted observed time and reason to `completed`, preserves both fencing counters,
+and records that effect in its single event. Folding clears `active_lease`, stores `merge`, and
+replaces the complete token map, so Verifying never retains a live integration lease.
 `LeaseHandoffEffectV1` is `{ handoff: HandoffDecisionV1; revoked_lease: LeaseSnapshotV1 | null;
 acquired_lease: LeaseSnapshotV1 | null }`. `FindingDispositionEffectV1` is
 `{ finding: ProcessFindingV1; invalidation: InvalidationEffectV1 | null }`.
@@ -708,8 +739,8 @@ use `ApprovalEvidenceV1`; every lease acquire/revoke/heartbeat uses `LeaseSnapsh
 uses `LeaseHandoffEffectV1`; pause and cancellation use `LifecycleInterruptionEffectV1`; resume uses
 `LifecycleResumeEffectV1`; review findings, review accepted, Learn
 accepted, and return for repair use `HandoffDecisionV1` and never mutate a lease; review invalidation and planning resume use
-`InvalidationEffectV1 { review, approval, gates, resulting_state }`; exact merge and verification
-events use `ExactMergeRecordV1` and `VerificationOutcomeV1`, respectively; review-scope response uses `ReviewScopeResponseV1`; gate uses
+`InvalidationEffectV1 { review, approval, gates, resulting_state }`; exact merge uses
+`ExactMergeEffectV1` and verification uses `VerificationOutcomeV1`; review-scope response uses `ReviewScopeResponseV1`; gate uses
 `GateDecisionV1`; finding creation uses `ProcessFindingV1`; finding disposition and supersession use
 `FindingDispositionEffectV1`; reconciliation uses `ReconciliationEffectV1`. This mapping is exhaustive;
 an event with another value type is `INVALID_ENVELOPE`.
@@ -752,8 +783,12 @@ it is not the event-chain function. Export `initialEventsDigestV1` and
 
 `NextActionV1` contains exactly `refresh-plan-review`, `refresh-plan-approval`, `refresh-gate`,
 `release-lease`, `reacquire-lease`, `dispose-process-finding`,
-`record-exact-merge`, `return-for-repair`, `reconcile-sources`, `return-to-planning`,
-`retry-command`, and `ask-operator`.
+`submit-plan-review`, `record-plan-review-dispatch`, `record-plan-review-verdict`,
+`record-plan-decision`, `queue-approved-plan`, `acquire-work-lease`, `submit-work-handoff`,
+`record-review-findings`, `accept-review`, `accept-learn`, `record-exact-merge`,
+`record-verification-success`, `record-verification-failure`, `resume-planning`, `resume-queued`,
+`resume-work`, `return-for-repair`,
+`reconcile-sources`, `return-to-planning`, `retry-command`, and `ask-operator`.
 
 Canonical wire bytes are NFC UTF-8 JSON with object keys sorted lexically at every depth, arrays in
 declared order, no insignificant whitespace, LF only, no byte-order mark, and exactly one trailing
@@ -784,6 +819,33 @@ The runtime module exports `parseCanonicalJsonV1`, `parseCommandEnvelopeV1`, `se
 `serializeCommandResultV1`, `parseEventEnvelopeV1`, `serializeEventEnvelopeV1`, and
 `canonicalDigestV1`. Parsers return a discriminated `ParseResultV1`; they do not throw for untrusted
 input.
+
+`src/modules/execution/domain/lifecycle.ts` exposes two entry points. The raw boundary is:
+
+    interface LifecycleByteEvaluationInputV1 {
+      readonly snapshot: LifecycleSnapshotV1;
+      readonly command_bytes: Uint8Array;
+      readonly principal: TrustedPrincipalV1;
+      readonly observed_time: ObservedTimeV1;
+      readonly event_ids: readonly Uuid[];
+      readonly dependency_statuses: readonly DependencyStatusV1[];
+      readonly review_dispatch: ValidatedReviewDispatchV1 | null;
+      readonly review_evidence: ValidatedReviewEvidenceV1 | null;
+      readonly approval_evidence: ApprovalEvidenceV1 | null;
+      readonly workspace_observation: ValidatedWorkspaceObservationV1 | null;
+    }
+    function evaluateLifecycleBytesV1(
+      input: LifecycleByteEvaluationInputV1,
+    ): LifecycleDecisionV1;
+
+It calls only `parseCommandEnvelopeV1`. A parser failure returns the unchanged snapshot, no events,
+and the exact rejected `CommandResultV1` from the first three rejection-matrix rows, with null
+command/correlation/issue IDs unless the complete envelope was validated. On success it replaces
+`command_bytes` with the parsed `CommandEnvelopeV1` and calls `evaluateLifecycleCommand`. The typed
+entry point never handles malformed bytes, duplicate fields, limits, or unsupported versions; its
+first guard is expected revision/events digest. Protocol tests own parser errors, lifecycle tests
+own typed guards, and composition fixtures assert the raw wrapper returns byte-identical parser
+errors and byte-identical successful decisions from the typed reducer.
 
 ## Lifecycle Guard Contract
 
@@ -829,8 +891,8 @@ structurally equal to the input snapshot.
 
 ### Exhaustive rejection contract
 
-Every command evaluates guards in this order and stops at the first failure: raw protocol and
-limits; expected revision/events digest; trusted-input presence; principal identity; requested
+`evaluateLifecycleBytesV1` alone evaluates raw protocol/version/limits and then delegates.
+`evaluateLifecycleCommand` evaluates guards in this order and stops at the first failure: expected revision/events digest; trusted-input presence; principal identity; requested
 attribution; role; scope; source state; review-limit policy; artifact/workspace/dependency
 freshness; approval; gates; unresolved findings; lease; handoff; finding/disposition; and
 command-specific reconciliation predicates. `retryable: true` means the same command kind may be
@@ -948,6 +1010,74 @@ handoff-only event never reads or writes `active_lease` or token history; an exp
 the sole writer. Single-event work handoff applies its complete `LeaseHandoffEffectV1` once and has
 no adjacent lease event. Pause, resume, cancellation, and reconciliation each apply their distinct
 complete effect once and have no adjacent lease event.
+
+Every accepted command returns `status: "completed"` when its final event changes lifecycle state
+and `status: "accepted"` when every event keeps the same state. This rule is exhaustive; multi-event
+batches use the final event's state comparison. The result and next snapshot contain the identical
+event array and identical derived `next_actions`.
+
+`deriveNextActionsV1(snapshot)` is pure and exhaustive:
+
+| Snapshot condition | Exact sorted `next_actions` |
+| --- | --- |
+| `NeedsPlanning`, review limit permits submission | `[submit-plan-review]` |
+| `NeedsPlanning`, third response required | `[return-to-planning]` |
+| `NeedsPlanning`, operator choice required | `[ask-operator]` |
+| `PlanReview`, no dispatch | `[record-plan-review-dispatch]` |
+| `PlanReview`, dispatch recorded | `[record-plan-review-verdict]` |
+| `NeedsApproval` | `[queue-approved-plan, record-plan-decision]` |
+| `Queued` | `[acquire-work-lease]` |
+| `Working` | `[submit-work-handoff]` |
+| `Reviewing` | `[accept-review, record-review-findings]` |
+| `Learning` | `[accept-learn]` |
+| `Merging` | `[record-exact-merge, return-for-repair]` |
+| `Verifying` | `[record-verification-failure, record-verification-success]` |
+| `NeedsYou`, approval remains exact | `[resume-queued]` |
+| `NeedsYou`, approved intent is invalid | `[resume-planning]` |
+| `Paused` | `[resume-work]` |
+| `Done` or `Cancelled` | `[]` |
+
+Terminal snapshots are the only values allowed an empty `next_actions` array. Lexical order is the
+order shown for multi-action rows. Findings do not change the primary next action until their
+unresolved status blocks a phase exit; the attempted exit then returns the rejection matrix's
+`dispose-process-finding` action.
+
+Event folding always verifies identity/state/anchors, applies the following field operation, sets
+`state = to_state`, `revision = event_id`, advances `events_digest`, and recomputes
+`next_actions`. Protocol/project/issue IDs and every field not named in a row are retained
+byte-for-byte. `replace` means store the complete event value; `clear` means set null or the stated
+empty collection. This table is exhaustive:
+
+| Event kind | Snapshot operations beyond the universal operations |
+| --- | --- |
+| `plan-review-submitted` | replace plan, governing contract, submitted manifest; clear dispatch, accepted review, approval, gates, handoff, exact merge, verification |
+| `plan-review-dispatch-recorded` | replace review dispatch |
+| `plan-review-changes-required` | replace failed-review policy; clear submitted manifest, dispatch, accepted review, approval, gates, handoff, exact merge, verification |
+| `plan-review-accepted` | replace accepted review; clear submitted manifest and dispatch |
+| `plan-decision-denied` | replace approval with exact denial; clear gates, exact merge, verification |
+| `approved-plan-queued` | replace approval with exact approval; clear exact merge and verification |
+| `work-lease-acquired`, `work-lease-acquired-for-repair`, `integration-lease-acquired` | replace active lease with acquired lease and replace its resource token counter from the lease; clear verification |
+| `lease-heartbeat-recorded` | replace active lease only |
+| `lease-revoked` | require it equals current lease with revocation fields filled; clear active lease and retain both token counters |
+| `work-handoff-submitted` | replace handoff; clear active lease; replace complete token map from effect |
+| `review-findings-recorded`, `review-accepted`, `learn-accepted`, `work-returned-for-repair` | replace handoff only |
+| `review-invalidated` | clear accepted review, approval, and gates named by the complete invalidation effect |
+| `exact-merge-recorded` | replace exact merge from effect; clear active lease; replace complete token map; clear verification |
+| `verification-succeeded`, `verification-failed` | replace verification outcome only |
+| `planning-resumed` | clear plan, governing contract, submitted manifest, dispatch, accepted review, approval, gates, handoff, exact merge, verification |
+| `queue-resumed` | clear handoff, exact merge, verification; retain exact approval and gates |
+| `work-paused`, `work-cancelled` | clear active lease; replace complete token map from interruption effect; retain workspace/evidence only in the event |
+| `work-resumed` | require and retain null active lease; replace complete token map from resume effect; replace approval and gates from effect |
+| `reconciliation-conflict-recorded` | clear active lease; replace complete token map from effect; retain contradiction evidence in event |
+| `review-scope-response-recorded` | replace third response or append fifth choice and update active/consumed permit fields exactly as the response policy states |
+| `gate-decision-recorded` | replace only the same gate ID, then sort all gates by ID |
+| `process-finding-recorded` | append distinct finding, then sort by finding ID; exact duplicate retains collection |
+| `process-finding-disposition-recorded`, `process-finding-disposition-superseded` | replace the named finding; for contract-gap effect also clear review/approval/gates exactly as its invalidation value states |
+
+Initial values plus this table determine every field after every event. Tests build a fully populated
+pre-state for each row so a mistaken retain/clear is observable, compare the complete expected
+snapshot, and repeat by event-only replay. For every multi-event command they assert the complete
+intermediate snapshot after each event, not only the final decision.
 
 Every table predicate is closed as follows. A complete manifest passes the exact review-binding
 validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the plan commit and whose
@@ -1069,7 +1199,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–4 are lifetime failures fourteen through seventeen; the native issue records that count,
+verdicts. U2A clean-room rounds 1–5 are lifetime failures fourteen through eighteen; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -1115,7 +1245,7 @@ digest and trace digests but not the lineage ID or behavior set.
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–4 as failures fourteen through seventeen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–5 as failures fourteen through eighteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1132,7 +1262,8 @@ invalid.
 The final `src/modules/runtime/index.ts` exports all runtime aliases, closed catalogs, command,
 event, result, error, snapshot and evidence types plus every parser, serializer and digest function
 named above. The final `src/modules/execution/index.ts` exports `LifecycleDecisionV1`,
-`evaluateLifecycleCommand`, `validateReviewEvidenceV1`, `parseReviewVerdictV1`,
+`LifecycleByteEvaluationInputV1`, `evaluateLifecycleBytesV1`, `evaluateLifecycleCommand`,
+`deriveNextActionsV1`, `validateReviewEvidenceV1`, `parseReviewVerdictV1`,
 `validatePlanApprovalV1`, `evaluateGateFreshnessV1`, lease validators,
 `deriveProcessFindingIdV1`, finding disposition policy, and failed-review-limit policy. Neither root
 barrel exports infrastructure. `src/modules/execution/api/composition.ts` exports no function in
@@ -1191,6 +1322,8 @@ Test scenarios are prescriptive:
   provider/nullability combination, every handoff kind/outcome/code pairing, every reason,
   resolution, and verification-failure code, both `ParseResultV1` variants, and unknown values for
   each closed catalog.
+  Include fixed accepted/rejected bytes for every alias grammar and prove the raw lifecycle wrapper
+  returns the parser's exact rejected result without invoking typed guards.
 - Event digest fixtures assert the literal hex output for the empty domain, one fixed event, and
   each intermediate digest in a fixed multi-event transfer. Tampering with the prior digest fails,
   and U2B-style replay over the same canonical event bytes produces the identical final digest.
@@ -1203,6 +1336,10 @@ Test scenarios are prescriptive:
   For every rejected fixture, assert the first guard, exact code, retryable boolean, exact sorted
   evidence array, and exact one-member next-action array from the rejection matrix; permute two
   simultaneous failures to prove guard order.
+  For every accepted command, assert `accepted` versus `completed`, the complete state-derived
+  next-action array, and every snapshot field retained, replaced, or cleared from a fully populated
+  pre-state. Repeat every single- and multi-event case through `applyLifecycleEventV1` and compare
+  every intermediate snapshot byte-for-byte.
 - `leases.test.ts`: expiry without takeover, heartbeat at and after expiry, wrong owner, wrong
   session, wrong token, takeover, handoff, release twice, merging release, pause, cancellation,
   review repair, merge repair, first mutation by the replacement owner, and backdated or future
@@ -1240,12 +1377,12 @@ Test scenarios are prescriptive:
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–4 as failures fourteen through seventeen, and prove another plan commit in the same split lineage retains seventeen
+  rounds 1–5 as failures fourteen through eighteen, and prove another plan commit in the same split lineage retains eighteen
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
   Use one fixed split declaration whose lineage ID is computed without readiness bytes; after
-  failure seventeen, change both plan and readiness artifact digests while retaining that ID and
+  failure eighteen, change both plan and readiness artifact digests while retaining that ID and
   behavior set, then allow U2A and reject another issue, another behavior set, a recomputed lineage,
   a self-referential declaration, and an artifact whose bytes do not match the declaration.
 - `reducer-determinism.test.ts`: byte-identical decision for identical input, no ambient I/O, every
@@ -1355,3 +1492,8 @@ self-referential scope digest with one immutable operator-decision lineage decla
 per-plan readiness declaration; added the exhaustive ordered rejection/error/retry/evidence/action
 matrix; and required a trusted configured-repository workspace observation for every
 workspace-bearing command, with mismatch and no-lease fixtures.
+
+Canonical round-5 repair note (2026-08-04): Preserved lifetime failure eighteen and the mandatory
+operator-choice block. Defined exact UUID/hash/Git/timestamp/path grammars; separated raw-byte
+parsing from the typed reducer with one composition entry point; and added exhaustive successful
+status, next-action, and event-fold operations for every snapshot field and intermediate event.
