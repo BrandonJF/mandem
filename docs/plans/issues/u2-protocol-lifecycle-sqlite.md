@@ -68,7 +68,11 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   raised the retained issue's lifetime failed-review count to eighteen.
 - [x] (2026-08-04) Repaired stable lineage, exhaustive rejection results, and trusted workspace
   observations; the canonical reviewer found no blocker in those contracts.
-- [ ] Repair alias grammars, parser composition, and exhaustive successful folds; repeat readiness. Another
+- [x] (2026-08-04) Repaired alias grammars, parser composition, and exhaustive successful folds;
+  canonical round 6 found only a milestone-order blocker.
+- [x] (2026-08-04) Reordered milestones so protocol, standalone policies, reducer integration, and
+  documentation each end at a complete passing boundary. Lifetime failed-review count is nineteen.
+- [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
 
@@ -113,7 +117,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all eighteen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all nineteen failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -132,8 +136,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–5 are
-preserved as failed verdicts, and the lifetime count is eighteen. Another review is blocked until
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–6 are
+preserved as failed verdicts, and the lifetime count is nineteen. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 or implementation exists for the repaired revision yet.
 
@@ -1199,7 +1203,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–5 are lifetime failures fourteen through eighteen; the native issue records that count,
+verdicts. U2A clean-room rounds 1–6 are lifetime failures fourteen through nineteen; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -1245,7 +1249,7 @@ digest and trace digests but not the lineage ID or behavior set.
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–5 as failures fourteen through eighteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–6 as failures fourteen through nineteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1276,20 +1280,33 @@ to wire I/O.
 
 Create `src/modules/runtime/domain/protocol.ts` and its test first. Add exact aliases and shared
 values to `types.ts`. Implement closed parsing, canonical serialization, limits, result/error/event
-shapes, and digests. Export them through domain, API, and root barrels. The focused test must fail
-because the protocol does not exist, then pass every variant and invalid-boundary fixture.
+shapes, and digests. Export them through domain, API, and root barrels. End this milestone by running
+`bunx vitest run src/modules/runtime/domain/protocol.test.ts`, `bun run typecheck`, and
+`bun run architecture:check`. The boundary is complete only when the protocol test file passes all
+catalog, alias, byte-limit, canonicalization, parser, serializer, and digest fixtures and both gates
+exit zero. No execution reducer or policy is required yet.
 
-### Milestone 2: Create the execution module and exhaustive lifecycle reducer
+### Milestone 2: Define and prove every standalone execution policy
 
-Create the complete module skeleton and `domain/types.ts`. Add `lifecycle.ts` and a fixture inventory
-with one minimal success for every table row, one invalid-source-state case for every command, exact
-guard ordering, unchanged-snapshot rejection, and deterministic event/snapshot parity.
+Create the complete execution module skeleton and `domain/types.ts`, then implement `leases.ts`,
+`review-binding.ts`, `freshness.ts`, `gates.ts`, `routed-items.ts`, and
+`failed-review-limits.ts` test-first. Each module accepts and returns the complete public values
+defined above without importing or calling `lifecycle.ts`. End by running
+`bunx vitest run src/modules/execution/domain/{leases,review-binding,freshness,gates,routed-items,failed-review-limits}.test.ts`,
+followed by `bun run typecheck` and
+`bun run architecture:check`. The milestone passes only when all six focused policy files pass and
+the execution module compiles without a reducer implementation.
 
-### Milestone 3: Add lease, review, approval, gate, finding, and review-limit policies
+### Milestone 3: Integrate the proven policies into the exhaustive lifecycle reducer
 
-Implement each policy in its named pure domain file, starting with its failing test. Integrate each
-policy into the lifecycle reducer only after its focused suite passes. Tests must use explicit
-values, not Git, SQLite, provider, clock, or filesystem fakes.
+Create `lifecycle.ts`, `lifecycle.test.ts`, and `reducer-determinism.test.ts`. Integrate only the
+already passing Milestone 2 policy functions. Add one minimal success for every transition row,
+every invalid source state, exact ordered guards, unchanged-snapshot rejection, raw-wrapper parity,
+complete status/next-action/fold assertions, and every intermediate multi-event snapshot. End by
+running `bunx vitest run src/modules/runtime/domain/protocol.test.ts src/modules/execution/domain`,
+then `bun run typecheck` and `bun run architecture:check`. The
+milestone passes only when the protocol, all standalone policies, lifecycle inventory, and replay
+determinism pass together with no skipped fixture.
 
 ### Milestone 4: Publish the module contract and prove architecture
 
@@ -1297,6 +1314,9 @@ Complete barrels and module documentation, add `Execution` to `src/modules/READM
 `docs/architecture/control-protocol.md`, and index it from `docs/architecture/README.md`. Document
 fact ownership, reducer inputs/outputs, lifecycle table, approval/review binding, and the U2B
 storage boundary. Run focused tests and all repository gates.
+End with `bun run docs:audit`, `bun run authored-files:check`, `bun run vocabulary:check`,
+`bun run issue-graph:check`, and `bun run check`. The observable boundary is every command exiting
+zero and Vitest reporting all repository test files passed.
 
 ## Exact Files and Tests
 
@@ -1307,10 +1327,11 @@ storage boundary. Run focused tests and all repository gates.
 - Execution module shape: create `src/modules/execution/README.md`, `index.ts`, `domain/index.ts`,
   `domain/types.ts`, `application/index.ts`, `infrastructure/index.ts`, `api/composition.ts`,
   `api/index.ts`, and `tests/fakes/index.ts`.
-- Execution policies and adjacent tests: create `domain/lifecycle.ts`, `lifecycle.test.ts`,
-  `leases.ts`, `leases.test.ts`, `review-binding.ts`, `review-binding.test.ts`, `freshness.ts`,
+- Execution policies and adjacent tests: create `leases.ts`, `leases.test.ts`,
+  `review-binding.ts`, `review-binding.test.ts`, `freshness.ts`,
   `freshness.test.ts`, `gates.ts`, `gates.test.ts`, `routed-items.ts`, `routed-items.test.ts`,
-  `failed-review-limits.ts`, `failed-review-limits.test.ts`, and `reducer-determinism.test.ts`.
+  and `failed-review-limits.ts`, `failed-review-limits.test.ts` in Milestone 2; create
+  `domain/lifecycle.ts`, `lifecycle.test.ts`, and `reducer-determinism.test.ts` in Milestone 3.
 - Documentation: modify `src/modules/README.md` and `docs/architecture/README.md`; create
   `docs/architecture/control-protocol.md`.
 
@@ -1377,12 +1398,12 @@ Test scenarios are prescriptive:
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–5 as failures fourteen through eighteen, and prove another plan commit in the same split lineage retains eighteen
+  rounds 1–6 as failures fourteen through nineteen, and prove another plan commit in the same split lineage retains nineteen
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
   Use one fixed split declaration whose lineage ID is computed without readiness bytes; after
-  failure eighteen, change both plan and readiness artifact digests while retaining that ID and
+  failure nineteen, change both plan and readiness artifact digests while retaining that ID and
   behavior set, then allow U2A and reject another issue, another behavior set, a recomputed lineage,
   a self-referential declaration, and an artifact whose bytes do not match the declaration.
 - `reducer-determinism.test.ts`: byte-identical decision for identical input, no ambient I/O, every
@@ -1497,3 +1518,8 @@ Canonical round-5 repair note (2026-08-04): Preserved lifetime failure eighteen 
 operator-choice block. Defined exact UUID/hash/Git/timestamp/path grammars; separated raw-byte
 parsing from the typed reducer with one composition entry point; and added exhaustive successful
 status, next-action, and event-fold operations for every snapshot field and intermediate event.
+
+Canonical round-6 repair note (2026-08-04): Preserved lifetime failure nineteen and the exhausted
+one-review permit. Reordered execution so the runtime protocol, six standalone policy modules,
+integrated reducer, and documentation each finish with explicit focused commands and a complete
+passing observable boundary. Another review requires a new operator choice.
