@@ -27,3 +27,5 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   protocol repair to a fresh reviewer, current `PLANS.md`, and one sole output path.
 - [U2 clean-room round 3 reviewer output](./2026-08-04-u2-clean-room-round-3-reviewer-output.md)
   preserves the reviewer's exact three-P1 verdict and is the authoritative round-3 artifact.
+- [U2 clean-room round 4 prompt](./2026-08-04-u2-clean-room-round-4-prompt.md) binds the replay-policy
+  repair, current `PLANS.md`, fresh reviewer, and sole output path.
