@@ -80,6 +80,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   blockers, and raised the lifetime failed-review count to twenty-two.
 - [x] (2026-08-04) Preserved canonical round 10, repaired its three P1 schema-consistency and
   idempotency blockers, and raised the lifetime failed-review count to twenty-three.
+- [x] (2026-08-04) Preserved canonical round 11, repaired its one P1 unbounded-string blocker, and
+  raised the lifetime failed-review count to twenty-four.
 - [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
@@ -125,7 +127,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all twenty-three failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all twenty-four failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -144,8 +146,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–10 are
-preserved as failed verdicts, and the lifetime count is twenty-three. Another review is blocked until
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–11 are
+preserved as failed verdicts, and the lifetime count is twenty-four. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 exists for the repaired revision yet.
 
@@ -246,7 +248,8 @@ Implementation must use these exact public names and closed catalogs. A protocol
 required to rename a field, add a union member, or make a required field optional.
 
 `src/modules/runtime/domain/types.ts` owns every wire and snapshot type so `runtime` never imports
-`execution`. It defines validated aliases `Uuid`, `Sha256`, `GitSha`, `UtcTimestamp`, and `RepoPath`;
+`execution`. It defines validated aliases `Uuid`, `Sha256`, `GitSha`, `UtcTimestamp`, `RepoPath`,
+`RepositorySlugV1`, and `GateIdV1`;
 `ActorRoleV1`; `AuthorityScopeV1`; `ActorAttributionV1`; `TrustedPrincipalV1`; and
 `ArtifactReferenceV1`. Human prose lives in a referenced artifact, never in a protocol value.
 
@@ -265,11 +268,21 @@ The validated alias grammars are exact:
   bytes and may not be `.`, `..`, or `.git`; empty segments, leading/trailing slash, backslash,
   NUL/control bytes, drive prefixes, percent-encoded traversal, and non-NFC text fail. Printable
   Unicode is allowed after NFC normalization, but normalization must not change the input bytes.
+- `RepositorySlugV1` is 3–201 printable ASCII bytes in exact `owner/name` form. Each component is
+  1–100 bytes, begins and ends with an ASCII alphanumeric, and contains only ASCII alphanumerics,
+  `.`, `_`, or `-`; there is exactly one slash. Wire equality is byte equality with the configured
+  repository's canonical spelling—there is no case folding or Unicode normalization.
+- `GateIdV1` is 1–64 lowercase ASCII bytes matching
+  `[a-z][a-z0-9]*(?:-[a-z0-9]+){0,7}`. Equality, sorting, uniqueness, and replacement use bytewise
+  ASCII comparison; uppercase, Unicode, underscores, empty components, and leading/trailing hyphens
+  fail.
 
 Alias validators return `ParseResultV1`-compatible errors and fixed fixtures cover every accepted
 boundary plus uppercase, wrong UUID version/variant, wrong hash length/all-zero hash, timestamp
 offset/precision/date/leap-second errors, traversal, separators, controls, normalization, and byte
-limits.
+limits. Repository fixtures cover exact configured spelling, component boundaries, extra slash,
+Unicode, whitespace, and punctuation; gate fixtures cover bounds, ASCII ordering, duplicates,
+uppercase, Unicode, underscores, and malformed hyphen components.
 
     type ActorRoleV1 = "operator" | "phase-agent" | "worker" | "reviewer" | "control-plane";
     type AuthorityScopeV1 =
@@ -504,7 +517,7 @@ the U2A parser composes that public parser rather than redefining it.
     interface IdempotencyIdentityV1 { readonly key: Uuid; readonly kind: CommandKindV1; readonly payload_digest: Sha256; }
     interface PlanTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; }
     interface GoverningContractTargetV1 { readonly path: "PLANS.md"; readonly commit: GitSha; readonly digest: Sha256; }
-    interface PullRequestTargetV1 { readonly provider: "github"; readonly repository: string; readonly number: number; readonly head: GitSha; }
+    interface PullRequestTargetV1 { readonly provider: "github"; readonly repository: RepositorySlugV1; readonly number: number; readonly head: GitSha; }
     interface ApprovalEvidenceV1 { readonly record: ApprovalRecord; readonly source: ArtifactReferenceV1; }
     interface ApprovalLocatorV1 { readonly issue_id: Uuid; readonly commit: GitSha; }
     interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: string; readonly head: GitSha; readonly path_digest: Sha256; }
@@ -512,7 +525,7 @@ the U2A parser composes that public parser rather than redefining it.
     interface ReviewWriteV1 { readonly path: RepoPath; readonly digest: Sha256; }
     interface ApprovedWorkspaceRequirementV1 { readonly branch: string; readonly head: "reviewed-plan-commit"; }
     interface ExecutionRequirementsV1 { readonly dependency_issue_ids: readonly Uuid[]; readonly approved_workspace: ApprovedWorkspaceRequirementV1; readonly required_gates: readonly GateRequirementV1[]; readonly declaration_digest: Sha256; }
-    interface GateDecisionV1 { readonly gate_id: string; readonly definition_digest: Sha256; readonly input_digests: readonly Sha256[]; readonly target_revision: GitSha; readonly outcome: "passed" | "failed"; readonly evidence: readonly ArtifactReferenceV1[]; readonly decided_at: UtcTimestamp; }
+    interface GateDecisionV1 { readonly gate_id: GateIdV1; readonly definition_digest: Sha256; readonly input_digests: readonly Sha256[]; readonly target_revision: GitSha; readonly outcome: "passed" | "failed"; readonly evidence: readonly ArtifactReferenceV1[]; readonly decided_at: UtcTimestamp; }
     interface HandoffDecisionV1 { readonly kind: HandoffKindV1; readonly source_session_id: Uuid; readonly target_session_id: Uuid | null; readonly target_revision: GitSha; readonly outcome_code: HandoffOutcomeCodeV1; readonly decision_codes: readonly HandoffDecisionCodeV1[]; readonly blocker_codes: readonly HandoffBlockerCodeV1[]; readonly mutation_artifacts: readonly ArtifactReferenceV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly next_transition: CommandKindV1; }
     type ProcessFindingOriginV1 = "operator-correction" | "agent-error" | "review-finding" | "interruption" | "unexpected-delay";
     type ProcessFindingDispositionV1 = "execution-deviation" | "issue-contract-gap" | "product-contract-gap" | "operating-contract-gap" | "no-reusable-change";
@@ -693,7 +706,7 @@ The complete readonly shapes are:
       readonly execution_requirements: ExecutionRequirementsV1;
       readonly execution_requirements_source_digest: Sha256;
     }
-    interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256;
+    interface GateRequirementV1 { readonly gate_id: GateIdV1; readonly definition_digest: Sha256;
       readonly valid_for_ms: number; }
     interface ValidatedReviewEvidenceV1 {
       readonly manifest: ReviewManifestV1;
@@ -1327,7 +1340,8 @@ snapshot, and repeat by event-only replay. For every multi-event command they as
 intermediate snapshot after each event, not only the final decision.
 
 Every table predicate is closed as follows. A complete manifest passes the exact review-binding
-validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the plan commit and whose
+validator. A pushed branch/PR is a `PullRequestTargetV1` whose repository slug is byte-equal to the
+configured repository's canonical slug, whose head equals the plan commit, and whose
 configured-repository digest appears in the trusted attestation. Dependencies ready means every
 ID in `snapshot.accepted_review.execution_requirements.dependency_issue_ids` has exactly one sorted
 `DependencyStatusV1` with state `complete`, with no duplicate, omitted, or foreign ID; a missing,
@@ -1472,7 +1486,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–10 are lifetime failures fourteen through twenty-three; the native issue records that count,
+verdicts. U2A clean-room rounds 1–11 are lifetime failures fourteen through twenty-four; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -1518,7 +1532,7 @@ digest and trace digests but not the lineage ID or behavior set.
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–10 as failures fourteen through twenty-three, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–11 as failures fourteen through twenty-four, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1674,7 +1688,7 @@ Test scenarios are prescriptive:
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–10 as failures fourteen through twenty-three, and prove another plan commit in the same split lineage retains twenty-three
+  rounds 1–11 as failures fourteen through twenty-four, and prove another plan commit in the same split lineage retains twenty-four
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
@@ -1824,3 +1838,8 @@ Canonical round-10 repair note (2026-08-04): Preserved lifetime failure twenty-t
 exhausted permit. Corrected the process-finding origin to its closed token type, replaced the
 overbroad collection rule with field-specific gate cardinalities, and added a complete idempotency
 identity plus a domain-separated payload-digest equation and result handoff for U2B.
+
+Canonical round-11 repair note (2026-08-04): Preserved lifetime failure twenty-four and the
+exhausted permit. Replaced bare repository and gate strings with bounded ASCII aliases, exact
+configured-repository equality, bytewise gate identity/order rules, and fixed parser, replacement,
+and replay fixtures.
