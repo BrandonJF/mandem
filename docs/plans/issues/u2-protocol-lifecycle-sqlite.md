@@ -76,6 +76,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   failed-review count to twenty.
 - [x] (2026-08-04) Preserved canonical round 8, repaired its one P1 protocol-schema blocker, and
   raised the lifetime failed-review count to twenty-one.
+- [x] (2026-08-04) Preserved canonical round 9, repaired its three P1 immutable-requirements
+  blockers, and raised the lifetime failed-review count to twenty-two.
 - [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
@@ -121,7 +123,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all twenty-one failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all twenty-two failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -140,8 +142,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–8 are
-preserved as failed verdicts, and the lifetime count is twenty-one. Another review is blocked until
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–9 are
+preserved as failed verdicts, and the lifetime count is twenty-two. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 exists for the repaired revision yet.
 
@@ -433,7 +435,7 @@ Every payload contains only closed scalar fields or these named values:
   `GoverningContractTargetV1 { path: "PLANS.md", commit, digest }`.
 - `PullRequestTargetV1 { provider: "github", repository, number, head }`.
 - `ReviewManifestV1 { plan, governing_contract, complete_prompt, complete_prompt_digest,
-  reviewer_role, reviewer, challenge_lenses, output_path, author_attestations,
+  execution_requirements, reviewer_role, reviewer, challenge_lenses, output_path, author_attestations,
   reviser_attestations, reviewer_attestation, risk_policy, dispatch_id }`, using the exact review
   values below. `complete_prompt` is the immutable artifact reference that locates the exact
   committed prompt bytes.
@@ -441,8 +443,9 @@ Every payload contains only closed scalar fields or these named values:
   dispatched_at, receipt }` where `receipt` is an artifact reference to exact validated bytes.
 - `ValidatedReviewEvidenceV1 { manifest, dispatch, output, reviewer_commit, sole_write,
   reviewer, authors, revisers, challenge_lenses, risk_policy, attestation_digests, bundle_digest,
-  required_gates, verdict }` with `required_gates` as sorted unique `{ gate_id, definition_digest }`
-  values and `verdict: "clean" | "changes-required"`.
+  execution_requirements, required_gates, verdict }`, where `execution_requirements` is the exact
+  trusted declaration and `required_gates` is its byte-equal gate collection, with
+  `verdict: "clean" | "changes-required"`.
 - `ReviewEvidenceAttestationV1 { configured_repository_digest, resolved_manifest_commit,
   resolved_reviewer_commit, reviewer_parent_commit, ancestry_proof_digest, write_set,
   provider_session, transport_identity_digest, source_digests }` uses the exact types below. It is
@@ -487,6 +490,8 @@ the U2A parser composes that public parser rather than redefining it.
     interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: string; readonly head: GitSha; readonly path_digest: Sha256; }
     interface ReviewOutputTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; readonly verdict: "clean" | "changes-required"; }
     interface ReviewWriteV1 { readonly path: RepoPath; readonly digest: Sha256; }
+    interface ApprovedWorkspaceRequirementV1 { readonly branch: string; readonly head: "reviewed-plan-commit"; }
+    interface ExecutionRequirementsV1 { readonly dependency_issue_ids: readonly Uuid[]; readonly approved_workspace: ApprovedWorkspaceRequirementV1; readonly required_gates: readonly GateRequirementV1[]; readonly declaration_digest: Sha256; }
     interface GateDecisionV1 { readonly gate_id: string; readonly definition_digest: Sha256; readonly input_digests: readonly Sha256[]; readonly target_revision: GitSha; readonly outcome: "passed" | "failed"; readonly evidence: readonly ArtifactReferenceV1[]; readonly decided_at: UtcTimestamp; }
     interface HandoffDecisionV1 { readonly kind: HandoffKindV1; readonly source_session_id: Uuid; readonly target_session_id: Uuid | null; readonly target_revision: GitSha; readonly outcome_code: HandoffOutcomeCodeV1; readonly decision_codes: readonly HandoffDecisionCodeV1[]; readonly blocker_codes: readonly HandoffBlockerCodeV1[]; readonly mutation_artifacts: readonly ArtifactReferenceV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly next_transition: CommandKindV1; }
     type ProcessFindingOriginV1 = "operator-correction" | "agent-error" | "review-finding" | "interruption" | "unexpected-delay";
@@ -563,8 +568,47 @@ from those attestations; `.reviewer`, `.challenge_lenses`, and `.risk_policy` eq
 evidence attestation; and `.sole_write` equals the only `write_set` member and output target.
 `required_gates` is sorted uniquely by `gate_id` with at most 64 entries. `bundle_digest` is
 `canonicalDigestV1` of the closed object `{ manifest_digest, dispatch_digest, output_digest,
-attestation_digests, required_gates, verdict }`, using the exact canonical digests/collections
+attestation_digests, execution_requirements_digest, required_gates, verdict }`, using the exact canonical digests/collections
 already validated and no other fields.
+
+`ExecutionRequirementsV1` is part of the reviewed manifest and is independently extracted from
+the exact reviewed plan bytes by the later trusted Git adapter. Its `dependency_issue_ids` are
+sorted unique with at most 64 members; its gate requirements follow the gate bounds below; and its
+branch is a 1–255-byte printable ASCII Git ref component that is neither `HEAD` nor a ref traversal.
+`declaration_digest` is `canonicalDigestV1` of the closed object `{ approved_workspace,
+dependency_issue_ids, required_gates }`, excluding only the digest itself. The attestation carries
+the adapter-extracted value and source digest; validation requires byte equality among the plan
+extraction, attestation, and manifest before constructing accepted review evidence. The
+requirements source digest is included in `source_digests` and therefore in the review bundle.
+There is no public command decoder for the trusted extraction.
+
+This plan's exact declaration is:
+
+    {
+      "approved_workspace": {
+        "branch": "feat/u2a-protocol-lifecycle",
+        "head": "reviewed-plan-commit"
+      },
+      "dependency_issue_ids": [
+        "6a6a8bab-853f-4658-9bc0-38e2386b642d",
+        "745eda80-1e74-4866-bc95-2f2983b31025",
+        "da645bd0-9899-40b3-9f23-3b48d65362a4"
+      ],
+      "required_gates": [
+        {
+          "definition_digest": "f28e2d2f0b1eff7ecd41049b7208aaef223eede7eb85babcd95812adc0ece5c2",
+          "gate_id": "u2a-full-check",
+          "valid_for_ms": 86400000
+        }
+      ],
+      "declaration_digest": "414af47935724f1621602f24a9ec89f9cf9eebd86a5fe5a4f919a9bd3673a594"
+    }
+
+The gate definition digest is the canonical digest of
+`{"command":"bun run check","gate_id":"u2a-full-check","success":"exit-0"}`. The adapter
+resolves `reviewed-plan-commit` to `ReviewManifestV1.plan.commit`; the token never enters a
+workspace value. Thus acquisition requires branch `feat/u2a-protocol-lifecycle` and head equal to
+the exact approved reviewed-plan commit without embedding a self-referential commit in this file.
 
 `ReviewEvidenceAttestationV1.write_set` is a sorted unique readonly `ReviewWriteV1[]` of exactly one
 member. `provider_session` is the exact primary `ReviewSessionIdentityV1`.
@@ -586,6 +630,7 @@ The complete readonly shapes are:
     interface ReviewManifestV1 {
       readonly plan: PlanTargetV1;
       readonly governing_contract: GoverningContractTargetV1;
+      readonly execution_requirements: ExecutionRequirementsV1;
       readonly complete_prompt: ArtifactReferenceV1;
       readonly complete_prompt_digest: Sha256;
       readonly reviewer_role: string;
@@ -619,6 +664,8 @@ The complete readonly shapes are:
       readonly source_digests: readonly Sha256[];
       readonly verified_participants: readonly VerifiedReviewParticipantV1[];
       readonly participant_inventory_digest: Sha256;
+      readonly execution_requirements: ExecutionRequirementsV1;
+      readonly execution_requirements_source_digest: Sha256;
     }
     interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256;
       readonly valid_for_ms: number; }
@@ -635,6 +682,7 @@ The complete readonly shapes are:
       readonly risk_policy: ReviewRiskPolicyV1;
       readonly attestation_digests: readonly Sha256[];
       readonly bundle_digest: Sha256;
+      readonly execution_requirements: ExecutionRequirementsV1;
       readonly required_gates: readonly GateRequirementV1[];
       readonly verdict: "clean" | "changes-required";
     }
@@ -646,7 +694,8 @@ observed_at: UtcTimestamp; source: ArtifactReferenceV1; validator_identity_diges
 later workspace adapter constructs it only after resolving the configured repository, workspace
 identity, branch, exact head, and canonical path-state digest. `source` is a committed `workspace`
 artifact containing those observed fields. The reducer requires byte equality with the command's
-workspace. Acquisition also requires branch/head equality with the approved plan target. A command
+workspace. Acquisition also requires branch equality with the accepted review's approved workspace
+requirement and head equality with that review's exact plan commit. A command
 under an active lease requires the same workspace ID and branch as the lease; its observed head and
 path digest may advance only when the command payload and trusted observation match. Lease-free
 pause/cancellation requires configured-repository provenance but has no prior-lease comparison.
@@ -1252,17 +1301,21 @@ intermediate snapshot after each event, not only the final decision.
 Every table predicate is closed as follows. A complete manifest passes the exact review-binding
 validator. A pushed branch/PR is a `PullRequestTargetV1` whose head equals the plan commit and whose
 configured-repository digest appears in the trusted attestation. Dependencies ready means every
-declared dependency has exactly one sorted `DependencyStatusV1` with state `complete`; a missing,
-duplicate, or incomplete entry returns `ARTIFACT_MISSING` and `reconcile-sources`. Workspace ready
+ID in `snapshot.accepted_review.execution_requirements.dependency_issue_ids` has exactly one sorted
+`DependencyStatusV1` with state `complete`, with no duplicate, omitted, or foreign ID; a missing,
+duplicate, foreign, or incomplete entry returns `ARTIFACT_MISSING` and `reconcile-sources`. Workspace ready
 means the trusted `ValidatedWorkspaceObservationV1` matches the payload and configured repository;
-acquisition also matches the approved branch/head, and an existing lease also matches workspace ID
-and branch. Every lease
+acquisition also requires the payload and observation branch to equal
+`snapshot.accepted_review.execution_requirements.approved_workspace.branch` and their head to equal
+the reviewed plan commit selected by the `reviewed-plan-commit` rule. An existing lease also
+matches workspace ID and branch. Every lease
 creation or transfer requires `expires_at > observed_time.observed_at`; otherwise it returns
 `LEASE_EXPIRED` and `reacquire-lease`. A complete handoff contains every closed field, nonempty
 evidence, a source session matching the active phase or lease, and a target revision matching the
 named artifact. Reconciliation and verification evidence are nonempty artifact arrays with the
-configured repository digest and exact target revision. Accepted review evidence stores the sorted
-required gate IDs and definition digests read from the reviewed plan; Learn and merge require
+configured repository digest and exact target revision. Accepted review evidence stores the
+complete requirements extracted from the reviewed plan and the byte-equal sorted required gates;
+Learn and merge require
 exactly those current gates, all passed and fresh. All findings disposed means every snapshot
 finding has a non-null current disposition event. Each failed predicate returns the stable error
 named in the relevant policy subsection, the next action stated here, and no event.
@@ -1308,7 +1361,6 @@ Its complete interface is:
       readonly dispatch: ValidatedReviewDispatchV1;
       readonly output_bytes: Uint8Array;
       readonly attestation: ReviewEvidenceAttestationV1;
-      readonly required_gates: readonly GateRequirementV1[];
     }
     type ReviewValidationResultV1 =
       | { ok: true; value: ValidatedReviewEvidenceV1 }
@@ -1319,7 +1371,9 @@ Its complete interface is:
 
 The function parses `manifest_bytes` through the closed `ReviewManifestV1` decoder, parses the
 bounded Markdown output only through `parseReviewVerdictV1`, validates the typed trusted
-attestation, derives every duplicated field in `ValidatedReviewEvidenceV1`, and returns
+attestation, requires the manifest execution requirements to equal the adapter-extracted attested
+requirements, copies that declaration and its gates into `ValidatedReviewEvidenceV1`, derives every
+other duplicated field, and returns
 `ARTIFACT_STALE` for any mismatch. It never accepts caller-supplied validated evidence or a claimed
 verdict. `serializeReviewManifestV1` and `parseReviewManifestV1` join the runtime barrel and use
 `ParseResultV1<ReviewManifestV1>`; trusted `ReviewEvidenceAttestationV1` is constructed in-process
@@ -1390,7 +1444,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–7 are lifetime failures fourteen through twenty; the native issue records that count,
+verdicts. U2A clean-room rounds 1–9 are lifetime failures fourteen through twenty-two; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -1436,7 +1490,7 @@ digest and trace digests but not the lineage ID or behavior set.
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–7 as failures fourteen through twenty, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–9 as failures fourteen through twenty-two, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1550,13 +1604,18 @@ Test scenarios are prescriptive:
   This file also proves `evaluateLifecycleBytesV1` returns the parser's exact rejection without
   typed guards. It owns all lifecycle state/revision/digest cases for takeover, handoff, release,
   pause, cancellation, repair transfers, resume, and reconciliation, including every intermediate
-  snapshot and stale-owner replay.
+  snapshot and stale-owner replay. Acquisition succeeds with exactly one complete status for each
+  requirements-bound dependency; omission, duplicate, foreign ID, and incomplete status reject
+  without events. Fold the successful acquisition event from accepted-review state and prove replay
+  reaches the identical snapshot without dependency input.
 - `leases.test.ts`: test only pure lease/workspace policy functions—expiry before/at/after trusted
   observed time, heartbeat validity, owner/session/token checks, next fencing token, complete
   revoke/acquire/interruption effects, matching with/without-lease target, and validated workspace
   comparison. Assert returned policy values/errors, not lifecycle state, revision, event digest, or
   replay. Independently reject absent/foreign/stale/mismatched workspace observations and prove
-  client `occurred_at` never controls expiry.
+  client `occurred_at` never controls expiry. For acquisition, accept the exact requirements-bound
+  branch and reviewed-plan head; reject a substituted branch, substituted head, and observation
+  that differs from the payload.
 - `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
@@ -1568,18 +1627,21 @@ Test scenarios are prescriptive:
   Require at least one independently verified author; derive all participant claims from the
   trusted complete inventory; cover zero revisers with a complete empty trusted set; and reject an
   empty author set, omitted observed reviser, self-review by omission, substituted subject/path or
-  digest, incomplete inventory digest, and manifest-only participant claims.
+  digest, incomplete inventory digest, and manifest-only participant claims. Extract the exact
+  execution requirements from reviewed plan bytes and reject omitted, substituted, stale-plan, or
+  digest-mismatched dependency, workspace, and gate declarations before producing accepted review.
 - `freshness.test.ts`: exact approved and exact denied validation modes; absent, cross-mode,
   malformed, incomparable, wrong issue/action, wrong commit/digest, changed plan; exact gate,
   absent/failed/stale/future gate, one millisecond before expiry, exact expiry, maximum validity,
-  overflow, and unrelated gate preserved. Assert policy values/errors only.
+  overflow, and unrelated gate preserved. Reject omitted or substituted requirements-bound gates
+  and a declaration extracted from different plan bytes. Assert policy values/errors only.
 - `gates.test.ts`: sorted unique values, duplicate rejection, replace one gate, preserve others.
 - `routed-items.test.ts`: role/origin matrix, stable dedupe, changed evidence identity, unresolved
   completion block, every disposition, required repair artifacts, supersession, invalidation effect.
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–7 as failures fourteen through twenty, and prove another plan commit in the same split lineage retains twenty
+  rounds 1–9 as failures fourteen through twenty-two, and prove another plan commit in the same split lineage retains twenty-two
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
@@ -1716,3 +1778,9 @@ permit. Replaced descriptive command/event field inventories with complete discr
 TypeScript unions, declared every nested protocol value's exact scalar and nullability, and removed
 the conflicting suffix-based revision inference rule. Another review requires a new operator
 choice.
+
+Canonical round-9 repair note (2026-08-04): Preserved lifetime failure twenty-two and the exhausted
+permit. Added one closed execution-requirements declaration independently extracted from the exact
+reviewed plan bytes and bound it through the manifest, trusted attestation, accepted review, and
+bundle digest. Work acquisition now compares an exact dependency-ID set and the declared branch
+plus reviewed-plan head; gate validation can no longer accept a caller-selected requirement set.
