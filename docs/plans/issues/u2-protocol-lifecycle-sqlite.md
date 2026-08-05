@@ -72,6 +72,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   canonical round 6 found only a milestone-order blocker.
 - [x] (2026-08-04) Reordered milestones so protocol, standalone policies, reducer integration, and
   documentation each end at a complete passing boundary. Lifetime failed-review count is nineteen.
+- [x] (2026-08-04) Preserved canonical round 7, repaired four P1 blockers, and raised the lifetime
+  failed-review count to twenty.
 - [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
@@ -117,7 +119,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all nineteen failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all twenty failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -136,8 +138,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–6 are
-preserved as failed verdicts, and the lifetime count is nineteen. Another review is blocked until
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–7 are
+preserved as failed verdicts, and the lifetime count is twenty. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 or implementation exists for the repaired revision yet.
 
@@ -534,7 +536,8 @@ The complete readonly shapes are:
       readonly verified_participants: readonly VerifiedReviewParticipantV1[];
       readonly participant_inventory_digest: Sha256;
     }
-    interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256; }
+    interface GateRequirementV1 { readonly gate_id: string; readonly definition_digest: Sha256;
+      readonly valid_for_ms: number; }
     interface ValidatedReviewEvidenceV1 {
       readonly manifest: ReviewManifestV1;
       readonly dispatch: ValidatedReviewDispatchV1;
@@ -805,6 +808,23 @@ attestations; a snapshot is 1 MiB with at most 64 gates, 64 findings, one active
 counters, and 32 handoff artifacts. Raw byte and collection-header limits are checked before hashing
 or allocating nested values. A limit failure is
 `PROTOCOL_LIMIT_EXCEEDED`, appends no event, and is retryable only with changed input.
+
+Canonical strings use double quotes. The serializer emits every NFC Unicode scalar directly as its
+shortest valid UTF-8 sequence except `"`, `\\`, and U+0000–U+001F. It spells quote and backslash as
+`\"` and `\\`; spells backspace, tab, line feed, form feed, and carriage return as `\b`, `\t`,
+`\n`, `\f`, and `\r`; and spells every other control as `\u00xx` with lowercase hexadecimal.
+It never emits `\/`, `\u` for a printable scalar, uppercase hex, surrogate escapes, or an alternate
+escape for a character with a short form. A parser accepts only that spelling, so parse/serialize
+byte equality is unambiguous.
+
+Protocol v1 JSON numbers are unsigned decimal integers only. Their grammar is `0|[1-9][0-9]*`;
+minus, plus, fraction, exponent, leading zero, whitespace, `NaN`, and infinity fail before numeric
+conversion. `protocol_version` is the literal `1`. `PullRequestTargetV1.number` is an unsigned
+integer from 1 through 2,147,483,647 inclusive. `GateRequirementV1.valid_for_ms` is an unsigned
+integer from 1 through 86,400,000 inclusive. Collection counts and byte lengths are parser
+metadata, not JSON fields. No other protocol-v1 field accepts a JSON number. Fixed canonical-byte
+fixtures cover every escape form, printable non-ASCII, control boundary, forbidden alternate
+spelling, zero/one/maximum PR number, leading zero, negative, fraction, exponent, and overflow.
 
 `parseCanonicalJsonV1(bytes: Uint8Array)` uses a repository-owned recursive-descent tokenizer over
 raw UTF-8 so duplicate keys, numeric tokens, byte order, and nesting remain observable. It returns
@@ -1142,7 +1162,7 @@ Its complete interface is:
       readonly dispatch: ValidatedReviewDispatchV1;
       readonly output_bytes: Uint8Array;
       readonly attestation: ReviewEvidenceAttestationV1;
-      readonly required_gates: readonly { gate_id: string; definition_digest: Sha256 }[];
+      readonly required_gates: readonly GateRequirementV1[];
     }
     type ReviewValidationResultV1 =
       | { ok: true; value: ValidatedReviewEvidenceV1 }
@@ -1167,19 +1187,40 @@ boolean.
 
 ### Approval and gate freshness
 
-`validatePlanApprovalV1` accepts the existing parsed `ApprovalRecord`, its source reference and
-configured-repository provenance supplied by a Git evidence adapter, issue
-UUID, and accepted review. It requires `action: execute-plan`, `decision: approved`, response
-`APPROVED`, matching issue UUID, and exact `plan_commit` and `plan_sha256`. Denial is a valid
-`record-plan-decision` input but never queues work. Malformed, incomparable, or absent approval is
-rejected before the reducer; changed plan bytes or commit return `APPROVAL_STALE`. Working-tree
+`validatePlanApprovalV1` has this complete closed interface:
+
+    type PlanApprovalValidationInputV1 =
+      | { mode: "record-denial"; record: ApprovalRecord; source: ArtifactReferenceV1;
+          repository_digest: Sha256; issue_id: Uuid; accepted_review: ValidatedReviewEvidenceV1 }
+      | { mode: "queue-approval"; record: ApprovalRecord; source: ArtifactReferenceV1;
+          repository_digest: Sha256; issue_id: Uuid; accepted_review: ValidatedReviewEvidenceV1 };
+    type PlanApprovalValidationResultV1 =
+      | { ok: true; value: ApprovalEvidenceV1 }
+      | { ok: false; error: ProtocolErrorV1 };
+    function validatePlanApprovalV1(
+      input: PlanApprovalValidationInputV1,
+    ): PlanApprovalValidationResultV1;
+
+Both modes require `action: execute-plan`, matching issue UUID, and the accepted review's exact
+`plan_commit` and `plan_sha256`. `record-denial` requires `decision: denied` and response `DENIED`;
+it produces the denial evidence consumed only by `record-plan-decision`. `queue-approval` requires
+`decision: approved` and response `APPROVED`; it produces the approval evidence consumed only by
+`queue-approved-plan`. An exact denial supplied to queue mode is `APPROVAL_DENIED` /
+`return-to-planning`; the opposite decision/mode, wrong action, issue, commit, digest, repository,
+or source is `APPROVAL_STALE` with the matrix action; absent input is `APPROVAL_ABSENT`; malformed
+record bytes are `INVALID_ENVELOPE`. Tests cover both successes and every cross-mode substitution.
+Working-tree
 content is irrelevant. U3 alone constructs `TrustedPrincipalV1` from authenticated local transport.
 U4/U5 adapters construct review and approval provenance only after resolving immutable Git/provider
 evidence. Protocol clients submit locators, never trusted values. An unrelated repository, rewritten
 ref, issuer mismatch, or syntactically valid caller-supplied evidence fails closed.
 
 Gate freshness compares gate ID, definition digest, sorted unique input digests, target revision,
-outcome, evidence digests, and decision time. Recording one gate replaces only that ID. A guard
+outcome, evidence digests, and decision time. Every `GateRequirementV1.valid_for_ms` is an unsigned
+integer from 1 through 86,400,000 inclusive and is fixed in the reviewed plan. A passed decision is
+fresh exactly when `decided_at <= observed_time.observed_at < decided_at + valid_for_ms` after exact
+UTC millisecond conversion. A future decision, equality at the exclusive expiry boundary, overflow,
+wrong requirement, or failed outcome is stale/failed under the rejection matrix. Recording one gate replaces only that ID. A guard
 names the gates it consumes and returns absent, failed, or stale errors without modifying unrelated
 gate values.
 
@@ -1203,7 +1244,7 @@ gap dispositions require the matching issue, epic, or operating-contract repair 
 `NeedsPlanning`, and emit an effect containing the invalidated review, approval, and sorted gate IDs.
 
 The retained native issue UUID means U2A preserves the former combined plan's thirteen failed
-verdicts. U2A clean-room rounds 1–6 are lifetime failures fourteen through nineteen; the native issue records that count,
+verdicts. U2A clean-room rounds 1–7 are lifetime failures fourteen through twenty; the native issue records that count,
 the earlier operator-selected `split` response, its repair evidence, and the U2A/U2B successor
 scope. The split authorizes review of this reduced U2A issue but never resets its counter. A truly
 new issue UUID begins at zero. A retained or imported issue is seeded by U2B with its complete
@@ -1249,7 +1290,7 @@ digest and trace digests but not the lineage ID or behavior set.
 | Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
 | Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
 | Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–6 as failures fourteen through nineteen, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
+| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–7 as failures fourteen through twenty, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
 | Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
@@ -1342,9 +1383,8 @@ Test scenarios are prescriptive:
   value, and noncanonical order; assert stable error and next action. Cover every artifact kind and
   provider/nullability combination, every handoff kind/outcome/code pairing, every reason,
   resolution, and verification-failure code, both `ParseResultV1` variants, and unknown values for
-  each closed catalog.
-  Include fixed accepted/rejected bytes for every alias grammar and prove the raw lifecycle wrapper
-  returns the parser's exact rejected result without invoking typed guards.
+  each closed catalog. Include fixed accepted/rejected bytes for every alias and canonical JSON
+  string/number grammar. This file imports no execution module.
 - Event digest fixtures assert the literal hex output for the empty domain, one fixed event, and
   each intermediate digest in a fixed multi-event transfer. Tampering with the prior digest fails,
   and U2B-style replay over the same canonical event bytes produces the identical final digest.
@@ -1361,23 +1401,16 @@ Test scenarios are prescriptive:
   next-action array, and every snapshot field retained, replaced, or cleared from a fully populated
   pre-state. Repeat every single- and multi-event case through `applyLifecycleEventV1` and compare
   every intermediate snapshot byte-for-byte.
-- `leases.test.ts`: expiry without takeover, heartbeat at and after expiry, wrong owner, wrong
-  session, wrong token, takeover, handoff, release twice, merging release, pause, cancellation,
-  review repair, merge repair, first mutation by the replacement owner, and backdated or future
-  client `occurred_at` values evaluated only against attested `observed_at`. For review repair,
-  Learn integration, and merge repair, assert every intermediate state/revision/digest, prove
-  handoff-only events leave lease/token bytes unchanged, prove the explicit lease event is the sole
-  mutation, and reject the stale owner after revocation.
-  For pause and cancellation, cover every listed source state with the required no-lease variant
-  and every lease-bearing state with the matching lease variant; reject the opposite variant,
-  replay the exact interruption effect, and compare workspace, evidence, revoked lease, and both
-  token counters byte-for-byte. Resume proves null active lease and preserved counters. Reconcile a
-  conflict in a lease-free state and with both work and integration leases, then replay and reject
-  each stale owner.
-  Every workspace-bearing case supplies a matching trusted observation, then independently rejects
-  absence, wrong-command presence, foreign repository, wrong workspace ID/branch/head/path digest,
-  stale source artifact, acquisition against an unapproved head, and lease transfer across another
-  workspace.
+  This file also proves `evaluateLifecycleBytesV1` returns the parser's exact rejection without
+  typed guards. It owns all lifecycle state/revision/digest cases for takeover, handoff, release,
+  pause, cancellation, repair transfers, resume, and reconciliation, including every intermediate
+  snapshot and stale-owner replay.
+- `leases.test.ts`: test only pure lease/workspace policy functions—expiry before/at/after trusted
+  observed time, heartbeat validity, owner/session/token checks, next fencing token, complete
+  revoke/acquire/interruption effects, matching with/without-lease target, and validated workspace
+  comparison. Assert returned policy values/errors, not lifecycle state, revision, event digest, or
+  replay. Independently reject absent/foreign/stale/mismatched workspace observations and prove
+  client `occurred_at` never controls expiry.
 - `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
@@ -1390,20 +1423,22 @@ Test scenarios are prescriptive:
   trusted complete inventory; cover zero revisers with a complete empty trusted set; and reject an
   empty author set, omitted observed reviser, self-review by omission, substituted subject/path or
   digest, incomplete inventory digest, and manifest-only participant claims.
-- `freshness.test.ts`: exact approval; absent, denied, malformed, incomparable, wrong issue/action,
-  wrong commit/digest, changed plan; exact gate, absent/failed/stale gate, unrelated gate preserved.
+- `freshness.test.ts`: exact approved and exact denied validation modes; absent, cross-mode,
+  malformed, incomparable, wrong issue/action, wrong commit/digest, changed plan; exact gate,
+  absent/failed/stale/future gate, one millisecond before expiry, exact expiry, maximum validity,
+  overflow, and unrelated gate preserved. Assert policy values/errors only.
 - `gates.test.ts`: sorted unique values, duplicate rejection, replace one gate, preserve others.
 - `routed-items.test.ts`: role/origin matrix, stable dedupe, changed evidence identity, unresolved
   completion block, every disposition, required repair artifacts, supersession, invalidation effect.
 - `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
-  rounds 1–6 as failures fourteen through nineteen, and prove another plan commit in the same split lineage retains nineteen
+  rounds 1–7 as failures fourteen through twenty, and prove another plan commit in the same split lineage retains twenty
   while another issue or scope digest remains blocked. Reject unsorted successors, a split without
   a distinct successor, and a readiness artifact whose scope digest differs. Also prove a genuinely
   new issue starts at zero.
   Use one fixed split declaration whose lineage ID is computed without readiness bytes; after
-  failure nineteen, change both plan and readiness artifact digests while retaining that ID and
+  failure twenty, change both plan and readiness artifact digests while retaining that ID and
   behavior set, then allow U2A and reject another issue, another behavior set, a recomputed lineage,
   a self-referential declaration, and an artifact whose bytes do not match the declaration.
 - `reducer-determinism.test.ts`: byte-identical decision for identical input, no ambient I/O, every
@@ -1523,3 +1558,9 @@ Canonical round-6 repair note (2026-08-04): Preserved lifetime failure nineteen 
 one-review permit. Reordered execution so the runtime protocol, six standalone policy modules,
 integrated reducer, and documentation each finish with explicit focused commands and a complete
 passing observable boundary. Another review requires a new operator choice.
+
+Canonical round-7 repair note (2026-08-04): Preserved lifetime failure twenty and the exhausted
+permit. Defined the complete canonical JSON string and unsigned-number algorithms; made approval
+validation a closed approved/denied mode union; fixed gate validity to an exact millisecond window;
+and separated protocol, standalone-policy, and lifecycle integration fixtures so every milestone's
+focused suite depends only on files already created in that milestone.
