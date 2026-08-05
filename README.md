@@ -10,6 +10,8 @@ executables.
 - [Agent instructions](./AGENTS.md) and [Claude instructions](./CLAUDE.md) point every supported
   harness to the shared [operating contract](./.agents/OPERATING.md).
 - [ExecPlan rules](./PLANS.md) describe how Mandem authors and executes implementation plans.
+- [Plan authoring principles](./.agents/PLAN_AUTHORING.md) record recurring design errors to check
+  before writing or revising an ExecPlan.
 - [Documentation](./docs/README.md) indexes all maintained Mandem documentation.
 - [Architecture](./docs/architecture/README.md) describes the system and repository rules.
 - [Development](./docs/development/README.md) explains documentation and source-authoring practice.
