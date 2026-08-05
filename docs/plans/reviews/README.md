@@ -109,3 +109,6 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
 - [U2A clean-room round 7 dispatch](./2026-08-04-u2a-clean-room-round-7-dispatch.md) consumes the
   operator's next one-review permit and binds only the immutable plan, governing contract,
   canonical prompt, fresh reviewer, and sole output path.
+- [U2A clean-room round 7 reviewer output](./2026-08-04-u2a-clean-room-round-7-reviewer-output.md)
+  preserves the canonical prompt reviewer's exact four-P1 verdict as the authoritative U2A round-7
+  artifact.
