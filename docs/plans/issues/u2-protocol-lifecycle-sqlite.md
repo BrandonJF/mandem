@@ -82,6 +82,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   idempotency blockers, and raised the lifetime failed-review count to twenty-three.
 - [x] (2026-08-04) Preserved canonical round 11, repaired its one P1 unbounded-string blocker, and
   raised the lifetime failed-review count to twenty-four.
+- [x] (2026-08-04) Applied the operator-selected redesign by adding a compiled planning contract
+  and focused catalog/type-closure tests before another clean-room review.
 - [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
@@ -104,6 +106,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   plan-quality review.
   Evidence: Process finding `afb5ca4f-512f-4570-8866-55203106fa95` records the operator correction,
   the interrupted U2A round-5 dispatch, and the canonical prompt repair.
+- Observation: Repeated late clean-room findings shared one cause: the plan's protocol declarations
+  behaved like a type system but repository checks treated them as prose.
+  Evidence: Rounds 8–11 found incomplete interfaces, missing immutable producers, contradictory
+  collection rules, and unconstrained strings after every ordinary documentation gate was green.
 
 ## Decision Log
 
@@ -141,6 +147,12 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   Rationale: The reviewer must judge the whole plan as a context-free novice executor, not confirm
   that the author closed a supplied list of findings.
   Date/Author: 2026-08-04 / Codex
+- Decision: Make `docs/plans/contracts/u2a-protocol-contract.ts` and its focused test the planning
+  authority for command/event catalogs and their immediate field/value type references.
+  Rationale: TypeScript and executable parity assertions catch missing members, unknown type
+  references, duplicate fields, and raw strings before human review. The ExecPlan remains
+  authoritative for behavior, provenance, lifecycle rules, and implementation sequencing.
+  Date/Author: 2026-08-04 / Codex
 
 ## Outcomes & Retrospective
 
@@ -150,6 +162,23 @@ gates, process findings, failed-review limits, and deterministic tests. U2A roun
 preserved as failed verdicts, and the lifetime count is twenty-four. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
 exists for the repaired revision yet.
+
+## Mechanically Checked Planning Contract
+
+`docs/plans/contracts/u2a-protocol-contract.ts` is a planning artifact, not production runtime
+code. It is the canonical catalog for every command kind and field and every event kind and value
+type. `docs/plans/contracts/u2a-protocol-contract.test.ts` verifies catalog counts, unique token
+identities, field uniqueness, closed type references, and the absence of unconstrained raw string
+fields. Run it before every review:
+
+    bunx vitest run docs/plans/contracts/u2a-protocol-contract.test.ts
+
+The test must report one passing file and four passing tests. A plan edit that changes a command,
+event, or immediate field/value type must update the planning contract in the same commit. A
+mismatch blocks readiness and review dispatch. The prose declarations below remain the complete
+nested-value and behavioral contract until Milestone 1 promotes the checked catalog into the
+runtime types; where a catalog entry and duplicated prose disagree, the plan is not ready and must
+be repaired rather than choosing one silently.
 
 ## Context and Orientation
 
@@ -791,7 +820,7 @@ exactly `scope-complete`, `tests-passed`, `review-clean`, `learning-recorded`, `
 `gate-failed`, `approval-stale`, or `reconciliation-required`. `decision_codes` is a sorted unique
 nonempty array. `blocker_codes` is exactly `["none"]` for a successful outcome and excludes `none`
 otherwise. `next_transition` is exactly the command enabled by the kind/outcome pair:
-`record-review-findings` or `accept-review` after implementation, `return-for-repair` after review
+`record-review-findings` or `accept-review` after implementation, `submit-work-handoff` after review
 findings, `accept-learn` after clean review, `record-exact-merge` after Learn, and
 `submit-work-handoff` after repair.
 
@@ -1561,10 +1590,12 @@ to wire I/O.
 
 ### Milestone 1: Define and prove the runtime protocol
 
-Create `src/modules/runtime/domain/protocol.ts` and its test first. Add exact aliases and shared
-values to `types.ts`. Implement closed parsing, canonical serialization, limits, result/error/event
+Start from the checked catalog in `docs/plans/contracts/u2a-protocol-contract.ts`; do not retype or
+rename its command fields or event value mappings. Create `src/modules/runtime/domain/protocol.ts`
+and its test first. Add exact aliases and shared values to `types.ts`. Implement closed parsing,
+canonical serialization, limits, result/error/event
 shapes, and digests. Export them through domain, API, and root barrels. End this milestone by running
-`bunx vitest run src/modules/runtime/domain/protocol.test.ts`, `bun run typecheck`, and
+the planning-contract test, `bunx vitest run src/modules/runtime/domain/protocol.test.ts`, `bun run typecheck`, and
 `bun run architecture:check`. The boundary is complete only when the protocol test file passes all
 catalog, alias, byte-limit, canonicalization, parser, serializer, and digest fixtures and both gates
 exit zero. No execution reducer or policy is required yet.
@@ -1603,6 +1634,9 @@ zero and Vitest reporting all repository test files passed.
 
 ## Exact Files and Tests
 
+- Planning inputs: read but do not delete or weaken
+  `docs/plans/contracts/u2a-protocol-contract.ts` and
+  `docs/plans/contracts/u2a-protocol-contract.test.ts`; runtime catalog parity must match them.
 - Runtime: modify `src/modules/runtime/domain/types.ts`, `src/modules/runtime/domain/index.ts`,
   `src/modules/runtime/api/index.ts`, `src/modules/runtime/index.ts`, and
   `src/modules/runtime/README.md`; create `src/modules/runtime/domain/protocol.ts` and
