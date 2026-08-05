@@ -84,8 +84,11 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   raised the lifetime failed-review count to twenty-four.
 - [x] (2026-08-04) Applied the operator-selected redesign by adding a compiled planning contract
   and focused catalog/type-closure tests before another clean-room review.
-- [ ] Another
-  review remains blocked until the operator chooses split, redesign, or permit-one-more.
+- [x] (2026-08-04) Auto-resolved the redesign document review: completed recursive schema coverage,
+  trusted-input provenance, fencing and external-ID aliases, handoff replay facts, and policy
+  consolidation.
+- [ ] Another clean-room review remains blocked until the operator records `PERMIT ONE MORE REVIEW`
+  for the redesigned revision.
 - [ ] Obtain exact operator approval before implementation.
 
 ## Surprises & Discoveries
@@ -148,10 +151,19 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   that the author closed a supplied list of findings.
   Date/Author: 2026-08-04 / Codex
 - Decision: Make `docs/plans/contracts/u2a-protocol-contract.ts` and its focused test the planning
-  authority for command/event catalogs and their immediate field/value type references.
+  authority for command/event catalogs and the complete recursive wire-type registry.
   Rationale: TypeScript and executable parity assertions catch missing members, unknown type
-  references, duplicate fields, and raw strings before human review. The ExecPlan remains
-  authoritative for behavior, provenance, lifecycle rules, and implementation sequencing.
+  references, duplicate fields, raw strings, and missing recursive definitions before human
+  review. The ExecPlan remains authoritative for behavior, provenance, lifecycle rules, and
+  implementation sequencing.
+  Date/Author: 2026-08-04 / Codex
+- Decision: Persist the attestation for every trusted adapter input in the event that consumes it.
+  Rationale: U2B replay must preserve who established an external fact without trusting a caller or
+  recontacting the external source.
+  Date/Author: 2026-08-04 / Codex
+- Decision: Consolidate six single-purpose policy files into work, evidence, and process policies.
+  Rationale: These three modules match current behavioral seams and retain focused testing without
+  publishing six abstractions whose only production consumer is the lifecycle reducer.
   Date/Author: 2026-08-04 / Codex
 
 ## Outcomes & Retrospective
@@ -159,26 +171,31 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
 gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–11 are
-preserved as failed verdicts, and the lifetime count is twenty-four. Another review is blocked until
-the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
+preserved as failed verdicts, and the lifetime count is twenty-four. The redesign passed author-side
+coherence, feasibility, scope, security, and adversarial review. Another clean-room review is blocked
+until the operator records `PERMIT ONE MORE REVIEW`. No clean review, approval, or implementation
 exists for the repaired revision yet.
 
 ## Mechanically Checked Planning Contract
 
 `docs/plans/contracts/u2a-protocol-contract.ts` is a planning artifact, not production runtime
-code. It is the canonical catalog for every command kind and field and every event kind and value
-type. `docs/plans/contracts/u2a-protocol-contract.test.ts` verifies catalog counts, unique token
-identities, field uniqueness, closed type references, and the absence of unconstrained raw string
-fields. Run it before every review:
+code. It is the canonical catalog for command payload fields, event value types, and every wire
+type recursively referenced by those two catalogs. It deliberately does not duplicate the
+top-level command, event, result, error, evaluation-input, or snapshot declarations below; those
+remain prose inputs to Milestone 1 and receive runtime compilation and conformance tests there.
+`docs/plans/contracts/u2a-protocol-contract.test.ts`
+verifies catalog counts, unique token identities, field uniqueness, closed type references, the
+absence of unconstrained raw string fields, and complete recursive registry coverage. Run it before every review:
 
     bunx vitest run docs/plans/contracts/u2a-protocol-contract.test.ts
 
-The test must report one passing file and four passing tests. A plan edit that changes a command,
-event, or immediate field/value type must update the planning contract in the same commit. A
+The test must report one passing file and ten passing tests. A plan edit that changes a command
+payload, event value, registered nested wire type, or immediate field/value type must update the planning contract in the same commit. A
 mismatch blocks readiness and review dispatch. The prose declarations below remain the complete
-nested-value and behavioral contract until Milestone 1 promotes the checked catalog into the
-runtime types; where a catalog entry and duplicated prose disagree, the plan is not ready and must
-be repaired rather than choosing one silently.
+behavioral contract until Milestone 1 promotes the checked schema into runtime types. Within the
+two catalog roots, the machine schema governs wire membership and field types; prose governs
+top-level envelopes, snapshots, results, behavior, and provenance. A mismatch
+blocks review rather than letting an implementer choose one silently.
 
 ## Context and Orientation
 
@@ -305,6 +322,18 @@ The validated alias grammars are exact:
   `[a-z][a-z0-9]*(?:-[a-z0-9]+){0,7}`. Equality, sorting, uniqueness, and replacement use bytewise
   ASCII comparison; uppercase, Unicode, underscores, empty components, and leading/trailing hyphens
   fail.
+- `FencingTokenV1` is a positive unsigned 64-bit integer written as 1–20 ASCII decimal bytes with
+  no sign and no leading zero. Zero, overflow above `18446744073709551615`, whitespace, exponent
+  notation, and alternate spellings fail. Token comparison parses this exact grammar and compares
+  the unsigned values.
+- `FencingCounterV1` uses the same unsigned 64-bit decimal grammar but permits canonical `0` for a
+  resource that has never issued a lease. `FencingTokenByResourceV1` uses counters; every
+  `LeaseSnapshotV1` and command token uses positive-only `FencingTokenV1`. First acquisition changes
+  the matching counter from `0` to token `1`.
+- `ExternalArtifactIdV1` is a non-secret provider-issued opaque identifier of 1–256 printable ASCII
+  bytes without leading or trailing whitespace, `://`, `?`, `#`, `=`, ASCII control bytes, or
+  credential prefixes such as `Bearer ` and `Basic `. Only a trusted adapter may construct it;
+  command parsing rejects every artifact reference with a non-null provider or external ID.
 
 Alias validators return `ParseResultV1`-compatible errors and fixed fixtures cover every accepted
 boundary plus uppercase, wrong UUID version/variant, wrong hash length/all-zero hash, timestamp
@@ -323,7 +352,7 @@ uppercase, Unicode, underscores, and malformed hyphen components.
     interface ActorAttributionV1 { actor_id: Uuid; role: ActorRoleV1; session_id: Uuid;
       authority_scopes: AuthorityScopeV1[]; }
     interface TrustedPrincipalV1 extends ActorAttributionV1 { authenticated_at: UtcTimestamp;
-      transport_identity_digest: Sha256; }
+      transport_identity_digest: Sha256; trust: TrustedAdapterAttestationV1; }
     type ArtifactKindV1 = "repo-file" | "review-manifest" | "review-dispatch-receipt"
       | "review-output" | "readiness-check" | "approval-record" | "gate-evidence"
       | "workspace" | "handoff" | "review-findings" | "learn-record" | "merge-record"
@@ -332,13 +361,18 @@ uppercase, Unicode, underscores, and malformed hyphen components.
     type ArtifactProviderV1 = "git" | "git-issue" | "github" | "codex" | "local";
     interface ArtifactReferenceV1 { kind: ArtifactKindV1; path: RepoPath | null;
       commit: GitSha | null; digest: Sha256; provider: ArtifactProviderV1 | null;
-      external_id: string | null; }
+      external_id: ExternalArtifactIdV1 | null; }
 
 Artifact references require `path` and `commit` together for `repo-file`, `review-manifest`,
 `review-output`, `readiness-check`, `approval-record`, `learn-record`, and `process-repair`.
 `provider` is required for dispatch receipts and external evidence and forbidden otherwise;
-`external_id` is allowed only when `provider` is non-null. External IDs use 1–256 printable ASCII
-bytes without leading/trailing whitespace. The closed decoder rejects every other combination.
+`external_id` is allowed only when `provider` is non-null and uses `ExternalArtifactIdV1`. The
+closed command decoder accepts only artifact references whose `provider` and `external_id` are both
+null. Trusted Git/provider/workspace adapters may enrich a validated reference with those fields
+only after authenticating the provider metadata and attaching `TrustedAdapterAttestationV1` to the
+containing trusted value. URL, query, header, bearer, basic-auth, cookie, credential, and secret
+material therefore cannot enter commands, events, snapshots, results, logs, or U2B receipts. The
+closed decoder rejects every other combination.
 
 The role/scope matrix is exhaustive. Operator may hold every scope. Phase agent may hold
 `submit-plan-review`, `decide-plan`, `record-learn`, `reconcile-sources`,
@@ -440,16 +474,16 @@ there is no suffix-based type inference and no optional command property.
     interface RecordPlanDecisionCommandV1 { readonly kind: "record-plan-decision"; readonly approval_locator: ApprovalLocatorV1; }
     interface QueueApprovedPlanCommandV1 { readonly kind: "queue-approved-plan"; readonly approval_locator: ApprovalLocatorV1; }
     interface AcquireWorkLeaseCommandV1 { readonly kind: "acquire-work-lease"; readonly owner_id: Uuid; readonly session_id: Uuid; readonly workspace: WorkspaceTargetV1; readonly expires_at: UtcTimestamp; }
-    interface RecordLeaseHeartbeatCommandV1 { readonly kind: "record-lease-heartbeat"; readonly lease_id: Uuid; readonly fencing_token: string; readonly observed_at: UtcTimestamp; }
+    interface RecordLeaseHeartbeatCommandV1 { readonly kind: "record-lease-heartbeat"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly observed_at: UtcTimestamp; }
     interface TakeoverWorkLeaseCommandV1 { readonly kind: "takeover-work-lease"; readonly prior_lease_id: Uuid; readonly new_owner_id: Uuid; readonly new_session_id: Uuid; readonly expires_at: UtcTimestamp; readonly operator_override: boolean; readonly reason_code: LeaseReasonCodeV1; }
-    interface ReleaseWorkLeaseCommandV1 { readonly kind: "release-work-lease"; readonly lease_id: Uuid; readonly fencing_token: string; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
-    interface SubmitWorkHandoffCommandV1 { readonly kind: "submit-work-handoff"; readonly lease_id: Uuid; readonly fencing_token: string; readonly handoff: HandoffDecisionV1; }
+    interface ReleaseWorkLeaseCommandV1 { readonly kind: "release-work-lease"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface SubmitWorkHandoffCommandV1 { readonly kind: "submit-work-handoff"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly handoff: HandoffDecisionV1; }
     interface RecordReviewFindingsCommandV1 { readonly kind: "record-review-findings"; readonly reviewed_head: GitSha; readonly review_output: ReviewOutputTargetV1; readonly repair_owner_id: Uuid; readonly repair_session_id: Uuid; readonly repair_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; readonly handoff: HandoffDecisionV1; }
     interface AcceptReviewCommandV1 { readonly kind: "accept-review"; readonly reviewed_head: GitSha; readonly review_output: ReviewOutputTargetV1; readonly handoff: HandoffDecisionV1; }
     interface InvalidateReviewCommandV1 { readonly kind: "invalidate-review"; readonly changed_artifacts: readonly ArtifactReferenceV1[]; }
     interface AcceptLearnCommandV1 { readonly kind: "accept-learn"; readonly handoff: HandoffDecisionV1; readonly integration_owner_id: Uuid; readonly integration_session_id: Uuid; readonly integration_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; }
-    interface ReturnForRepairCommandV1 { readonly kind: "return-for-repair"; readonly lease_id: Uuid; readonly fencing_token: string; readonly evidence: readonly ArtifactReferenceV1[]; readonly repair_owner_id: Uuid; readonly repair_session_id: Uuid; readonly repair_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; readonly handoff: HandoffDecisionV1; }
-    interface RecordExactMergeCommandV1 { readonly kind: "record-exact-merge"; readonly lease_id: Uuid; readonly fencing_token: string; readonly approved_head: GitSha; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ReturnForRepairCommandV1 { readonly kind: "return-for-repair"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly repair_owner_id: Uuid; readonly repair_session_id: Uuid; readonly repair_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; readonly handoff: HandoffDecisionV1; }
+    interface RecordExactMergeCommandV1 { readonly kind: "record-exact-merge"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly approved_head: GitSha; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface RecordVerificationSuccessCommandV1 { readonly kind: "record-verification-success"; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface RecordVerificationFailureCommandV1 { readonly kind: "record-verification-failure"; readonly merge_sha: GitSha; readonly failure_code: VerificationFailureCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface ResumePlanningCommandV1 { readonly kind: "resume-planning"; readonly resolution_code: ResolutionCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
@@ -547,7 +581,8 @@ the U2A parser composes that public parser rather than redefining it.
     interface PlanTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; }
     interface GoverningContractTargetV1 { readonly path: "PLANS.md"; readonly commit: GitSha; readonly digest: Sha256; }
     interface PullRequestTargetV1 { readonly provider: "github"; readonly repository: RepositorySlugV1; readonly number: number; readonly head: GitSha; }
-    interface ApprovalEvidenceV1 { readonly record: ApprovalRecord; readonly source: ArtifactReferenceV1; }
+    interface TrustedAdapterAttestationV1 { readonly issuer_id: Uuid; readonly issuer_kind: "local-transport" | "git-adapter" | "provider-adapter" | "clock-adapter" | "workspace-adapter"; readonly authenticated_at: UtcTimestamp; readonly transport_identity_digest: Sha256; readonly configured_repository_digest: Sha256; readonly subject_digest: Sha256; readonly source: ArtifactReferenceV1; }
+    interface ApprovalEvidenceV1 { readonly record: ApprovalRecord; readonly source: ArtifactReferenceV1; readonly trust: TrustedAdapterAttestationV1; }
     interface ApprovalLocatorV1 { readonly issue_id: Uuid; readonly commit: GitSha; }
     interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: string; readonly head: GitSha; readonly path_digest: Sha256; }
     interface ReviewOutputTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; readonly verdict: "clean" | "changes-required"; }
@@ -562,21 +597,22 @@ the U2A parser composes that public parser rather than redefining it.
     interface ProcessFindingV1 { readonly finding_id: Sha256; readonly origin: ProcessFindingOriginV1; readonly affected_phase: LifecycleStateV1; readonly evidence_code: ProcessEvidenceCodeV1; readonly evidence_artifacts: readonly ArtifactReferenceV1[]; readonly disposition: ProcessFindingDispositionV1 | null; readonly repair_artifacts: readonly ArtifactReferenceV1[]; readonly disposition_event_id: Uuid | null; readonly supersedes_event_id: Uuid | null; }
     interface FailedReviewChoiceV1 { readonly event_id: Uuid; readonly response: ReviewScopeResponseV1; }
     interface FailedReviewPolicyV1 { readonly changes_required_count: number; readonly third_review_response: ReviewScopeResponseV1 | null; readonly fifth_review_choices: readonly FailedReviewChoiceV1[]; readonly active_permit_choice_event_id: Uuid | null; readonly consumed_permit_choice_event_ids: readonly Uuid[]; }
-    interface LeaseSnapshotV1 { readonly lease_id: Uuid; readonly resource: "work" | "integration"; readonly workspace: WorkspaceTargetV1; readonly owner_id: Uuid; readonly session_id: Uuid; readonly acquired_at: UtcTimestamp; readonly expires_at: UtcTimestamp; readonly fencing_token: string; readonly last_heartbeat_at: UtcTimestamp | null; readonly revoked_at: UtcTimestamp | null; readonly reason_code: LeaseReasonCodeV1 | null; }
+    interface FencingTokenByResourceV1 { readonly work: FencingCounterV1; readonly integration: FencingCounterV1; }
+    interface LeaseSnapshotV1 { readonly lease_id: Uuid; readonly resource: "work" | "integration"; readonly workspace: WorkspaceTargetV1; readonly owner_id: Uuid; readonly session_id: Uuid; readonly acquired_at: UtcTimestamp; readonly expires_at: UtcTimestamp; readonly fencing_token: FencingTokenV1; readonly last_heartbeat_at: UtcTimestamp | null; readonly revoked_at: UtcTimestamp | null; readonly reason_code: LeaseReasonCodeV1 | null; }
     interface InvalidationEffectV1 { readonly review: ValidatedReviewEvidenceV1 | null; readonly approval: ApprovalEvidenceV1 | null; readonly gates: readonly GateDecisionV1[]; readonly resulting_state: LifecycleStateV1; }
     interface ExactMergeRecordV1 { readonly approved_head: GitSha; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
     type VerificationOutcomeV1 =
       | { readonly kind: "succeeded"; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[] }
       | { readonly kind: "failed"; readonly merge_sha: GitSha; readonly failure_code: VerificationFailureCodeV1; readonly evidence: readonly ArtifactReferenceV1[] };
-    interface ExactMergeEffectV1 { readonly merge: ExactMergeRecordV1; readonly revoked_lease: LeaseSnapshotV1; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
-    interface LeaseHandoffEffectV1 { readonly handoff: HandoffDecisionV1; readonly revoked_lease: LeaseSnapshotV1 | null; readonly acquired_lease: LeaseSnapshotV1 | null; }
+    interface ExactMergeEffectV1 { readonly merge: ExactMergeRecordV1; readonly revoked_lease: LeaseSnapshotV1; readonly resulting_last_fencing_token_by_resource: FencingTokenByResourceV1; }
+    interface LeaseHandoffEffectV1 { readonly handoff: HandoffDecisionV1; readonly revoked_lease: LeaseSnapshotV1 | null; readonly acquired_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: FencingTokenByResourceV1; }
     interface FindingDispositionEffectV1 { readonly finding: ProcessFindingV1; readonly invalidation: InvalidationEffectV1 | null; }
     type LeaseTargetV1 =
       | { readonly kind: "without-active-lease" }
-      | { readonly kind: "with-active-lease"; readonly lease_id: Uuid; readonly fencing_token: string };
-    interface LifecycleInterruptionEffectV1 { readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
-    interface LifecycleResumeEffectV1 { readonly workspace: WorkspaceTargetV1; readonly approval: ApprovalEvidenceV1; readonly gates: readonly GateDecisionV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly resulting_active_lease: null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
-    interface ReconciliationEffectV1 { readonly conflict_code: ErrorCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
+      | { readonly kind: "with-active-lease"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1 };
+    interface LifecycleInterruptionEffectV1 { readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: FencingTokenByResourceV1; }
+    interface LifecycleResumeEffectV1 { readonly workspace: WorkspaceTargetV1; readonly approval: ApprovalEvidenceV1; readonly gates: readonly GateDecisionV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly resulting_active_lease: null; readonly resulting_last_fencing_token_by_resource: FencingTokenByResourceV1; }
+    interface ReconciliationEffectV1 { readonly conflict_code: ErrorCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: FencingTokenByResourceV1; }
 
 The named values below expand to required readonly TypeScript fields without optional properties. Every
 name ending `_id` is `Uuid` except finding IDs (`Sha256`); every `*_at` or `*_expires_at` is
@@ -719,6 +755,7 @@ The complete readonly shapes are:
       readonly model: string | null;
       readonly dispatched_at: UtcTimestamp;
       readonly receipt: ArtifactReferenceV1;
+      readonly trust: TrustedAdapterAttestationV1;
     }
     interface ReviewEvidenceAttestationV1 {
       readonly configured_repository_digest: Sha256;
@@ -734,6 +771,7 @@ The complete readonly shapes are:
       readonly participant_inventory_digest: Sha256;
       readonly execution_requirements: ExecutionRequirementsV1;
       readonly execution_requirements_source_digest: Sha256;
+      readonly trust: TrustedAdapterAttestationV1;
     }
     interface GateRequirementV1 { readonly gate_id: GateIdV1; readonly definition_digest: Sha256;
       readonly valid_for_ms: number; }
@@ -754,11 +792,14 @@ The complete readonly shapes are:
       readonly required_gates: readonly GateRequirementV1[];
       readonly verdict: "clean" | "changes-required";
     }
-`ObservedTimeV1` is `{ observed_at: UtcTimestamp; source_digest: Sha256 }`, constructed only by the
+`ObservedTimeV1` is `{ observed_at: UtcTimestamp; source_digest: Sha256; trust:
+TrustedAdapterAttestationV1 }`, constructed only by the
 control plane's trusted clock adapter. `DependencyStatusV1` is `{ issue_id: Uuid;
-state: "complete" | "incomplete"; evidence: ArtifactReferenceV1 }`.
+state: "complete" | "incomplete"; evidence: ArtifactReferenceV1; trust:
+TrustedAdapterAttestationV1 }`.
 `ValidatedWorkspaceObservationV1` is `{ workspace: WorkspaceTargetV1; repository_digest: Sha256;
-observed_at: UtcTimestamp; source: ArtifactReferenceV1; validator_identity_digest: Sha256 }`. The
+observed_at: UtcTimestamp; source: ArtifactReferenceV1; validator_identity_digest: Sha256; trust:
+TrustedAdapterAttestationV1 }`. The
 later workspace adapter constructs it only after resolving the configured repository, workspace
 identity, branch, exact head, and canonical path-state digest. `source` is a committed `workspace`
 artifact containing those observed fields. The reducer requires byte equality with the command's
@@ -769,6 +810,27 @@ path digest may advance only when the command payload and trusted observation ma
 pause/cancellation requires configured-repository provenance but has no prior-lease comparison.
 Foreign repository, absent observation, identity/branch mismatch, stale head, path-digest mismatch,
 or source mismatch is `ARTIFACT_STALE` under the rejection matrix.
+
+`TrustedAdapterAttestationV1` is the common proof attached to every trusted evaluation value. The
+later composition root may construct it only after its configured adapter registry maps the
+authenticated transport or provider identity to the exact `issuer_id`, `issuer_kind`, and
+configured repository. Local transport uses operating-system peer credentials; Git and workspace
+adapters resolve the configured repository and immutable object IDs; provider adapters verify the
+provider-issued receipt and session; the clock adapter uses the control-plane clock process
+identity. Each adapter computes `subject_digest` from the complete canonical value with its `trust`
+field omitted, then signs or transport-binds that digest before returning the value. The U2A
+application boundary recomputes the subject digest, requires issuer kind to match the input kind,
+requires repository and transport digests to match the authenticated composition context, and only
+then calls the pure reducer. Callers cannot submit this type through command JSON.
+
+Every emitted event stores the sorted unique `trusted_inputs` used for that decision, ordered by
+issuer kind then issuer ID. Every accepted event includes `principal.trust`; transitions also
+include each additional trusted adapter value they consume. The principal attestation uses issuer
+kind `local-transport`, and its subject digest binds the complete `TrustedPrincipalV1` except its
+own `trust` field. U2B persists the array as part of the event bytes, so replay preserves which authenticated issuer
+established each external fact without recontacting Git, a provider, or the clock. A missing,
+duplicate, subject-mismatched, wrong-kind, wrong-repository, or unregistered attestation returns
+`UNTRUSTED_PRINCIPAL` before lifecycle guards and emits no event.
 `ScopeBehaviorIdV1` is exactly `interpret-request`, `reject-invalid-order`,
 `control-active-agent`, `bind-clean-review`, `bind-operator-approval`, `limit-failed-reviews`, or
 `handoff-to-storage`. `ReviewScopeLineageV1` is `{ decision: "keep-scope" | "split" | "redesign";
@@ -846,23 +908,25 @@ evidence: readonly ArtifactReferenceV1[] }`. Both verification commands must mat
 `snapshot.exact_merge.merge_sha`; mismatch returns `ARTIFACT_STALE`, emits no event, and offers
 `reconcile-sources`.
 `ExactMergeEffectV1` is `{ merge: ExactMergeRecordV1; revoked_lease: LeaseSnapshotV1;
-resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }> }`.
+resulting_last_fencing_token_by_resource: FencingTokenByResourceV1 }`.
 `record-exact-merge` requires the active integration lease, copies it completely, sets its
 `revoked_at` to trusted observed time and reason to `completed`, preserves both fencing counters,
 and records that effect in its single event. Folding clears `active_lease`, stores `merge`, and
 replaces the complete token map, so Verifying never retains a live integration lease.
 `LeaseHandoffEffectV1` is `{ handoff: HandoffDecisionV1; revoked_lease: LeaseSnapshotV1 | null;
-acquired_lease: LeaseSnapshotV1 | null }`. `FindingDispositionEffectV1` is
+acquired_lease: LeaseSnapshotV1 | null; resulting_last_fencing_token_by_resource:
+FencingTokenByResourceV1 }`. It records the complete post-transition token map even when unchanged;
+folding never derives a token from lease fields. `FindingDispositionEffectV1` is
 `{ finding: ProcessFindingV1; invalidation: InvalidationEffectV1 | null }`.
 
 `LeaseTargetV1` is exactly `{ kind: "without-active-lease" }` or
-`{ kind: "with-active-lease"; lease_id: Uuid; fencing_token: string }`. The reducer requires the
+`{ kind: "with-active-lease"; lease_id: Uuid; fencing_token: FencingTokenV1 }`. The reducer requires the
 first variant when `snapshot.active_lease` is null and the second to match the complete current
 lease; a mismatch is `LEASE_REQUIRED`, `LEASE_NON_OWNER`, or `LEASE_FENCED` under the existing guard
 order. `LifecycleInterruptionEffectV1` is `{ reason_code: LeaseReasonCodeV1;
 workspace: WorkspaceTargetV1; evidence: readonly ArtifactReferenceV1[];
 revoked_lease: LeaseSnapshotV1 | null; resulting_last_fencing_token_by_resource:
-Readonly<{ work: string; integration: string }> }`. Pause and cancellation construct it from the
+FencingTokenByResourceV1 }`. Pause and cancellation construct it from the
 validated `lease_target`, complete pre-transition lease, trusted observed time, exact reason, and
 prior token map. When a lease exists, the effect's lease copies every prior field, sets
 `revoked_at = observed_time.observed_at`, sets the transition's reason, and leaves the corresponding
@@ -872,10 +936,10 @@ byte-identical to the input.
 `LifecycleResumeEffectV1` is `{ workspace: WorkspaceTargetV1; approval: ApprovalEvidenceV1;
 gates: readonly GateDecisionV1[]; evidence: readonly ArtifactReferenceV1[];
 resulting_active_lease: null; resulting_last_fencing_token_by_resource:
-Readonly<{ work: string; integration: string }> }`. It preserves the complete token map and proves
+FencingTokenByResourceV1 }`. It preserves the complete token map and proves
 that resume never recreates a lease. `ReconciliationEffectV1` is `{ conflict_code: ErrorCodeV1;
 evidence: readonly ArtifactReferenceV1[]; revoked_lease: LeaseSnapshotV1 | null;
-resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }> }`.
+resulting_last_fencing_token_by_resource: FencingTokenByResourceV1 }`.
 Reconciliation copies and revokes an active lease at trusted observed time with reason
 `reconciliation-conflict`, or records null and the unchanged complete token map. These effects are
 event values, not new snapshot fields; folding them clears or preserves `active_lease`, replaces the
@@ -904,7 +968,7 @@ or collection shape.
       readonly approval: ApprovalEvidenceV1 | null;
       readonly gates: readonly GateDecisionV1[];
       readonly active_lease: LeaseSnapshotV1 | null;
-      readonly last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>;
+      readonly last_fencing_token_by_resource: FencingTokenByResourceV1;
       readonly handoff: HandoffDecisionV1 | null;
       readonly exact_merge: ExactMergeRecordV1 | null;
       readonly verification: VerificationOutcomeV1 | null;
@@ -1012,6 +1076,7 @@ four shown properties, so a value is always explicit and no event field is infer
       readonly actor: ActorAttributionV1;
       readonly prior_revision: Uuid | null;
       readonly prior_events_digest: Sha256;
+      readonly trusted_inputs: readonly TrustedAdapterAttestationV1[];
       readonly payload: EventPayloadV1;
     }
 
@@ -1600,15 +1665,17 @@ the planning-contract test, `bunx vitest run src/modules/runtime/domain/protocol
 catalog, alias, byte-limit, canonicalization, parser, serializer, and digest fixtures and both gates
 exit zero. No execution reducer or policy is required yet.
 
-### Milestone 2: Define and prove every standalone execution policy
+### Milestone 2: Define and prove three cohesive execution policies
 
-Create the complete execution module skeleton and `domain/types.ts`, then implement `leases.ts`,
-`review-binding.ts`, `freshness.ts`, `gates.ts`, `routed-items.ts`, and
-`failed-review-limits.ts` test-first. Each module accepts and returns the complete public values
-defined above without importing or calling `lifecycle.ts`. End by running
-`bunx vitest run src/modules/execution/domain/{leases,review-binding,freshness,gates,routed-items,failed-review-limits}.test.ts`,
+Create the complete execution module skeleton and `domain/types.ts`, then implement
+`work-policy.ts` for leases, workspace, fencing, and handoffs; `evidence-policy.ts` for review,
+approval, gate validation, and freshness; and `process-policy.ts` for process findings and failed
+review limits. These are the three present behavioral seams and each has both the lifecycle reducer
+and its focused tests as current consumers. Keep helpers private unless an application adapter must
+call a validator before constructing a trusted input. End by running
+`bunx vitest run src/modules/execution/domain/{work-policy,evidence-policy,process-policy}.test.ts`,
 followed by `bun run typecheck` and
-`bun run architecture:check`. The milestone passes only when all six focused policy files pass and
+`bun run architecture:check`. The milestone passes only when all three focused policy files pass and
 the execution module compiles without a reducer implementation.
 
 ### Milestone 3: Integrate the proven policies into the exhaustive lifecycle reducer
@@ -1644,10 +1711,9 @@ zero and Vitest reporting all repository test files passed.
 - Execution module shape: create `src/modules/execution/README.md`, `index.ts`, `domain/index.ts`,
   `domain/types.ts`, `application/index.ts`, `infrastructure/index.ts`, `api/composition.ts`,
   `api/index.ts`, and `tests/fakes/index.ts`.
-- Execution policies and adjacent tests: create `leases.ts`, `leases.test.ts`,
-  `review-binding.ts`, `review-binding.test.ts`, `freshness.ts`,
-  `freshness.test.ts`, `gates.ts`, `gates.test.ts`, `routed-items.ts`, `routed-items.test.ts`,
-  and `failed-review-limits.ts`, `failed-review-limits.test.ts` in Milestone 2; create
+- Execution policies and adjacent tests: create `work-policy.ts`, `work-policy.test.ts`,
+  `evidence-policy.ts`, `evidence-policy.test.ts`, `process-policy.ts`, and
+  `process-policy.test.ts` in Milestone 2; create
   `domain/lifecycle.ts`, `lifecycle.test.ts`, and `reducer-determinism.test.ts` in Milestone 3.
 - Documentation: modify `src/modules/README.md` and `docs/architecture/README.md`; create
   `docs/architecture/control-protocol.md`.
@@ -1666,6 +1732,9 @@ Test scenarios are prescriptive:
   change that correctly preserves the payload digest, and reject a malformed
   identity. Round-trip complete idempotency in accepted and typed-rejected results and null only for
   pre-envelope parser failure. This file imports no execution module.
+  Include fencing-token zero, leading-zero, maximum, and overflow fixtures. Reject every
+  command-supplied provider or external ID plus URL, query, header, bearer/basic-auth, cookie, and
+  credential-shaped external IDs; accept one adapter-constructed opaque external ID.
 - Event digest fixtures assert the literal hex output for the empty domain, one fixed event, and
   each intermediate digest in a fixed multi-event transfer. Tampering with the prior digest fails,
   and U2B-style replay over the same canonical event bytes produces the identical final digest.
@@ -1685,19 +1754,22 @@ Test scenarios are prescriptive:
   This file also proves `evaluateLifecycleBytesV1` returns the parser's exact rejection without
   typed guards. It owns all lifecycle state/revision/digest cases for takeover, handoff, release,
   pause, cancellation, repair transfers, resume, and reconciliation, including every intermediate
-  snapshot and stale-owner replay. Acquisition succeeds with exactly one complete status for each
+  snapshot and stale-owner replay. Assert every accepted event stores exactly the trusted adapter
+  attestations its decision consumed and replay preserves them byte-for-byte; reject missing,
+  duplicate, wrong-issuer-kind, wrong-repository, and subject-digest mismatches. Acquisition succeeds with exactly one complete status for each
   requirements-bound dependency; omission, duplicate, foreign ID, and incomplete status reject
   without events. Fold the successful acquisition event from accepted-review state and prove replay
   reaches the identical snapshot without dependency input.
-- `leases.test.ts`: test only pure lease/workspace policy functions—expiry before/at/after trusted
+- `work-policy.test.ts`: test only pure lease/workspace/handoff policy functions—expiry before/at/after trusted
   observed time, heartbeat validity, owner/session/token checks, next fencing token, complete
   revoke/acquire/interruption effects, matching with/without-lease target, and validated workspace
   comparison. Assert returned policy values/errors, not lifecycle state, revision, event digest, or
   replay. Independently reject absent/foreign/stale/mismatched workspace observations and prove
-  client `occurred_at` never controls expiry. For acquisition, accept the exact requirements-bound
+  client `occurred_at` never controls expiry. Assert every handoff effect carries the complete
+  post-transition fencing-token map and replay never derives it from lease fields. For acquisition, accept the exact requirements-bound
   branch and reviewed-plan head; reject a substituted branch, substituted head, and observation
   that differs from the payload.
-- `review-binding.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
+- `evidence-policy.test.ts`: exact clean case; missing/terminal-only/nonfinal/repeated/malformed marker;
   changed plan, `PLANS.md`, prompt, receipt, output, attestation, or risk evidence; wrong reviewer;
   author/reviser collision; inherited context; stale round; non-descendant; decoy path; extra write;
   unavailable alternative without evidence; valid bounded unavailable case. Round-trip the exact
@@ -1711,15 +1783,16 @@ Test scenarios are prescriptive:
   digest, incomplete inventory digest, and manifest-only participant claims. Extract the exact
   execution requirements from reviewed plan bytes and reject omitted, substituted, stale-plan, or
   digest-mismatched dependency, workspace, and gate declarations before producing accepted review.
-- `freshness.test.ts`: exact approved and exact denied validation modes; absent, cross-mode,
+  In the same file, cover exact approved and exact denied validation modes; absent, cross-mode,
   malformed, incomparable, wrong issue/action, wrong commit/digest, changed plan; exact gate,
   absent/failed/stale/future gate, one millisecond before expiry, exact expiry, maximum validity,
   overflow, and unrelated gate preserved. Reject omitted or substituted requirements-bound gates
   and a declaration extracted from different plan bytes. Assert policy values/errors only.
-- `gates.test.ts`: sorted unique values, duplicate rejection, replace one gate, preserve others.
-- `routed-items.test.ts`: role/origin matrix, stable dedupe, changed evidence identity, unresolved
+  Also cover sorted unique gates, duplicate rejection, replacement of one gate, and preservation of
+  unrelated gates.
+- `process-policy.test.ts`: role/origin matrix, stable dedupe, changed evidence identity, unresolved
   completion block, every disposition, required repair artifacts, supersession, invalidation effect.
-- `failed-review-limits.test.ts`: counts one/two; third response; rewrite no reset; fifth choice;
+  In the same file, cover counts one/two; third response; rewrite no reset; fifth choice;
   one-use permission; sixth failure; stale/unavailable/invalid evidence no increment. Seed the
   retained U2A issue from thirteen verdict events plus the recorded split response, apply U2A
   rounds 1–11 as failures fourteen through twenty-four, and prove another plan commit in the same split lineage retains twenty-four
