@@ -55,6 +55,11 @@ describe("U2A planning protocol contract", () => {
 
   it("requires authenticated provenance on the trusted principal", () => {
     expect(recursiveWireSchemaV1.TrustedPrincipalV1).toContain("trust:TrustedAdapterAttestationV1");
+    expect(recursiveWireSchemaV1.WorkspaceTargetV1).toContain("branch:BranchNameV1");
+    expect(recursiveWireSchemaV1.BranchNameV1).toBe("ascii:git-branch-ref:1..255");
+    expect(commandSchemaV1["record-lease-heartbeat"]).toEqual(["lease_id:Uuid", "fencing_token:FencingTokenV1"]);
+    expect(commandSchemaV1["resume-queued"]).toEqual(["resolution_code:ResolutionCodeV1", "evidence:ArtifactReferenceV1[]"]);
+    expect(commandSchemaV1["resume-work"]).toEqual(["workspace:WorkspaceTargetV1", "evidence:ArtifactReferenceV1[]"]);
   });
 
   it("defines every closed wire type exactly once in the recursive schema", () => {

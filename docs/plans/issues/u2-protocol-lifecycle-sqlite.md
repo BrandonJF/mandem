@@ -87,6 +87,11 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - [x] (2026-08-04) Auto-resolved the redesign document review: completed recursive schema coverage,
   trusted-input provenance, fencing and external-ID aliases, handoff replay facts, and policy
   consolidation.
+- [x] (2026-08-05) Preserved canonical round 12, which returned four P1 findings and raised the
+  retained issue's lifetime failed-review count to twenty-five.
+- [x] (2026-08-05) Repaired all four round-12 findings by aligning branch validation, removing
+  trusted evidence and time from command JSON, copying resume evidence from the snapshot, and
+  making the initial next action `submit-plan-review`.
 - [ ] Another clean-room review remains blocked until the operator records `PERMIT ONE MORE REVIEW`
   for the redesigned revision.
 - [ ] Obtain exact operator approval before implementation.
@@ -171,8 +176,9 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
 gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–11 are
-preserved as failed verdicts, and the lifetime count is twenty-four. The redesign passed author-side
-coherence, feasibility, scope, security, and adversarial review. Another clean-room review is blocked
+preserved as failed verdicts, and the lifetime count is twenty-five. The redesign passed author-side
+coherence, feasibility, scope, security, and adversarial review before canonical round 12 found four
+remaining prose/catalog contradictions. Those contradictions are repaired. Another clean-room review is blocked
 until the operator records `PERMIT ONE MORE REVIEW`. No clean review, approval, or implementation
 exists for the repaired revision yet.
 
@@ -318,6 +324,12 @@ The validated alias grammars are exact:
   1–100 bytes, begins and ends with an ASCII alphanumeric, and contains only ASCII alphanumerics,
   `.`, `_`, or `-`; there is exactly one slash. Wire equality is byte equality with the configured
   repository's canonical spelling—there is no case folding or Unicode normalization.
+- `BranchNameV1` is 1–255 printable ASCII bytes accepted by Git's branch-ref grammar. It rejects
+  `HEAD`, a leading hyphen, a lone `@`, leading or trailing slash, consecutive slash, a trailing
+  dot, any segment equal to `.` or `..` or ending in `.lock`, and any occurrence of `..`, `@{`,
+  backslash, space, ASCII control, `~`, `^`, `:`, `?`, `*`, or `[`. Equality and sorting use exact
+  ASCII bytes. The implementation uses a pure validator for these stated rules; it does not invoke
+  Git during parsing.
 - `GateIdV1` is 1–64 lowercase ASCII bytes matching
   `[a-z][a-z0-9]*(?:-[a-z0-9]+){0,7}`. Equality, sorting, uniqueness, and replacement use bytewise
   ASCII comparison; uppercase, Unicode, underscores, empty components, and leading/trailing hyphens
@@ -441,7 +453,7 @@ The payload union uses these exact required fields. Any field not listed is reje
 | `record-plan-decision` | `approval_locator` |
 | `queue-approved-plan` | `approval_locator` |
 | `acquire-work-lease` | `owner_id`, `session_id`, `workspace`, `expires_at` |
-| `record-lease-heartbeat` | `lease_id`, `fencing_token`, `observed_at` |
+| `record-lease-heartbeat` | `lease_id`, `fencing_token` |
 | `takeover-work-lease` | `prior_lease_id`, `new_owner_id`, `new_session_id`, `expires_at`, `operator_override`, `reason_code` |
 | `release-work-lease` | `lease_id`, `fencing_token`, `reason_code`, `workspace`, `evidence` |
 | `submit-work-handoff` | `lease_id`, `fencing_token`, `handoff` |
@@ -454,9 +466,9 @@ The payload union uses these exact required fields. Any field not listed is reje
 | `record-verification-success` | `merge_sha`, `evidence` |
 | `record-verification-failure` | `merge_sha`, `failure_code`, `evidence` |
 | `resume-planning` | `resolution_code`, `evidence` |
-| `resume-queued` | `resolution_code`, `approval`, `evidence` |
+| `resume-queued` | `resolution_code`, `evidence` |
 | `pause-work` | `reason_code`, `workspace`, `lease_target`, `evidence` |
-| `resume-work` | `workspace`, `approval`, `gates`, `evidence` |
+| `resume-work` | `workspace`, `evidence` |
 | `cancel-work` | `reason_code`, `workspace`, `lease_target`, `evidence` |
 | `record-reconciliation-conflict` | `conflict_code`, `evidence` |
 | `record-review-scope-response` | `response` |
@@ -474,7 +486,7 @@ there is no suffix-based type inference and no optional command property.
     interface RecordPlanDecisionCommandV1 { readonly kind: "record-plan-decision"; readonly approval_locator: ApprovalLocatorV1; }
     interface QueueApprovedPlanCommandV1 { readonly kind: "queue-approved-plan"; readonly approval_locator: ApprovalLocatorV1; }
     interface AcquireWorkLeaseCommandV1 { readonly kind: "acquire-work-lease"; readonly owner_id: Uuid; readonly session_id: Uuid; readonly workspace: WorkspaceTargetV1; readonly expires_at: UtcTimestamp; }
-    interface RecordLeaseHeartbeatCommandV1 { readonly kind: "record-lease-heartbeat"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly observed_at: UtcTimestamp; }
+    interface RecordLeaseHeartbeatCommandV1 { readonly kind: "record-lease-heartbeat"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; }
     interface TakeoverWorkLeaseCommandV1 { readonly kind: "takeover-work-lease"; readonly prior_lease_id: Uuid; readonly new_owner_id: Uuid; readonly new_session_id: Uuid; readonly expires_at: UtcTimestamp; readonly operator_override: boolean; readonly reason_code: LeaseReasonCodeV1; }
     interface ReleaseWorkLeaseCommandV1 { readonly kind: "release-work-lease"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface SubmitWorkHandoffCommandV1 { readonly kind: "submit-work-handoff"; readonly lease_id: Uuid; readonly fencing_token: FencingTokenV1; readonly handoff: HandoffDecisionV1; }
@@ -487,9 +499,9 @@ there is no suffix-based type inference and no optional command property.
     interface RecordVerificationSuccessCommandV1 { readonly kind: "record-verification-success"; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface RecordVerificationFailureCommandV1 { readonly kind: "record-verification-failure"; readonly merge_sha: GitSha; readonly failure_code: VerificationFailureCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface ResumePlanningCommandV1 { readonly kind: "resume-planning"; readonly resolution_code: ResolutionCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
-    interface ResumeQueuedCommandV1 { readonly kind: "resume-queued"; readonly resolution_code: ResolutionCodeV1; readonly approval: ApprovalEvidenceV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ResumeQueuedCommandV1 { readonly kind: "resume-queued"; readonly resolution_code: ResolutionCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface PauseWorkCommandV1 { readonly kind: "pause-work"; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly lease_target: LeaseTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
-    interface ResumeWorkCommandV1 { readonly kind: "resume-work"; readonly workspace: WorkspaceTargetV1; readonly approval: ApprovalEvidenceV1; readonly gates: readonly GateDecisionV1[]; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ResumeWorkCommandV1 { readonly kind: "resume-work"; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface CancelWorkCommandV1 { readonly kind: "cancel-work"; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly lease_target: LeaseTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface RecordReconciliationConflictCommandV1 { readonly kind: "record-reconciliation-conflict"; readonly conflict_code: ErrorCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
     interface RecordReviewScopeResponseCommandV1 { readonly kind: "record-review-scope-response"; readonly response: ReviewScopeResponseV1; }
@@ -584,10 +596,10 @@ the U2A parser composes that public parser rather than redefining it.
     interface TrustedAdapterAttestationV1 { readonly issuer_id: Uuid; readonly issuer_kind: "local-transport" | "git-adapter" | "provider-adapter" | "clock-adapter" | "workspace-adapter"; readonly authenticated_at: UtcTimestamp; readonly transport_identity_digest: Sha256; readonly configured_repository_digest: Sha256; readonly subject_digest: Sha256; readonly source: ArtifactReferenceV1; }
     interface ApprovalEvidenceV1 { readonly record: ApprovalRecord; readonly source: ArtifactReferenceV1; readonly trust: TrustedAdapterAttestationV1; }
     interface ApprovalLocatorV1 { readonly issue_id: Uuid; readonly commit: GitSha; }
-    interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: string; readonly head: GitSha; readonly path_digest: Sha256; }
+    interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: BranchNameV1; readonly head: GitSha; readonly path_digest: Sha256; }
     interface ReviewOutputTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; readonly verdict: "clean" | "changes-required"; }
     interface ReviewWriteV1 { readonly path: RepoPath; readonly digest: Sha256; }
-    interface ApprovedWorkspaceRequirementV1 { readonly branch: string; readonly head: "reviewed-plan-commit"; }
+    interface ApprovedWorkspaceRequirementV1 { readonly branch: BranchNameV1; readonly head: "reviewed-plan-commit"; }
     interface ExecutionRequirementsV1 { readonly dependency_issue_ids: readonly Uuid[]; readonly approved_workspace: ApprovedWorkspaceRequirementV1; readonly required_gates: readonly GateRequirementV1[]; readonly declaration_digest: Sha256; }
     interface GateDecisionV1 { readonly gate_id: GateIdV1; readonly definition_digest: Sha256; readonly input_digests: readonly Sha256[]; readonly target_revision: GitSha; readonly outcome: "passed" | "failed"; readonly evidence: readonly ArtifactReferenceV1[]; readonly decided_at: UtcTimestamp; }
     interface HandoffDecisionV1 { readonly kind: HandoffKindV1; readonly source_session_id: Uuid; readonly target_session_id: Uuid | null; readonly target_revision: GitSha; readonly outcome_code: HandoffOutcomeCodeV1; readonly decision_codes: readonly HandoffDecisionCodeV1[]; readonly blocker_codes: readonly HandoffBlockerCodeV1[]; readonly mutation_artifacts: readonly ArtifactReferenceV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly next_transition: CommandKindV1; }
@@ -630,7 +642,7 @@ requirements, while a snapshot or invalidation collection may be empty when no d
 All other collection cardinalities are the exact bounds stated beside their declarations. Boolean fields are required booleans.
 Nullable fields are only those explicitly shown with `null`: causation, initial revision, target
 session, active lease, last heartbeat, revoked time/reason, current disposition and disposition links.
-`WorkspaceTargetV1` is `{ workspace_id: Uuid; branch: string; head: GitSha;
+`WorkspaceTargetV1` is `{ workspace_id: Uuid; branch: BranchNameV1; head: GitSha;
 path_digest: Sha256 }`. `ReviewOutputTargetV1` is `{ path: RepoPath; commit: GitSha;
 digest: Sha256; verdict: "clean" | "changes-required" }`. `ReviewWriteV1` is
 `{ path: RepoPath; digest: Sha256 }`. `ReviewSessionIdentityV1` is
@@ -936,8 +948,12 @@ byte-identical to the input.
 `LifecycleResumeEffectV1` is `{ workspace: WorkspaceTargetV1; approval: ApprovalEvidenceV1;
 gates: readonly GateDecisionV1[]; evidence: readonly ArtifactReferenceV1[];
 resulting_active_lease: null; resulting_last_fencing_token_by_resource:
-FencingTokenByResourceV1 }`. It preserves the complete token map and proves
-that resume never recreates a lease. `ReconciliationEffectV1` is `{ conflict_code: ErrorCodeV1;
+FencingTokenByResourceV1 }`. `resume-work` constructs this effect by copying `snapshot.approval`
+and the complete sorted `snapshot.gates` after validating them against the accepted review and
+trusted observed time; neither value comes from command JSON. It preserves the complete token map
+and proves that resume never recreates a lease. `resume-queued` likewise writes the existing
+snapshot approval into `queue-resumed` after exact validation and does not accept approval evidence
+in its payload. `ReconciliationEffectV1` is `{ conflict_code: ErrorCodeV1;
 evidence: readonly ArtifactReferenceV1[]; revoked_lease: LeaseSnapshotV1 | null;
 resulting_last_fencing_token_by_resource: FencingTokenByResourceV1 }`.
 Reconciliation copies and revokes an active lease at trusted observed time with reason
@@ -1084,7 +1100,7 @@ four shown properties, so a value is always explicit and no event field is infer
 `SHA256("mandem-events-v1\\0")` empty-stream digest defined below, null plan/review/approval/lease/handoff values, empty
 exact-merge and verification values, empty gates/findings, zero token counters, failed-review count
 zero with no responses, and
-`return-to-planning` as its only next action. `applyLifecycleEventV1(snapshot, event)` is the only
+`submit-plan-review` as its only next action. `applyLifecycleEventV1(snapshot, event)` is the only
 event-fold function. It verifies identity, `from_state`, the prior revision/digest, then applies the
 complete event value, performs every explicit clear/replace operation, sets revision to event ID,
 updates the rolling event digest, and derives next actions. Invalidation events carry full lists of
@@ -1207,8 +1223,12 @@ errors and byte-identical successful decisions from the typed reducer.
 `src/modules/execution/domain/lifecycle.ts` is the sole reducer entry point. Input contains the
 complete snapshot, validated command, trusted principal, control-plane-attested `observed_at`, and
 an explicit ordered list of event IDs plus nullable application-validated `review_dispatch`,
-`review_evidence`, and `approval_evidence`. Only the matching review/approval command may receive
-the corresponding non-null trusted input; all other combinations return `INVALID_ENVELOPE`. It first requires command `expected_revision` and
+`review_evidence`, and `approval_evidence`. Only `record-plan-review-dispatch` may receive non-null
+`review_dispatch`; only `record-plan-review-verdict` may receive non-null `review_evidence`; and
+only `record-plan-decision` or `queue-approved-plan` may receive non-null `approval_evidence`. Every
+other command/input combination returns `INVALID_ENVELOPE`. `resume-queued` and `resume-work` use
+the approval and gates already stored in the snapshot; clients cannot submit those trusted values.
+It first requires command `expected_revision` and
 `expected_events_digest` to match the snapshot; mismatch returns `STALE_SNAPSHOT`. U2A returns those
 same base anchors with its decision. U2B later owns the atomic compare-and-append that permits only
 one decision from a base to commit. The reducer checks principal/attribution equality, role and scopes, source state,
@@ -1314,7 +1334,7 @@ on a phase-completion row with `PROCESS_FINDING_UNRESOLVED`.
 | `NeedsApproval` | `record-plan-decision` denied | operator, `decide-plan` | Exact denied approval record | `NeedsYou`; store denial |
 | `NeedsApproval` | `queue-approved-plan` | operator or control-plane, `decide-plan` | Exact approved review-bound plan | `Queued`; store approval |
 | `Queued` | `acquire-work-lease` | control-plane, `dispatch-work` | Dependencies/workspace ready; no active work lease | `Working`; acquire work lease |
-| `Working` or `Merging` | `record-lease-heartbeat` | current owner, `heartbeat-lease` | Exact active session/token; timestamp before expiry | same; update heartbeat only |
+| `Working` or `Merging` | `record-lease-heartbeat` | current owner, `heartbeat-lease` | Exact active session/token; trusted observed time before expiry | same; set `last_heartbeat_at` from trusted observed time only |
 | `Working` or `Merging` | `takeover-work-lease` | operator/control-plane, `takeover-lease` | Expired lease or explicit operator override | same; atomically revoke and replace lease |
 | `Working` | `release-work-lease` | owner/operator/control-plane, `release-lease` | Exact token and reconciliation/workspace evidence | `Queued`; revoke lease |
 | `Working` | `submit-work-handoff` | worker, `mutate-work` | Exact work lease and complete handoff | `Reviewing`; revoke lease and store handoff |
@@ -1327,9 +1347,9 @@ on a phase-completion row with `PROCESS_FINDING_UNRESOLVED`.
 | `Verifying` | `record-verification-success` | control-plane, `verify-merge` | Exact merge and plan-defined evidence | `Done`; closure event |
 | `Verifying` | `record-verification-failure` | control-plane, `verify-merge` | Exact merge and failure evidence | `NeedsYou`; incident event |
 | `NeedsYou` | `resume-planning` | operator, `reconcile-sources` | Resolution changes approved intent | `NeedsPlanning`; invalidate review, approval, gates |
-| `NeedsYou` | `resume-queued` | operator, `reconcile-sources` | Runtime blocker resolved; approval still exact | `Queued`; preserve approval |
+| `NeedsYou` | `resume-queued` | operator, `reconcile-sources` | Runtime blocker resolved; snapshot approval still matches accepted review | `Queued`; preserve the snapshot approval |
 | `Queued`, `Working`, `Reviewing`, `Learning` | `pause-work` | operator, `pause-work` | Exact with/without-lease target; preserve workspace/evidence; revoke active lease when present | `Paused`; store interruption effect and fence prior owner |
-| `Paused` | `resume-work` | operator, `pause-work` | Workspace and approval/gates reconciled; no active lease | `Queued`; store resume effect and require fresh lease |
+| `Paused` | `resume-work` | operator, `pause-work` | Trusted workspace observation matches the payload; snapshot approval matches accepted review; snapshot gates exactly match the reviewed requirements and are passed and fresh; no active lease | `Queued`; copy snapshot approval and gates into the resume effect and require a fresh lease |
 | `NeedsPlanning`, `NeedsApproval`, `Queued`, `Working`, `Reviewing`, `Learning` | `cancel-work` | operator, `cancel-work` | Exact with/without-lease target; preserve workspace/evidence; revoke active lease when present | `Cancelled`; store interruption effect; terminal |
 | any nonterminal | `record-reconciliation-conflict` | control-plane, `reconcile-sources` | Valid ledger but authority-sensitive contradiction; revoke current lease from snapshot when present | `NeedsYou`; store reconciliation effect and fence unsafe owner |
 | any nonterminal | `record-gate-decision` | control-plane, `record-gate-decision` | Complete unique sorted gate value | same; replace only same gate ID |
@@ -1468,7 +1488,9 @@ plus one, starting at `1`, represented as a positive unsigned 64-bit decimal str
 integration mutation requires matching resource, owner, session, unexpired lease, and exact token.
 A lease whose expiry is less than or equal to control-plane-attested `observed_at` remains active-but-expired until
 takeover, operator release, pause, cancellation, or reconciliation revokes it. Ordinary acquisition
-returns `LEASE_HELD`; a heartbeat at or after expiry returns `LEASE_EXPIRED`. A heartbeat never extends expiry. Takeover, handoff, release, pause, cancellation, review repair,
+returns `LEASE_HELD`; a heartbeat at or after trusted `observed_time.observed_at` returns
+`LEASE_EXPIRED`. An accepted heartbeat copies that trusted timestamp into `last_heartbeat_at`; its
+command payload contains no timestamp. A heartbeat never extends expiry. Takeover, handoff, release, pause, cancellation, review repair,
 and merge repair record revocation and any replacement lease in one decision. The snapshot retains
 the last token by resource so an old owner remains fenced after the active lease clears.
 Takeover copies the prior lease's exact workspace into the replacement lease; review repair, Learn,
@@ -1950,3 +1972,9 @@ Canonical round-11 repair note (2026-08-04): Preserved lifetime failure twenty-f
 exhausted permit. Replaced bare repository and gate strings with bounded ASCII aliases, exact
 configured-repository equality, bytewise gate identity/order rules, and fixed parser, replacement,
 and replay fixtures.
+
+Canonical round-12 repair note (2026-08-05): Preserved lifetime failure twenty-five and the
+exhausted permit. Made every workspace branch use one exact `BranchNameV1` grammar; removed trusted
+approval, gate, and observed-time values from client command payloads; made resume events copy
+validated approval and gate values from the snapshot; and aligned initial snapshot actions with
+`deriveNextActionsV1`. Another review requires a new operator choice.
