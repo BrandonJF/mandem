@@ -7,7 +7,7 @@ const placeholderOverview = /^(?:todo|tbd|description|file|placeholder)$/i;
 
 export const documentationPolicyV1: RepositoryPolicy = {
   recursiveDocumentationRoots: ["docs"],
-  rootIndexEntries: ["AGENTS.md", "CLAUDE.md", "PLANS.md", ".agents/OPERATING.md", "docs/README.md", "scripts/README.md", ".githooks/README.md", "src/modules/README.md"],
+  rootIndexEntries: ["AGENTS.md", "CLAUDE.md", "PLANS.md", ".agents/OPERATING.md", ".agents/PLAN_AUTHORING.md", "docs/README.md", "scripts/README.md", ".githooks/README.md", "src/modules/README.md"],
   specialIndexes: {
     ".agents/skills": ["SKILL.md"],
     "scripts": ["README.md"],

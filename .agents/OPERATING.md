@@ -62,6 +62,10 @@ The repository-root [`PLANS.md`](../PLANS.md) governs every ExecPlan.
 Immediately before authoring, discussing, reviewing, or executing an ExecPlan, read the complete
 `PLANS.md` and follow it to the letter.
 
+Before writing or revising an ExecPlan, also read
+[`PLAN_AUTHORING.md`](./PLAN_AUTHORING.md) completely. It records recurring plan-design errors and
+the principles used to detect them before clean-room review.
+
 The epic ExecPlan provides shared direction. It is not an implementation prompt. Every worker must
 receive the complete approved ExecPlan for its issue and keep that plan's living sections current
 throughout execution.
