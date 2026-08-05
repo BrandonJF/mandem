@@ -74,6 +74,8 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   documentation each end at a complete passing boundary. Lifetime failed-review count is nineteen.
 - [x] (2026-08-04) Preserved canonical round 7, repaired four P1 blockers, and raised the lifetime
   failed-review count to twenty.
+- [x] (2026-08-04) Preserved canonical round 8, repaired its one P1 protocol-schema blocker, and
+  raised the lifetime failed-review count to twenty-one.
 - [ ] Another
   review remains blocked until the operator chooses split, redesign, or permit-one-more.
 - [ ] Obtain exact operator approval before implementation.
@@ -119,7 +121,7 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - Decision: Record WI1 as complete in the managed issue graph.
   Rationale: WI1 implemented the issue-graph workflow and its native issue is closed.
   Date/Author: 2026-08-04 / Codex
-- Decision: Preserve all twenty failed verdicts on retained issue UUID `cb67d131` while carrying
+- Decision: Preserve all twenty-one failed verdicts on retained issue UUID `cb67d131` while carrying
   forward the operator-selected U2A/U2B split response.
   Rationale: A scope split permits the reduced lineage to be reviewed; it does not create a new
   issue identity or reset the lifetime counter.
@@ -138,10 +140,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
-gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–7 are
-preserved as failed verdicts, and the lifetime count is twenty. Another review is blocked until
+gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–8 are
+preserved as failed verdicts, and the lifetime count is twenty-one. Another review is blocked until
 the operator chooses split, redesign, or permit-one-more. No clean review, approval, or implementation
-or implementation exists for the repaired revision yet.
+exists for the repaired revision yet.
 
 ## Context and Orientation
 
@@ -381,6 +383,50 @@ The payload union uses these exact required fields. Any field not listed is reje
 | `dispose-process-finding` | `finding_id`, `disposition`, `reason_code`, `repair_artifacts` |
 | `supersede-process-finding-disposition` | `finding_id`, `prior_disposition_event_id`, `disposition`, `reason_code`, `repair_artifacts` |
 
+The table is implemented by this closed discriminated union. These declarations are normative;
+there is no suffix-based type inference and no optional command property.
+
+    interface SubmitPlanReviewCommandV1 { readonly kind: "submit-plan-review"; readonly plan: PlanTargetV1; readonly governing_contract: GoverningContractTargetV1; readonly planning_pull_request: PullRequestTargetV1; readonly review_manifest: ReviewManifestV1; readonly readiness_artifact: ReadinessDeclarationV1; }
+    interface RecordPlanReviewDispatchCommandV1 { readonly kind: "record-plan-review-dispatch"; readonly dispatch_id: Uuid; }
+    interface RecordPlanReviewVerdictCommandV1 { readonly kind: "record-plan-review-verdict"; readonly reviewer_commit: GitSha; }
+    interface RecordPlanDecisionCommandV1 { readonly kind: "record-plan-decision"; readonly approval_locator: ApprovalLocatorV1; }
+    interface QueueApprovedPlanCommandV1 { readonly kind: "queue-approved-plan"; readonly approval_locator: ApprovalLocatorV1; }
+    interface AcquireWorkLeaseCommandV1 { readonly kind: "acquire-work-lease"; readonly owner_id: Uuid; readonly session_id: Uuid; readonly workspace: WorkspaceTargetV1; readonly expires_at: UtcTimestamp; }
+    interface RecordLeaseHeartbeatCommandV1 { readonly kind: "record-lease-heartbeat"; readonly lease_id: Uuid; readonly fencing_token: string; readonly observed_at: UtcTimestamp; }
+    interface TakeoverWorkLeaseCommandV1 { readonly kind: "takeover-work-lease"; readonly prior_lease_id: Uuid; readonly new_owner_id: Uuid; readonly new_session_id: Uuid; readonly expires_at: UtcTimestamp; readonly operator_override: boolean; readonly reason_code: LeaseReasonCodeV1; }
+    interface ReleaseWorkLeaseCommandV1 { readonly kind: "release-work-lease"; readonly lease_id: Uuid; readonly fencing_token: string; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface SubmitWorkHandoffCommandV1 { readonly kind: "submit-work-handoff"; readonly lease_id: Uuid; readonly fencing_token: string; readonly handoff: HandoffDecisionV1; }
+    interface RecordReviewFindingsCommandV1 { readonly kind: "record-review-findings"; readonly reviewed_head: GitSha; readonly review_output: ReviewOutputTargetV1; readonly repair_owner_id: Uuid; readonly repair_session_id: Uuid; readonly repair_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; readonly handoff: HandoffDecisionV1; }
+    interface AcceptReviewCommandV1 { readonly kind: "accept-review"; readonly reviewed_head: GitSha; readonly review_output: ReviewOutputTargetV1; readonly handoff: HandoffDecisionV1; }
+    interface InvalidateReviewCommandV1 { readonly kind: "invalidate-review"; readonly changed_artifacts: readonly ArtifactReferenceV1[]; }
+    interface AcceptLearnCommandV1 { readonly kind: "accept-learn"; readonly handoff: HandoffDecisionV1; readonly integration_owner_id: Uuid; readonly integration_session_id: Uuid; readonly integration_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; }
+    interface ReturnForRepairCommandV1 { readonly kind: "return-for-repair"; readonly lease_id: Uuid; readonly fencing_token: string; readonly evidence: readonly ArtifactReferenceV1[]; readonly repair_owner_id: Uuid; readonly repair_session_id: Uuid; readonly repair_expires_at: UtcTimestamp; readonly workspace: WorkspaceTargetV1; readonly handoff: HandoffDecisionV1; }
+    interface RecordExactMergeCommandV1 { readonly kind: "record-exact-merge"; readonly lease_id: Uuid; readonly fencing_token: string; readonly approved_head: GitSha; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface RecordVerificationSuccessCommandV1 { readonly kind: "record-verification-success"; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface RecordVerificationFailureCommandV1 { readonly kind: "record-verification-failure"; readonly merge_sha: GitSha; readonly failure_code: VerificationFailureCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ResumePlanningCommandV1 { readonly kind: "resume-planning"; readonly resolution_code: ResolutionCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ResumeQueuedCommandV1 { readonly kind: "resume-queued"; readonly resolution_code: ResolutionCodeV1; readonly approval: ApprovalEvidenceV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface PauseWorkCommandV1 { readonly kind: "pause-work"; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly lease_target: LeaseTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface ResumeWorkCommandV1 { readonly kind: "resume-work"; readonly workspace: WorkspaceTargetV1; readonly approval: ApprovalEvidenceV1; readonly gates: readonly GateDecisionV1[]; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface CancelWorkCommandV1 { readonly kind: "cancel-work"; readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly lease_target: LeaseTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface RecordReconciliationConflictCommandV1 { readonly kind: "record-reconciliation-conflict"; readonly conflict_code: ErrorCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; }
+    interface RecordReviewScopeResponseCommandV1 { readonly kind: "record-review-scope-response"; readonly response: ReviewScopeResponseV1; }
+    interface RecordGateDecisionCommandV1 { readonly kind: "record-gate-decision"; readonly gate: GateDecisionV1; }
+    interface RecordProcessFindingCommandV1 { readonly kind: "record-process-finding"; readonly origin: ArtifactReferenceV1; readonly affected_phase: LifecycleStateV1; readonly evidence_code: ProcessEvidenceCodeV1; readonly evidence_artifacts: readonly ArtifactReferenceV1[]; }
+    interface DisposeProcessFindingCommandV1 { readonly kind: "dispose-process-finding"; readonly finding_id: Sha256; readonly disposition: ProcessFindingDispositionV1; readonly reason_code: ProcessEvidenceCodeV1; readonly repair_artifacts: readonly ArtifactReferenceV1[]; }
+    interface SupersedeProcessFindingDispositionCommandV1 { readonly kind: "supersede-process-finding-disposition"; readonly finding_id: Sha256; readonly prior_disposition_event_id: Uuid; readonly disposition: ProcessFindingDispositionV1; readonly reason_code: ProcessEvidenceCodeV1; readonly repair_artifacts: readonly ArtifactReferenceV1[]; }
+    type CommandPayloadV1 = SubmitPlanReviewCommandV1 | RecordPlanReviewDispatchCommandV1 |
+      RecordPlanReviewVerdictCommandV1 | RecordPlanDecisionCommandV1 | QueueApprovedPlanCommandV1 |
+      AcquireWorkLeaseCommandV1 | RecordLeaseHeartbeatCommandV1 | TakeoverWorkLeaseCommandV1 |
+      ReleaseWorkLeaseCommandV1 | SubmitWorkHandoffCommandV1 | RecordReviewFindingsCommandV1 |
+      AcceptReviewCommandV1 | InvalidateReviewCommandV1 | AcceptLearnCommandV1 |
+      ReturnForRepairCommandV1 | RecordExactMergeCommandV1 | RecordVerificationSuccessCommandV1 |
+      RecordVerificationFailureCommandV1 | ResumePlanningCommandV1 | ResumeQueuedCommandV1 |
+      PauseWorkCommandV1 | ResumeWorkCommandV1 | CancelWorkCommandV1 |
+      RecordReconciliationConflictCommandV1 | RecordReviewScopeResponseCommandV1 |
+      RecordGateDecisionCommandV1 | RecordProcessFindingCommandV1 |
+      DisposeProcessFindingCommandV1 | SupersedeProcessFindingDispositionCommandV1;
+
 Every payload contains only closed scalar fields or these named values:
 
 - `PlanTargetV1 { path, commit, digest }` and
@@ -429,9 +475,47 @@ Every payload contains only closed scalar fields or these named values:
   `integration`, `last_heartbeat_at` is nullable, and `revoked_at` and `reason_code` are both null
   for an active lease or both non-null for the complete revoked lease.
 
-These sketches expand to required readonly TypeScript fields without optional properties. Every
+The following declarations close every remaining named value used by a command, event, or
+snapshot. Referenced `ApprovalRecord` is the already-public closed architecture-standard type;
+the U2A parser composes that public parser rather than redefining it.
+
+    interface PlanTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; }
+    interface GoverningContractTargetV1 { readonly path: "PLANS.md"; readonly commit: GitSha; readonly digest: Sha256; }
+    interface PullRequestTargetV1 { readonly provider: "github"; readonly repository: string; readonly number: number; readonly head: GitSha; }
+    interface ApprovalEvidenceV1 { readonly record: ApprovalRecord; readonly source: ArtifactReferenceV1; }
+    interface ApprovalLocatorV1 { readonly issue_id: Uuid; readonly commit: GitSha; }
+    interface WorkspaceTargetV1 { readonly workspace_id: Uuid; readonly branch: string; readonly head: GitSha; readonly path_digest: Sha256; }
+    interface ReviewOutputTargetV1 { readonly path: RepoPath; readonly commit: GitSha; readonly digest: Sha256; readonly verdict: "clean" | "changes-required"; }
+    interface ReviewWriteV1 { readonly path: RepoPath; readonly digest: Sha256; }
+    interface GateDecisionV1 { readonly gate_id: string; readonly definition_digest: Sha256; readonly input_digests: readonly Sha256[]; readonly target_revision: GitSha; readonly outcome: "passed" | "failed"; readonly evidence: readonly ArtifactReferenceV1[]; readonly decided_at: UtcTimestamp; }
+    interface HandoffDecisionV1 { readonly kind: HandoffKindV1; readonly source_session_id: Uuid; readonly target_session_id: Uuid | null; readonly target_revision: GitSha; readonly outcome_code: HandoffOutcomeCodeV1; readonly decision_codes: readonly HandoffDecisionCodeV1[]; readonly blocker_codes: readonly HandoffBlockerCodeV1[]; readonly mutation_artifacts: readonly ArtifactReferenceV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly next_transition: CommandKindV1; }
+    type ProcessFindingOriginV1 = "operator-correction" | "agent-error" | "review-finding" | "interruption" | "unexpected-delay";
+    type ProcessFindingDispositionV1 = "execution-deviation" | "issue-contract-gap" | "product-contract-gap" | "operating-contract-gap" | "no-reusable-change";
+    type ProcessEvidenceCodeV1 = string;
+    interface ProcessFindingV1 { readonly finding_id: Sha256; readonly origin: ProcessFindingOriginV1; readonly affected_phase: LifecycleStateV1; readonly evidence_code: ProcessEvidenceCodeV1; readonly evidence_artifacts: readonly ArtifactReferenceV1[]; readonly disposition: ProcessFindingDispositionV1 | null; readonly repair_artifacts: readonly ArtifactReferenceV1[]; readonly disposition_event_id: Uuid | null; readonly supersedes_event_id: Uuid | null; }
+    interface FailedReviewChoiceV1 { readonly event_id: Uuid; readonly response: ReviewScopeResponseV1; }
+    interface FailedReviewPolicyV1 { readonly changes_required_count: number; readonly third_review_response: ReviewScopeResponseV1 | null; readonly fifth_review_choices: readonly FailedReviewChoiceV1[]; readonly active_permit_choice_event_id: Uuid | null; readonly consumed_permit_choice_event_ids: readonly Uuid[]; }
+    interface LeaseSnapshotV1 { readonly lease_id: Uuid; readonly resource: "work" | "integration"; readonly workspace: WorkspaceTargetV1; readonly owner_id: Uuid; readonly session_id: Uuid; readonly acquired_at: UtcTimestamp; readonly expires_at: UtcTimestamp; readonly fencing_token: string; readonly last_heartbeat_at: UtcTimestamp | null; readonly revoked_at: UtcTimestamp | null; readonly reason_code: LeaseReasonCodeV1 | null; }
+    interface InvalidationEffectV1 { readonly review: ValidatedReviewEvidenceV1 | null; readonly approval: ApprovalEvidenceV1 | null; readonly gates: readonly GateDecisionV1[]; readonly resulting_state: LifecycleStateV1; }
+    interface ExactMergeRecordV1 { readonly approved_head: GitSha; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[]; }
+    type VerificationOutcomeV1 =
+      | { readonly kind: "succeeded"; readonly merge_sha: GitSha; readonly evidence: readonly ArtifactReferenceV1[] }
+      | { readonly kind: "failed"; readonly merge_sha: GitSha; readonly failure_code: VerificationFailureCodeV1; readonly evidence: readonly ArtifactReferenceV1[] };
+    interface ExactMergeEffectV1 { readonly merge: ExactMergeRecordV1; readonly revoked_lease: LeaseSnapshotV1; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
+    interface LeaseHandoffEffectV1 { readonly handoff: HandoffDecisionV1; readonly revoked_lease: LeaseSnapshotV1 | null; readonly acquired_lease: LeaseSnapshotV1 | null; }
+    interface FindingDispositionEffectV1 { readonly finding: ProcessFindingV1; readonly invalidation: InvalidationEffectV1 | null; }
+    type LeaseTargetV1 =
+      | { readonly kind: "without-active-lease" }
+      | { readonly kind: "with-active-lease"; readonly lease_id: Uuid; readonly fencing_token: string };
+    interface LifecycleInterruptionEffectV1 { readonly reason_code: LeaseReasonCodeV1; readonly workspace: WorkspaceTargetV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
+    interface LifecycleResumeEffectV1 { readonly workspace: WorkspaceTargetV1; readonly approval: ApprovalEvidenceV1; readonly gates: readonly GateDecisionV1[]; readonly evidence: readonly ArtifactReferenceV1[]; readonly resulting_active_lease: null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
+    interface ReconciliationEffectV1 { readonly conflict_code: ErrorCodeV1; readonly evidence: readonly ArtifactReferenceV1[]; readonly revoked_lease: LeaseSnapshotV1 | null; readonly resulting_last_fencing_token_by_resource: Readonly<{ work: string; integration: string }>; }
+
+The named values below expand to required readonly TypeScript fields without optional properties. Every
 name ending `_id` is `Uuid` except finding IDs (`Sha256`); every `*_at` or `*_expires_at` is
-`UtcTimestamp`; every commit/head/revision is `GitSha`; every digest is `Sha256`; every path is
+`UtcTimestamp`; explicitly named commit and head fields are `GitSha`; snapshot `revision`, event
+`prior_revision`, and disposition event links are `Uuid | null` or `Uuid` exactly as declared;
+`target_revision` is `GitSha`; every digest is `Sha256`; every path is
 `RepoPath`; every artifact, target, output, workspace, or source is its named closed interface;
 every `evidence`, `gates`, `changed_artifacts`, `repair_artifacts`, and `*_artifacts` field is a
 nonempty canonically sorted bounded array of its named value. Boolean fields are required booleans.
@@ -751,6 +835,68 @@ accepted, and return for repair use `HandoffDecisionV1` and never mutate a lease
 `GateDecisionV1`; finding creation uses `ProcessFindingV1`; finding disposition and supersession use
 `FindingDispositionEffectV1`; reconciliation uses `ReconciliationEffectV1`. This mapping is exhaustive;
 an event with another value type is `INVALID_ENVELOPE`.
+
+The exact event schema is the following closed union. Every payload interface has precisely the
+four shown properties, so a value is always explicit and no event field is inferred from its kind.
+
+    interface PlanReviewSubmittedEventV1 { readonly kind: "plan-review-submitted"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ReviewManifestV1; }
+    interface PlanReviewDispatchRecordedEventV1 { readonly kind: "plan-review-dispatch-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ValidatedReviewDispatchV1; }
+    interface PlanReviewChangesRequiredValueV1 { readonly review: ValidatedReviewEvidenceV1; readonly policy: FailedReviewPolicyV1; }
+    interface PlanReviewChangesRequiredEventV1 { readonly kind: "plan-review-changes-required"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: PlanReviewChangesRequiredValueV1; }
+    interface PlanReviewAcceptedEventV1 { readonly kind: "plan-review-accepted"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ValidatedReviewEvidenceV1; }
+    interface PlanDecisionDeniedEventV1 { readonly kind: "plan-decision-denied"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ApprovalEvidenceV1; }
+    interface ApprovedPlanQueuedEventV1 { readonly kind: "approved-plan-queued"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ApprovalEvidenceV1; }
+    interface WorkLeaseAcquiredEventV1 { readonly kind: "work-lease-acquired"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseSnapshotV1; }
+    interface LeaseHeartbeatRecordedEventV1 { readonly kind: "lease-heartbeat-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseSnapshotV1; }
+    interface LeaseRevokedEventV1 { readonly kind: "lease-revoked"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseSnapshotV1; }
+    interface WorkLeaseAcquiredForRepairEventV1 { readonly kind: "work-lease-acquired-for-repair"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseSnapshotV1; }
+    interface IntegrationLeaseAcquiredEventV1 { readonly kind: "integration-lease-acquired"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseSnapshotV1; }
+    interface WorkHandoffSubmittedEventV1 { readonly kind: "work-handoff-submitted"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LeaseHandoffEffectV1; }
+    interface ReviewFindingsRecordedEventV1 { readonly kind: "review-findings-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: HandoffDecisionV1; }
+    interface ReviewAcceptedEventV1 { readonly kind: "review-accepted"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: HandoffDecisionV1; }
+    interface ReviewInvalidatedEventV1 { readonly kind: "review-invalidated"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: InvalidationEffectV1; }
+    interface LearnAcceptedEventV1 { readonly kind: "learn-accepted"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: HandoffDecisionV1; }
+    interface WorkReturnedForRepairEventV1 { readonly kind: "work-returned-for-repair"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: HandoffDecisionV1; }
+    interface ExactMergeRecordedEventV1 { readonly kind: "exact-merge-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ExactMergeEffectV1; }
+    interface VerificationSucceededEventV1 { readonly kind: "verification-succeeded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: VerificationOutcomeV1; }
+    interface VerificationFailedEventV1 { readonly kind: "verification-failed"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: VerificationOutcomeV1; }
+    interface PlanningResumedEventV1 { readonly kind: "planning-resumed"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: InvalidationEffectV1; }
+    interface QueueResumedEventV1 { readonly kind: "queue-resumed"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ApprovalEvidenceV1; }
+    interface WorkPausedEventV1 { readonly kind: "work-paused"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LifecycleInterruptionEffectV1; }
+    interface WorkResumedEventV1 { readonly kind: "work-resumed"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LifecycleResumeEffectV1; }
+    interface WorkCancelledEventV1 { readonly kind: "work-cancelled"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: LifecycleInterruptionEffectV1; }
+    interface ReconciliationConflictRecordedEventV1 { readonly kind: "reconciliation-conflict-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ReconciliationEffectV1; }
+    interface ReviewScopeResponseRecordedEventV1 { readonly kind: "review-scope-response-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ReviewScopeResponseV1; }
+    interface GateDecisionRecordedEventV1 { readonly kind: "gate-decision-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: GateDecisionV1; }
+    interface ProcessFindingRecordedEventV1 { readonly kind: "process-finding-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: ProcessFindingV1; }
+    interface ProcessFindingDispositionRecordedEventV1 { readonly kind: "process-finding-disposition-recorded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: FindingDispositionEffectV1; }
+    interface ProcessFindingDispositionSupersededEventV1 { readonly kind: "process-finding-disposition-superseded"; readonly from_state: LifecycleStateV1; readonly to_state: LifecycleStateV1; readonly value: FindingDispositionEffectV1; }
+    type EventPayloadV1 = PlanReviewSubmittedEventV1 | PlanReviewDispatchRecordedEventV1 |
+      PlanReviewChangesRequiredEventV1 | PlanReviewAcceptedEventV1 | PlanDecisionDeniedEventV1 |
+      ApprovedPlanQueuedEventV1 | WorkLeaseAcquiredEventV1 | LeaseHeartbeatRecordedEventV1 |
+      LeaseRevokedEventV1 | WorkLeaseAcquiredForRepairEventV1 | IntegrationLeaseAcquiredEventV1 |
+      WorkHandoffSubmittedEventV1 | ReviewFindingsRecordedEventV1 | ReviewAcceptedEventV1 |
+      ReviewInvalidatedEventV1 | LearnAcceptedEventV1 | WorkReturnedForRepairEventV1 |
+      ExactMergeRecordedEventV1 | VerificationSucceededEventV1 | VerificationFailedEventV1 |
+      PlanningResumedEventV1 | QueueResumedEventV1 | WorkPausedEventV1 | WorkResumedEventV1 |
+      WorkCancelledEventV1 | ReconciliationConflictRecordedEventV1 |
+      ReviewScopeResponseRecordedEventV1 | GateDecisionRecordedEventV1 |
+      ProcessFindingRecordedEventV1 | ProcessFindingDispositionRecordedEventV1 |
+      ProcessFindingDispositionSupersededEventV1;
+    interface EventEnvelopeV1 {
+      readonly protocol_version: 1;
+      readonly event_id: Uuid;
+      readonly project_id: Uuid;
+      readonly issue_id: Uuid;
+      readonly correlation_id: Uuid;
+      readonly causation_id: Uuid | null;
+      readonly command_id: Uuid;
+      readonly occurred_at: UtcTimestamp;
+      readonly actor: ActorAttributionV1;
+      readonly prior_revision: Uuid | null;
+      readonly prior_events_digest: Sha256;
+      readonly payload: EventPayloadV1;
+    }
 
 `createInitialLifecycleSnapshotV1(projectId, issueId)` returns `NeedsPlanning`, null revision, the
 `SHA256("mandem-events-v1\\0")` empty-stream digest defined below, null plan/review/approval/lease/handoff values, empty
@@ -1564,3 +1710,9 @@ permit. Defined the complete canonical JSON string and unsigned-number algorithm
 validation a closed approved/denied mode union; fixed gate validity to an exact millisecond window;
 and separated protocol, standalone-policy, and lifecycle integration fixtures so every milestone's
 focused suite depends only on files already created in that milestone.
+
+Canonical round-8 repair note (2026-08-04): Preserved lifetime failure twenty-one and the exhausted
+permit. Replaced descriptive command/event field inventories with complete discriminated readonly
+TypeScript unions, declared every nested protocol value's exact scalar and nullability, and removed
+the conflicting suffix-based revision inference rule. Another review requires a new operator
+choice.
