@@ -44,6 +44,7 @@ implementation instruction.
 - Tmux-native OpenTUI control surface
 - Keyboard and narrow-terminal accessibility
 - Evidence that the CLI, TUI, skills, and providers support the same actions
+- Operator-visible process findings, scope, blockers, linked repairs, and disposition actions
 
 ### Downstream Consumers
 
@@ -64,6 +65,7 @@ by the issue.
 - Home-view attention hierarchy
 - Pane/window focus lifecycle
 - Terminal testing strategy
+- Process-finding attention order and concise disposition presentation
 
 ## Required issue ExecPlan Content
 
@@ -78,6 +80,8 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving unresolved process findings appear as required attention, explain why the
+  phase cannot complete, and expose the same disposition actions through CLI, TOON, and TUI;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -87,6 +91,8 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Every operator surface shows the same process-finding state, linked artifacts, permitted
+  dispositions, and resulting next action
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

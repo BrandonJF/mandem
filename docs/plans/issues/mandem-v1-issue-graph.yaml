@@ -40,14 +40,22 @@ issues:
     depends_on_issue_ids: ["da645bd0-9899-40b3-9f23-3b48d65362a4"]
     expected_native_state: "closed"
     expected_native_labels: ["u1c"]
+  - issue_id: "5abb076c-c5ba-41da-aeab-089664360dbb"
+    issue_key: "U2B"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2b-durable-storage-recovery.md"
+    parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "planned", "u2b"]
   - issue_id: "6a6a8bab-853f-4658-9bc0-38e2386b642d"
     issue_key: "WI1"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     plan: "docs/plans/issues/wi1-epic-issue-graph-integrity.md"
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids: ["745eda80-1e74-4866-bc95-2f2983b31025"]
-    expected_native_state: "open"
-    expected_native_labels: ["blocked"]
+    expected_native_state: "closed"
+    expected_native_labels: []
   - issue_id: "6ca36caa-37e2-447b-935e-792a6f6566b6"
     issue_key: "U7"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
@@ -122,6 +130,9 @@ issues:
       u2:
         color: "ededed"
         description: ""
+      u2b:
+        color: "C5DEF5"
+        description: "Mandem durable storage and recovery issue U2B."
       u3:
         color: "ededed"
         description: ""
@@ -144,13 +155,13 @@ issues:
         color: "ededed"
         description: ""
   - issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
-    issue_key: "U2"
+    issue_key: "U2A"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     plan: "docs/plans/issues/u2-protocol-lifecycle-sqlite.md"
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     depends_on_issue_ids: ["6a6a8bab-853f-4658-9bc0-38e2386b642d", "745eda80-1e74-4866-bc95-2f2983b31025", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
     expected_native_state: "open"
-    expected_native_labels: ["blocked", "u2"]
+    expected_native_labels: ["in-progress", "planned", "u2"]
   - issue_id: "cf239716-00e2-46ae-82e7-84ac8f31baaf"
     issue_key: "U5"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
@@ -164,7 +175,7 @@ issues:
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
     plan: "docs/plans/issues/u3-server-docker-resident-reconciliation.md"
     parent_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
-    depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6"]
+    depends_on_issue_ids: ["5abb076c-c5ba-41da-aeab-089664360dbb"]
     expected_native_state: "open"
     expected_native_labels: ["blocked", "u3"]
   - issue_id: "da645bd0-9899-40b3-9f23-3b48d65362a4"

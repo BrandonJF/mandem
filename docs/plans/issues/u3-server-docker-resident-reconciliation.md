@@ -6,7 +6,7 @@ parent: ../2026-07-21-001-feat-mandem-plan.md
 epic_issue_id: abe862d6-b052-49fe-8611-bc1ab6e24253
 issue_id: d946e066-84d5-4651-b3b4-30a18e80008c
 depends_on_issue_ids:
-  - cb67d131-975c-4d97-9a6f-4934be991ac6
+  - 5abb076c-c5ba-41da-aeab-089664360dbb
 promotion: scaffolded
 execution_authorized: false
 ---
@@ -24,12 +24,12 @@ implementation instruction.
 
 ## Dependency Contract
 
-**Depends on:** U2
+**Depends on:** U2B
 
 ### Consumes
 
-- U2 protocol and lifecycle kernel
-- U2 persistence ports and checkpoint schema
+- U2A protocol and work-control rules through U2B's approved dependency
+- U2B persistence ports, checkpoint schema, and restart recovery
 - U1 executable/container composition roots
 
 ### Produces

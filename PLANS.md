@@ -22,6 +22,25 @@ NON-NEGOTIABLE REQUIREMENTS:
 * Every ExecPlan must produce a demonstrably working behavior, not merely code changes to "meet a definition".
 * Every ExecPlan must define every term of art in plain language or do not use it.
 
+Before requesting clean-room review, add a readiness section that traces every promised behavior
+from the user or agent action that starts it through the durable record, restart recovery, visible
+result, and test that proves it. Confirm that every stored value has a declared way to create or
+change it and that every interface supplies the complete value its consumer needs. If this check
+reveals that the plan requires the implementer to invent behavior, keep planning.
+
+Clean-room review verifies a plan; it is not the primary authoring loop. Count each
+`CHANGES_REQUIRED` verdict for an issue ExecPlan. Three failed verdicts require the author to stop
+review, reconsider the whole plan, update the readiness section, and decide whether the issue needs
+less scope or separate issues. Five failed verdicts require an operator choice before another
+review. Rewriting the plan does not reset either count.
+
+Every clean-room review uses `docs/plans/reviews/CLEAN_ROOM_PROMPT.md` verbatim. A dispatch binds
+only the exact ExecPlan, this governing file, canonical prompt, reviewer identity, and sole output
+path. Do not tell the reviewer which prior findings were repaired, what result to confirm, or which
+plan-specific lens to apply. A fresh reviewer judges the whole plan as a novice autonomous executor
+and reports only concrete blockers, ambiguities, unsafe instructions, and separate residual
+low-risk concerns. Executor-safe with residual low-risk concerns is a clean verdict.
+
 Purpose and intent come first. Begin by explaining, in a few sentences, why the work matters from a user's perspective: what someone can do after this change that they could not do before, and how to see it working. Then guide the reader through the exact steps to achieve that outcome, including what to edit, what to run, and what they should observe.
 
 The agent executing your plan can list files, read files, search, run the project, and run tests. It does not know any prior context and cannot infer what you meant from earlier milestones. Repeat any assumption you rely on. Do not point to external blogs or docs; if knowledge is required, embed it in the plan itself in your own words. If an ExecPlan builds upon a prior ExecPlan and that file is checked in, incorporate it by reference. If it is not, you must include all relevant context from that plan.
