@@ -91,6 +91,7 @@ describe("documentation policy", () => {
       "src/file.ts": "/** @fileoverview source. */\nexport {};",
       "scripts/file.ts": "#!/usr/bin/env bun\n/** @fileoverview script. */\nexport {};",
       "tests/file.test.ts": "/** @fileoverview test. */\nexport {};",
+      "docs/plans/contracts/contract.ts": "/** @fileoverview planning contract. */\nexport {};",
       "eslint.config.ts": "/** @fileoverview config. */\nexport {};",
       "src/misplaced.ts": "// text\n/** @fileoverview later. */",
       "scripts/placeholder.ts": "/** @fileoverview todo */",
@@ -109,6 +110,7 @@ describe("documentation policy", () => {
       expect.objectContaining({ ruleId: "ARCH-UNSCOPED-TYPESCRIPT", path: "tools/unscoped.ts" })
     ]));
     expect(result.violations.map(({ path }) => path)).not.toEqual(expect.arrayContaining(["tests/fixtures/example.ts", "generated/file.ts", "types.d.ts"]));
+    expect(result.violations.map(({ path }) => path)).not.toContain("docs/plans/contracts/contract.ts");
   });
 
   it("uses the supplied authored-source policy for inclusion and exclusion", () => {
