@@ -66,9 +66,8 @@ Before writing or revising an ExecPlan, also read
 [`PLAN_AUTHORING.md`](./PLAN_AUTHORING.md) completely. It records recurring plan-design errors and
 the principles used to detect them before clean-room review.
 
-Treat `PLANS.md` as a protected repository contract. Do not edit it unless the operator gives
-discrete consent for a change to that file. Approval to write or revise an ExecPlan, improve plan
-authoring guidance, or change related operating documents does not authorize a `PLANS.md` edit.
+`PLANS.md` is immutable. Never edit, replace, regenerate, or delete it. Put additional planning
+guidance in repository-owned operating documents or skills without changing `PLANS.md`.
 
 The epic ExecPlan provides shared direction. It is not an implementation prompt. Every worker must
 receive the complete approved ExecPlan for its issue and keep that plan's living sections current
