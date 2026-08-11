@@ -4,6 +4,9 @@ Read this file completely before writing or revising an ExecPlan. Read `PLANS.md
 follow its complete contract. This file records recurring reasoning errors that ordinary formatting
 and documentation checks do not catch.
 
+`PLANS.md` is immutable. Never edit it. Record additional planning guidance in this file or another
+repository-owned operating document.
+
 ## Plan the behavior as a complete system
 
 Trace every promised behavior from the action that starts it through validation, state change,
