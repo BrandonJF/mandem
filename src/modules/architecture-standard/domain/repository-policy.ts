@@ -16,7 +16,7 @@ export const documentationPolicyV1: RepositoryPolicy = {
   },
   excludedSegments: [".git", ".codex", ".claude", ".github", "node_modules", "dist", "coverage", "generated", "vendor", "vendored"],
   excludedPrefixes: ["tests/fixtures/"],
-  authoredSourceIncludes: ["src/", "scripts/", "tests/", "*.config.ts", "*.config.tsx"],
+  authoredSourceIncludes: ["src/", "scripts/", "tests/", "docs/plans/contracts/", "*.config.ts", "*.config.tsx"],
   authoredSourceExcludes: ["tests/fixtures/", "*.d.ts"]
 };
 

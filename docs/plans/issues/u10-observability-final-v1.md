@@ -36,6 +36,7 @@ implementation instruction.
 
 - Required Alloy/Loki/Grafana Compose services
 - Provisioned operational dashboards
+- Process-finding counts, age, scope, disposition, recurrence, and blocked-phase indicators derived from the event schema
 - Retention and local-binding policy
 - Observability failure-isolation evidence
 - Final v1 artifacts and publication record
@@ -57,6 +58,7 @@ by the issue.
 - Dashboard information hierarchy
 - Retention/disk defaults
 - Final release promotion checklist
+- Process-finding metrics that reveal recurrence without exposing prompt or evidence content
 
 ## Required issue ExecPlan Content
 
@@ -71,6 +73,8 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving dashboards show unresolved, aged, and repeated process findings while
+  retaining only bounded labels and artifact references;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -80,6 +84,8 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Observability reports process-finding recurrence and blocked phases without becoming workflow
+  state or storing sensitive review content
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision

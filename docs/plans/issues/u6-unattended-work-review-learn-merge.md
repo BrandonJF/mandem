@@ -42,6 +42,7 @@ implementation instruction.
 - TDD iteration and conventional-commit evidence
 - Draft PR and independent review-and-repair cycle
 - Mandatory Learn outcome
+- Automatic routing and repair of stable process findings before phase completion
 - Exact-SHA serialized merge and post-merge verification
 - Takeover, cancellation, and cleanup behavior
 
@@ -65,6 +66,9 @@ by the issue.
 - Learn prevention mechanisms
 - Integration lease transaction
 - Post-merge failure disposition
+- Process-finding repair leases, approval invalidation, and terminal-disposition rules
+- Let each implementation reviewer write one file, keep its exact bytes, and link any later synthesis to that file
+- Implementation Review by a fresh non-author, prompts that require counterexamples, and another provider or model when risk policy requires one
 
 ## Required issue ExecPlan Content
 
@@ -79,6 +83,12 @@ ExecPlan that includes:
 - failure, restart, idempotency, and rollback behavior where applicable;
 - exact consumed artifact versions and produced handoff artifacts;
 - verification contract and definition of done;
+- test scenarios proving that operator corrections, agent errors, review findings, interruptions,
+  and unexpected delays become stable process findings and that Review, Learn, merge, and closure
+  reject unresolved findings;
+- test scenarios proving each implementation reviewer writes the complete review to its sole
+  permitted artifact path, exact bytes remain immutable, and optional synthesis remains separate
+  and source-linked;
 - Progress, Surprises, Decision Log, and Outcomes sections that the team maintains throughout the
   work.
 
@@ -88,6 +98,10 @@ ExecPlan that includes:
 - [ ] Dependency outputs exist or all provisional assumptions are explicit
 - [ ] The plan names module boundaries that conform to the architecture standard
 - [ ] Test scenarios cover success, edge, failure, and integration paths as applicable
+- [ ] Every process finding has one terminal disposition and linked repair or dismissal evidence;
+  scope-changing dispositions return to Plan and invalidate stale review and approval
+- [ ] Implementation Review rejects the worker and every session that changed the artifact, then
+  records whether it used another provider or model when risk policy required one
 - [ ] A clean-room reviewer approved the current revision
 - [ ] The plan author addressed review findings, and reviewers re-reviewed the revision
 - [ ] Operator approved the exact reviewed revision
