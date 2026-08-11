@@ -54,6 +54,17 @@ authenticate external facts; storage persists and restores accepted facts; orche
 the pieces. Do not move a required producer, consumer, or recovery rule out of scope without naming
 the issue that owns it and the exact interface between them.
 
+## Define how the change reaches its consumer
+
+A committed artifact is not operational merely because it exists on a branch. Name the branch or
+pull request that will deliver it to the default branch, who or what must merge it, and how to verify
+the default branch contains and uses it. If the change must remain on a long-lived branch, identify
+the exact worktrees or processes that read that branch and who will keep the artifact current.
+
+Do not mark guidance, policy, automation, configuration, or generated output complete while its
+intended consumer still reads an older revision. Treat merge, deployment, installation, migration,
+or registration as part of the behavior path, not as an assumed follow-up.
+
 ## Use review to verify, not to design one finding at a time
 
 Before independent review, run a whole-plan consistency pass across producer, validator, event,
@@ -74,5 +85,5 @@ phrases such as “handle appropriately,” “validate as needed,” or “foll
 
 A novice executor should not need prior conversation, earlier reviews, or unstated judgment to
 finish the work. If two reasonable implementations could produce different accepted bytes, state,
-authorization results, recovery behavior, or user-visible outcomes, the plan still contains a
-decision that the author must make.
+authorization results, recovery behavior, delivery state, or user-visible outcomes, the plan still
+contains a decision that the author must make.
