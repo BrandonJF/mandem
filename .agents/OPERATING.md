@@ -111,6 +111,15 @@ must trace each promised behavior from its input through the code that records i
 a restart, and proves it in a test. The author must also confirm that every stored value has a
 declared input and every output has a named consumer. Store this readiness check with the plan.
 
+For every blocking clean-room finding, the planning agent must identify the reusable failure class
+and complete its process-finding disposition before dispatching another review. Compare the class
+with `.agents/PLAN_AUTHORING.md` and the checks that apply it. If existing guidance already states
+the principle, record why the author missed it and strengthen enforcement when the same class has
+recurred. If the principle is missing or too weak, update the repository-owned guidance and add an
+enforcement mechanism that can prevent or detect the class before review. If the finding is unique
+to the current plan, record `no-reusable-change` with concrete evidence. Do not copy plan-specific
+types, paths, or decisions into general guidance.
+
 Count every `CHANGES_REQUIRED` verdict for the same issue ExecPlan. After the third failed verdict,
 stop dispatching reviewers and return the issue to planning. The author must review the whole plan,
 resolve the common cause of the findings, update the readiness check, and decide whether to reduce
