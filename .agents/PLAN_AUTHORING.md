@@ -76,6 +76,26 @@ When a reviewer finds a contradiction, update every representation and affected 
 together. Preserve the exact review artifact. A repaired plan is a new immutable target and has no
 clean verdict until an independent reviewer judges those exact bytes.
 
+## Learn from every blocking review finding
+
+After a `CHANGES_REQUIRED` verdict, classify each blocker by the planning error that produced it,
+not by the plan-specific type, field, or file where the reviewer found it. Examples of a failure
+class include an undeclared producer, inconsistent representations, caller-controlled trusted
+input, an untested boundary, a milestone dependency inversion, or an artifact with no delivery
+path.
+
+For each failure class, check this file and its enforcement tests before revising the plan. If the
+applicable principle is missing or did not state the requirement strongly enough, add or strengthen
+the applicable principle and add an enforcement mechanism such as a focused policy test, executable
+planning contract, readiness assertion, or deterministic check. If the principle already covers
+the failure, record why the planning agent did not apply it. Strengthen enforcement when the same
+class recurs; repeating the prose alone is not a repair.
+
+Keep general guidance at the level of behavior, trust, data flow, sequencing, and verification.
+Do not copy plan-specific details into this file. When a finding depends only on one plan's chosen
+behavior and provides no reusable planning lesson, record the evidence and explain why no general
+change applies.
+
 ## Stay at the principle and behavior level
 
 Be exact about public behavior, trust boundaries, state transitions, interfaces, file ownership,
