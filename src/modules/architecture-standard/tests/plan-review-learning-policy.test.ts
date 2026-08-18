@@ -21,4 +21,18 @@ describe("plan-review learning policy", () => {
     expect(principles).toContain("enforcement mechanism");
     expect(principles).toContain("plan-specific details");
   });
+
+  it("requires five proof classes before independent review", () => {
+    expect(principles).toContain("## Complete five pre-review proofs");
+    for (const proof of ["closed-contract", "provenance", "state-and-replay", "milestone", "scope"]) {
+      expect(principles).toContain(`\`${proof}\` proof`);
+    }
+    expect(principles).toContain("Do not dispatch a reviewer");
+  });
+
+  it("allows only one permit-one-more exception for an issue", () => {
+    expect(operating).toContain("only one `permit-one-more` choice");
+    expect(operating).toContain("`bun run plan-review:choices`");
+    expect(operating).toContain("only `split` or `redesign`");
+  });
 });

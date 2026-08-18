@@ -8,3 +8,5 @@ export { analyzeAuthoredSourceDirectory, analyzeDocumentationDirectory, analyzeR
 export { previewNativeIssueGraph, runApplyNativeIssueGraph, runLocalIssueGraphCheck } from "./api/issue-graph";
 export { prepareIssueGraphProjection, runApplyIssueGraphProjection, runIssueGraphRemoteCheck } from "./api/issue-graph-reconciliation";
 export type { RemoteIssueGraphPlan } from "./api/issue-graph-reconciliation";
+export { allowedReviewChoices } from "./domain/plan-review-choice-policy";
+export type { PlanReviewChoice, PlanReviewHistory } from "./domain/plan-review-choice-policy";

@@ -9,6 +9,10 @@ Run `bun run repository-ruleset:check` to read the GitHub protection rules that 
 Repository administrators can run `bun run repository-ruleset:apply` to create or update the
 required ruleset through the GitHub CLI.
 
+Run `bun run plan-review:choices -- --failed-verdicts <count> --permits-used <count>` before
+dispatching or requesting another clean-room plan review. It prints the choices allowed by the
+retained issue's complete review history.
+
 ## Native issue graph
 
 - `bun run issue-graph:check` validates native issue metadata and matching ExecPlan frontmatter

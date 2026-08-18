@@ -10,3 +10,5 @@ This directory records repeatable operational evidence and provider capability b
   Codex CLI capabilities.
 - [U2 orchestrator reset handoff](./2026-08-04-u2-orchestrator-handoff.md) records the durable U2A
   and U2B split, pending guarded graph update, and exact resume sequence.
+- [U2 plan-review root cause](./2026-08-18-u2-plan-review-root-cause.md) classifies the repeated U2
+  review failures and records the controls added to prevent iterative review-driven design.

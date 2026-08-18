@@ -109,7 +109,8 @@ reviewer is available, block the transition instead of substituting self-review.
 Do not use clean-room review as the main way to finish a plan. Before the first review, the author
 must trace each promised behavior from its input through the code that records it, restores it after
 a restart, and proves it in a test. The author must also confirm that every stored value has a
-declared input and every output has a named consumer. Store this readiness check with the plan.
+declared input and every output has a named consumer. Complete all five pre-review proofs in
+`.agents/PLAN_AUTHORING.md` and store their executable evidence with the plan.
 
 For every blocking clean-room finding, the planning agent must identify the reusable failure class
 and complete its process-finding disposition before dispatching another review. Compare the class
@@ -120,14 +121,19 @@ enforcement mechanism that can prevent or detect the class before review. If the
 to the current plan, record `no-reusable-change` with concrete evidence. Do not copy plan-specific
 types, paths, or decisions into general guidance.
 
-Count every `CHANGES_REQUIRED` verdict for the same issue ExecPlan. After the third failed verdict,
-stop dispatching reviewers and return the issue to planning. The author must review the whole plan,
-resolve the common cause of the findings, update the readiness check, and decide whether to reduce
-or split the scope. Do not reset the count after a rewrite. After the fifth failed verdict, block
-another review until the operator chooses to split the issue, redesign the plan, or explicitly
-permit one more review. Record the count, the required response, and the operator's choice in the
-git-native issue. A stale manifest or unavailable reviewer does not count because no reviewer
-judged the plan.
+Count every `CHANGES_REQUIRED` verdict for the same retained issue ExecPlan; rewriting the plan does
+not reset the count. Before dispatching or recommending another review, run
+`bun run plan-review:choices` with `--failed-verdicts <count> --permits-used <count>` and record its
+result in the git-native issue. After the third failed verdict, stop dispatching reviewers and
+return the issue to planning. The author must resolve the common cause across the whole plan and
+choose `split` or `redesign` before review resumes.
+
+After the fifth failed verdict, the operator may record only one `permit-one-more` choice during the
+lifetime of that retained issue. If that review also fails, only `split` or `redesign` is allowed;
+do not request, infer, or record another permit. A structural choice must identify the changed scope
+or design boundary and refresh all five pre-review proofs before dispatch. Record the complete
+failure count, permit count, allowed choices, and operator choice in the git-native issue. A stale
+manifest or unavailable reviewer does not count because no reviewer judged the plan.
 
 Operator consent comes from a standalone `APPROVED` or `DENIED` response in the active Mandem
 conversation. Before requesting it, state one consent-boundary action and its immutable target:
