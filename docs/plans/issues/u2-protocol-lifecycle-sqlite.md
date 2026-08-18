@@ -92,8 +92,12 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
 - [x] (2026-08-05) Repaired all four round-12 findings by aligning branch validation, removing
   trusted evidence and time from command JSON, copying resume evidence from the snapshot, and
   making the initial next action `submit-plan-review`.
+- [x] (2026-08-13) Preserved canonical round 13, which returned one P1 readiness-artifact finding
+  and raised the retained issue's lifetime failed-review count to twenty-six.
+- [x] (2026-08-13) Made this plan file the committed `readiness-check` artifact and specified a
+  deterministic extractor and trace-digest verification in the planning-contract test.
 - [ ] Another clean-room review remains blocked until the operator records `PERMIT ONE MORE REVIEW`
-  for the redesigned revision.
+  for this repaired revision.
 - [ ] Obtain exact operator approval before implementation.
 
 ## Surprises & Discoveries
@@ -118,6 +122,10 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   behaved like a type system but repository checks treated them as prose.
   Evidence: Rounds 8–11 found incomplete interfaces, missing immutable producers, contradictory
   collection rules, and unconstrained strings after every ordinary documentation gate was green.
+- Observation: The readiness declaration required a committed artifact but did not identify bytes
+  that an executor could validate without inventing another file and a self-referential digest.
+  Evidence: Canonical U2A round 13 finding `CR-001` at
+  `docs/plans/reviews/2026-08-13-u2a-clean-room-round-13-reviewer-output.md`.
 
 ## Decision Log
 
@@ -170,15 +178,24 @@ supply real checkpoint, issue, provider, worktree, pull-request, and user-interf
   Rationale: These three modules match current behavioral seams and retain focused testing without
   publishing six abstractions whose only production consumer is the lifecycle reducer.
   Date/Author: 2026-08-04 / Codex
+- Decision: Use the complete committed ExecPlan as the U2A `readiness-check` artifact and derive
+  the closed readiness declaration from its exact readiness table.
+  Rationale: The review already binds the plan's path, commit, and digest. A second file that names
+  the plan commit while the plan embeds that file's digest creates an avoidable commit-hash cycle.
+  A deterministic extractor keeps one immutable artifact and gives every behavior trace exact,
+  mechanically verified bytes.
+  Date/Author: 2026-08-13 / Codex
 
 ## Outcomes & Retrospective
 
 Planning now separates work-control meaning from durable recovery. The plan specifies all public
 values that U2B must store, all lifecycle rows, exact review and approval bindings, lease fencing,
 gates, process findings, failed-review limits, and deterministic tests. U2A rounds 1–11 are
-preserved as failed verdicts, and the lifetime count is twenty-five. The redesign passed author-side
+preserved as failed verdicts, and the lifetime count is twenty-six. The redesign passed author-side
 coherence, feasibility, scope, security, and adversarial review before canonical round 12 found four
-remaining prose/catalog contradictions. Those contradictions are repaired. Another clean-room review is blocked
+remaining prose/catalog contradictions. Those contradictions are repaired. Canonical round 13 then
+found that the readiness declaration had no concrete artifact; this revision makes the plan itself
+that artifact and tests deterministic extraction. Another clean-room review is blocked
 until the operator records `PERMIT ONE MORE REVIEW`. No clean review, approval, or implementation
 exists for the repaired revision yet.
 
@@ -864,9 +881,17 @@ this complete immutable declaration.
 `ReadinessDeclarationV1` is `{ artifact: ArtifactReferenceV1; plan: PlanTargetV1; issue_id: Uuid;
 lineage_id: Sha256; behavior_trace_digests: readonly { behavior_id: ScopeBehaviorIdV1;
 trace_digest: Sha256 }[] }`. Traces are sorted, unique, and contain exactly the lineage's behavior
-IDs. Its committed `readiness-check` artifact contains that closed value except `artifact`; the
-artifact digest covers those bytes without self-reference. Each later plan/readiness revision may
-change its own target and trace digests but must repeat the immutable lineage ID. Submission and
+IDs. For U2A, the complete committed ExecPlan at
+`docs/plans/issues/u2-protocol-lifecycle-sqlite.md` is the `readiness-check` artifact. Its
+`ArtifactReferenceV1` uses that path, the reviewed plan commit, and the SHA-256 digest of the full
+plan bytes. A pure extractor reads only the `Behavior Readiness Check` table from those bound bytes,
+requires the seven exact sorted behavior IDs, and returns the closed value except `artifact`. For
+each row it computes `trace_digest` as `canonicalDigestV1` of `{ protocol_version: 1, behavior_id,
+trace }`, where `trace` is the exact UTF-8 text in the `Complete trace` cell. The table records each
+derived digest, and `docs/plans/contracts/u2a-protocol-contract.test.ts` recomputes all seven from
+the committed plan. No readiness value embeds the full-plan digest in the plan itself. Each later
+plan/readiness revision changes its plan target and may change trace digests but must repeat the
+immutable lineage ID. Submission and
 dispatch compare issue membership, the exact lineage ID, and the complete behavior-ID set; they do
 not recompute lineage from mutable readiness bytes. Arbitrary evidence prose cannot establish
 lineage.
@@ -1637,19 +1662,19 @@ the complete third response and ordered fifth-choice history, so a rewrite canno
 
 These seven rows are the current readiness declaration for U2A lineage
 `723787f06b1e33896b70cbaabdfc9555dbbab306e4b9da09690b72a7218262a1`; their behavior names map
-one-to-one to its seven `ScopeBehaviorIdV1` values. The next review manifest binds the exact plan
-commit/digest containing these rows as its readiness artifact. Later edits change that artifact
-digest and trace digests but not the lineage ID or behavior set.
+one-to-one to its seven `ScopeBehaviorIdV1` values. The next review manifest binds this complete file
+as both the exact plan target and the `readiness-check` artifact. Later edits change that artifact
+digest and may change trace digests but not the lineage ID or behavior set.
 
-| Behavior | Complete trace | Status |
-| --- | --- | --- |
-| Interpret one request | `CommandEnvelopeV1` -> closed parser/canonical digest -> reducer decision -> `CommandResultV1`; protocol tests cover every variant and limit | Ready |
-| Reject invalid order | Lifecycle table -> ordered guard evaluation -> one `ProtocolErrorV1` and unchanged snapshot; lifecycle fixture tests every command/state boundary | Ready |
-| Control one active agent | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | Ready |
-| Bind a clean-room review | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | Ready |
-| Bind operator approval | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | Ready |
-| Stop repeated failed reviews | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–11 as failures fourteen through twenty-four, preserve the selected split lineage, and cover no reset and one-use permission | Ready |
-| Hand complete values to U2B | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | Ready |
+| Behavior ID | Complete trace | Trace digest | Status |
+| --- | --- | --- | --- |
+| `interpret-request` | CommandEnvelopeV1 -> closed parser/canonical digest -> reducer decision -> CommandResultV1; protocol tests cover every variant and limit | `986b78d1ea9d191b2ddc6e0c1b8caf5c5d33b0ba5bc4de553853cf629613c0b4` | Ready |
+| `reject-invalid-order` | Lifecycle table -> ordered guard evaluation -> one ProtocolErrorV1 and unchanged snapshot; lifecycle fixture tests every command/state boundary | `21074f82490a2380a6d74c67f8a14d4a59781ee694c0fc7a54f3de925c259893` | Ready |
+| `control-active-agent` | Lease/with-or-without target -> explicit transfer, interruption, or reconciliation effect -> snapshot token history -> stale-owner rejection; lease tests cover every transfer, lease-free branch, and expiry edge | `08ab4bdec049439fef60cd81eed12e0e26d20efb7e40e9dabe6be77b8d014f37` | Ready |
+| `bind-clean-review` | Trusted complete participant inventory plus manifest/output/attestation bytes -> evidence validator -> derived participant/evidence value -> accepted-review event/snapshot; tests cover omission, substitution, self-review, and every stale input | `51af6b6c5350b267649b8ec6a12220094c0f3e3d261c091c37afdaf0fd1d828c` | Ready |
+| `bind-operator-approval` | Existing parsed approval -> exact issue/commit/digest comparison -> approval event/snapshot or typed rejection; freshness tests cover absence, denial, malformed and stale targets | `ad3a33bc3b5354eedf166c3c47cbeea0a2fa14f872f7b5fd1203bb18a3e92f38` | Ready |
+| `limit-failed-reviews` | Validated verdict -> lifetime counter event/snapshot -> third/fifth response guards; fixtures seed retained U2A at thirteen, apply rounds 1–11 as failures fourteen through twenty-four, preserve the selected split lineage, and cover no reset and one-use permission | `118a9ed78091e4712adb0e59d8948c0082b0a682aed4f3f8d82eded32ed33d63` | Ready |
+| `handoff-to-storage` | Complete event payloads and resulting snapshot fields -> public runtime/execution barrels -> U2B storage input; origin/consumer audit and reducer parity tests cover every field | `e6371df6a7c544f0608d47ef4fde0e048aa73b2880134aadbd216a25f134d56f` | Ready |
 
 Every stored value has a declared source: clients supply validated commands; transport supplies the
 trusted principal; application adapters supply validated review, approval, and workspace observations; the caller
@@ -1978,3 +2003,9 @@ exhausted permit. Made every workspace branch use one exact `BranchNameV1` gramm
 approval, gate, and observed-time values from client command payloads; made resume events copy
 validated approval and gate values from the snapshot; and aligned initial snapshot actions with
 `deriveNextActionsV1`. Another review requires a new operator choice.
+
+Canonical round-13 repair note (2026-08-13): Preserved lifetime failure twenty-six and the exhausted
+permit. Made the complete committed plan the named `readiness-check` artifact, defined exact
+readiness-table extraction and trace-digest derivation, and added a planning-contract test that
+recomputes every recorded trace digest from the bound plan bytes. Another review requires a new
+operator choice.

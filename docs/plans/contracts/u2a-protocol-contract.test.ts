@@ -1,10 +1,20 @@
 /** @fileoverview Verifies that the U2A planning catalogs are closed and internally referential. */
 
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { closedWireTypesV1, commandSchemaV1, eventValueSchemaV1, recursiveWireSchemaV1 } from "./u2a-protocol-contract";
 
 const fieldPattern = /^[a-z][a-z0-9_]*:([A-Za-z][A-Za-z0-9]*)(\[\])?$/u;
 const tokenPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 
 describe("U2A planning protocol contract", () => {
   it("keeps command and event catalogs unique and canonically ordered by explicit keys", () => {
@@ -97,6 +107,22 @@ describe("U2A planning protocol contract", () => {
           if (/^[A-Z][A-Za-z0-9]*$/u.test(type)) expect(known.has(type), field).toBe(true);
         }
       }
+    }
+  });
+
+  it("derives every readiness trace digest from the committed ExecPlan table", () => {
+    const plan = readFileSync("docs/plans/issues/u2-protocol-lifecycle-sqlite.md", "utf8");
+    const section = plan.split("## Behavior Readiness Check\n")[1]?.split("\n## ")[0] ?? "";
+    const rows = [...section.matchAll(/^\| `([^`]+)` \| (.+) \| `([0-9a-f]{64})` \| Ready \|$/gmu)];
+    const expected = [
+      "bind-clean-review", "bind-operator-approval", "control-active-agent", "handoff-to-storage",
+      "interpret-request", "limit-failed-reviews", "reject-invalid-order",
+    ];
+    expect(rows.map((row) => row[1]).sort()).toEqual(expected);
+    for (const row of rows) {
+      const [, behaviorId = "", trace = "", recordedDigest = ""] = row;
+      const bytes = canonicalJson({ protocol_version: 1, behavior_id: behaviorId, trace });
+      expect(createHash("sha256").update(bytes).digest("hex"), behaviorId).toBe(recordedDigest);
     }
   });
 });
