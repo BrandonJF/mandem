@@ -76,6 +76,30 @@ When a reviewer finds a contradiction, update every representation and affected 
 together. Preserve the exact review artifact. A repaired plan is a new immutable target and has no
 clean verdict until an independent reviewer judges those exact bytes.
 
+## Complete five pre-review proofs
+
+Complete these proofs as executable evidence before independent review:
+
+- The `closed-contract` proof inventories every public type, variant, grammar, cardinality, and
+  nullability rule, then checks parity across prose, machine-readable schemas, examples, and tests.
+  If the plan behaves like a type system, compile its closed contracts before review.
+- The `provenance` proof names the producer, authentication method, immutable binding, and consumer
+  for every externally supplied or trusted value. Caller-controlled data cannot become trusted
+  evidence merely because a command or event stores it.
+- The `state-and-replay` proof gives exhaustive state effects for every command and event, including
+  which fields are replaced, retained, or cleared. It proves fold equality and recovery after
+  deletion, retry, and restart.
+- The `milestone` proof draws the dependency order and verifies that every test imports only files
+  created in the same or an earlier milestone. Run each focused command at its milestone boundary.
+- The `scope` proof lists independently verifiable behaviors and contracts. Split behaviors that
+  can ship behind a stable interface. A plan combining a wire protocol, lifecycle state machine,
+  trust or evidence policy, and persistence is presumptively too broad unless it proves why those
+  responsibilities cannot be delivered separately.
+
+Do not dispatch a reviewer until all five proofs have executable evidence rather than readiness
+claims. If failures in several proof classes remain after three reviews, stop local repairs and
+change the design boundary or split the issue.
+
 ## Learn from every blocking review finding
 
 After a `CHANGES_REQUIRED` verdict, classify each blocker by the planning error that produced it,

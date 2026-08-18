@@ -12,3 +12,5 @@ export type { IssueGraphOperation, ProviderIssue, ProviderLabel, ProviderMilesto
 export { managedProviderSnapshot, providerSnapshotDigest } from "./issue-graph-operations";
 export { parseProjectionTransaction, projectionTransactionDigest, serializeProjectionTransaction } from "./projection-transaction";
 export type { ProjectionTransaction } from "./projection-transaction";
+export { allowedReviewChoices } from "./plan-review-choice-policy";
+export type { PlanReviewChoice, PlanReviewHistory } from "./plan-review-choice-policy";
