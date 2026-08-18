@@ -38,7 +38,7 @@ checker must report success. This requirement also applies to tooling and bootst
 
 ```mermaid
 flowchart LR
-  U1 --> U1C --> U1A --> WI1 --> U2A --> U2B --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
+  U1 --> U1C --> U1A --> WI1 --> U2A1 --> U2A2 --> U2A3 --> U2A4 --> U2A5 --> U2A --> U2B --> U3 --> U4 --> U5 --> U6 --> U7 --> U8 --> U9 --> U10
   U2A --> U4
   U3 --> U5
   U2A --> U6
@@ -65,7 +65,12 @@ must revalidate those scaffolds after dependencies complete.
 | U1C | [Correct architecture checker and package contract](./u1-architecture-package-contract.md) | U1 merged at `88b9533ab840c9d357a1d09d2341709e2cbdd986` | complete |
 | U1A | [Documentation discoverability and continuous authoring quality gates](./u1a-documentation-authoring-quality-gates.md) | U1C | complete |
 | WI1 | [Deterministic epic issue graph checks and idempotent GitHub reconciliation](./wi1-epic-issue-graph-integrity.md) | U1A | implementation and live projection complete; final review and merge remain |
-| U2A | [Mandem work-control rules](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | replanning; not ready for review |
+| U2A | [Split work-control coordination](./u2-protocol-lifecycle-sqlite.md) | U1, U1A, WI1 | coordination; implementation retired |
+| U2A1 | [Canonical runtime protocol foundation](./u2a1-runtime-protocol-foundation.md) | U1, U1A, WI1 | scaffolded; first active subissue |
+| U2A2 | [Independent clean-room review evidence](./u2a2-clean-review-evidence.md) | U2A1 | scaffolded; blocked by U2A1 |
+| U2A3 | [Plan admission and authorization](./u2a3-plan-governance.md) | U2A2 | scaffolded; blocked by U2A2 |
+| U2A4 | [Active work and handoffs](./u2a4-active-work-control.md) | U2A3 | scaffolded; blocked by U2A3 |
+| U2A5 | [Workflow reducer and U2B handoff](./u2a5-workflow-composition-handoff.md) | U2A4 | scaffolded; blocked by U2A4 |
 | U2B | [Durable storage and restart recovery](./u2b-durable-storage-recovery.md) | U2A | scaffolded; blocked by U2A |
 | U3 | [Server, Docker lifecycle, resident host mode, and reconciliation](./u3-server-docker-resident-reconciliation.md) | U2B | scaffolded |
 | U4 | [Issues, ExecPlans, queue, gates, primitive CLI, and projections](./u4-issues-plans-queue-gates-cli.md) | U2A, U3 | scaffolded |

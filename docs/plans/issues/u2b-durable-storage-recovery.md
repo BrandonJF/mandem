@@ -22,8 +22,8 @@ execution_authorized: false
 This ExecPlan is a living document governed by `PLANS.md`. Keep `Progress`, `Surprises &
 Discoveries`, `Decision Log`, and `Outcomes & Retrospective` current as planning and work proceed.
 
-This is a non-executable planning scaffold. U2B planning starts only after U2A defines and receives
-approval for the complete work-control values that U2B must store.
+This is a non-executable planning scaffold. U2B planning starts only after U2A1 through U2A5 merge,
+U2A5 publishes the complete storage handoff, and the U2A coordination issue closes.
 
 ## Purpose / Big Picture
 
@@ -95,7 +95,7 @@ database or skip a malformed event to make startup succeed.
 ## Progress
 
 - [x] (2026-08-04) Created U2B by splitting durable storage and restart recovery from U2A.
-- [ ] Wait for U2A's reviewed and approved public values.
+- [ ] Wait for U2A1 through U2A5 and the closed U2A coordination issue.
 - [ ] Complete all six readiness rows and exact execution instructions.
 - [ ] Obtain a clean review and exact operator approval before implementation.
 
@@ -107,7 +107,7 @@ database or skip a malformed event to make startup succeed.
 
 ## Decision Log
 
-- Decision: Make U2B depend on approved U2A contracts.
+- Decision: Make U2B depend on the completed U2A subissue-contract sequence.
   Rationale: Storage can preserve and replay decisions, but it must not invent what requests or
   lifecycle changes mean.
   Date/Author: 2026-08-04 / Brandon and Codex
@@ -125,8 +125,9 @@ of this new plan.
 
 ## Interfaces and Dependencies
 
-U2B depends only on U2A. U2B will produce the event-store, checkpoint, replay, migration, and backup
-implementations that U3 uses. Exact interfaces remain planning work.
+U2B depends on completed U2A coordination and consumes only U2A5's public event, result, and snapshot
+handoff. U2B will produce the event-store, checkpoint, replay, migration, and backup implementations
+that U3 uses. Exact interfaces remain planning work.
 
 Split-scope revision note (2026-08-04): Created U2B as the separate durable-storage and
 restart-recovery issue from the former combined U2 plan. This scaffold remains unauthorized and is

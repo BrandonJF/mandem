@@ -48,6 +48,46 @@ issues:
     depends_on_issue_ids: ["cb67d131-975c-4d97-9a6f-4934be991ac6"]
     expected_native_state: "open"
     expected_native_labels: ["blocked", "planned", "u2b"]
+  - issue_id: "3bffe969-4131-40bf-9192-3e00a845910e"
+    issue_key: "U2A1"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2a1-runtime-protocol-foundation.md"
+    parent_issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    depends_on_issue_ids: ["6a6a8bab-853f-4658-9bc0-38e2386b642d", "745eda80-1e74-4866-bc95-2f2983b31025", "da645bd0-9899-40b3-9f23-3b48d65362a4"]
+    expected_native_state: "open"
+    expected_native_labels: ["planned", "u2"]
+  - issue_id: "ee63c8fd-3489-46fe-afd2-b612ddc3ab5c"
+    issue_key: "U2A2"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2a2-clean-review-evidence.md"
+    parent_issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    depends_on_issue_ids: ["3bffe969-4131-40bf-9192-3e00a845910e"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "planned", "u2"]
+  - issue_id: "9a3035d2-8cb3-4479-8121-cff1ab32fd6e"
+    issue_key: "U2A3"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2a3-plan-governance.md"
+    parent_issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    depends_on_issue_ids: ["ee63c8fd-3489-46fe-afd2-b612ddc3ab5c"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "planned", "u2"]
+  - issue_id: "9d35f34e-7967-42fa-870a-f8ddfb7af43b"
+    issue_key: "U2A4"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2a4-active-work-control.md"
+    parent_issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    depends_on_issue_ids: ["9a3035d2-8cb3-4479-8121-cff1ab32fd6e"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "planned", "u2"]
+  - issue_id: "4706b2e2-42bb-4536-84a2-03940d798dc0"
+    issue_key: "U2A5"
+    epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"
+    plan: "docs/plans/issues/u2a5-workflow-composition-handoff.md"
+    parent_issue_id: "cb67d131-975c-4d97-9a6f-4934be991ac6"
+    depends_on_issue_ids: ["9d35f34e-7967-42fa-870a-f8ddfb7af43b"]
+    expected_native_state: "open"
+    expected_native_labels: ["blocked", "planned", "u2"]
   - issue_id: "6a6a8bab-853f-4658-9bc0-38e2386b642d"
     issue_key: "WI1"
     epic_issue_id: "abe862d6-b052-49fe-8611-bc1ab6e24253"

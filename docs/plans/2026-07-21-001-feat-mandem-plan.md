@@ -735,23 +735,43 @@ Each phase ends with a typed handoff containing its input artifact revisions, ve
 - **Verification:** The real repository and conformant fixtures pass; unindexed docs, missing
   fileoverviews, invalid staged commits, and malformed provider events fail with concise evidence.
 
-### U2A. Define Mandem work-control rules
+### U2A. Coordinate split Mandem work-control contracts
 
-- **Goal:** Define what Mandem requests mean, which requests are allowed, which agent controls work,
-  and how reviews and approvals bind to exact files.
+- **Goal:** Deliver Mandem work-control behavior through five independently reviewed subissue contracts.
 - **Requirements:** R1-R6a, R20-R22, R29-R33, R47-R57, R65-R70; AE2, AE4, AE8
 - **Dependencies:** U1C and U1A
-- **Files:** `src/modules/runtime/domain/**`, `src/modules/runtime/application/**`, `src/modules/runtime/api/**`, `src/modules/execution/domain/**`, `src/modules/execution/application/**`, `src/modules/execution/tests/**`, `docs/architecture/control-protocol.md`
-- **Approach:** Define the versioned request, result, error, and event values; the allowed work phases; agent-control rules; exact review and approval binding; gate facts; process findings; and failed-review limits. Keep every rule pure and deterministic. Publish complete values that U2B can store without inventing a new work rule.
-- **Execution note:** Prove every allowed and rejected rule without SQLite, GitHub, Docker, or provider CLIs.
-- **Patterns to follow:** `src/lib/pipeline-graph/pipeline-state.server.ts`, `src/lib/pipeline-graph/pipeline-graph.server.ts`, `scripts/agents/coord-service/*-store.ts`, `scripts/agents/observability-feed.ts`, and `docs/product/spec/2026-07-08-eng-plane-pipeline-design.md`.
-- **Test scenarios:**
-  - Every valid lifecycle transition returns the complete events and next state.
-  - Invalid ordering, missing artifacts, expired leases, stale approval hashes, stale gate revisions, and non-owner mutations fail with stable typed errors.
-  - Schema-valid appends inside machine-delimited living-record regions preserve approval; edits elsewhere, invalid living entries, or approval-sensitive instructions placed in an exempt region invalidate it.
-  - Every routed finding has exactly one terminal disposition before Done is reachable.
-  - Three failed plan reviews require replanning, and five require an operator choice that a plan rewrite cannot reset.
-- **Verification:** A deterministic domain suite proves the work rules and exports every complete value U2B needs.
+- **Approach:** U2A is coordination-only. U2A1 owns canonical runtime protocol primitives. U2A2 owns independent review evidence. U2A3 owns plan admission and authorization. U2A4 owns active-work control. U2A5 owns workflow composition and the complete U2B handoff. Each subissue completes the five pre-review proofs and receives its own clean review and exact approval.
+- **Verification:** U2A closes only after all five subissues merge and U2A5 proves that U2B can store and replay the complete public values without adding work-control meaning.
+
+### U2A1. Define the canonical runtime protocol foundation
+
+- **Goal:** Publish exact canonical bytes, scalar aliases, artifact references, trusted-attestation primitives, request identity, and digest helpers.
+- **Dependencies:** U1, U1A, and WI1
+- **Verification:** Boundary and adversarial fixtures prove every accepted and rejected primitive form without importing lifecycle policy.
+
+### U2A2. Validate independent clean-room review evidence
+
+- **Goal:** Convert exact manifest, dispatch, participant, output, ancestry, write-set, and provider facts into one validated review value.
+- **Dependencies:** U2A1
+- **Verification:** Focused tests accept one complete independent review and reject every stale, substituted, omitted, self-authored, or extra-write case.
+
+### U2A3. Govern plan admission and authorization
+
+- **Goal:** Move one issue from planning through reviewed approval and queue admission while preserving gates, findings, and lifetime review limits.
+- **Dependencies:** U2A2
+- **Verification:** An exhaustive planning transition and replay suite produces one complete work authorization or one typed rejection.
+
+### U2A4. Control active work and handoffs
+
+- **Goal:** Apply a work authorization to leases, fencing, handoffs, repair transfer, interruption, and reconciliation.
+- **Dependencies:** U2A3
+- **Verification:** An exhaustive work-control suite proves permanent stale-owner fencing and byte-identical local replay.
+
+### U2A5. Compose the complete workflow reducer
+
+- **Goal:** Compose U2A1 through U2A4 into the complete deterministic command, event, result, snapshot, and U2B handoff contract.
+- **Dependencies:** U2A4
+- **Verification:** Global routing and replay tests prove every lifecycle state and expose all storage inputs through public barrels without adding subissue-policy rules.
 
 ### U2B. Persist and recover Mandem work state
 
