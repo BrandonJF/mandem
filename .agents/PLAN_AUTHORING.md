@@ -83,6 +83,10 @@ Complete these proofs as executable evidence before independent review:
 - The `closed-contract` proof inventories every public type, variant, grammar, cardinality, and
   nullability rule, then checks parity across prose, machine-readable schemas, examples, and tests.
   If the plan behaves like a type system, compile its closed contracts before review.
+  A catalog entry or fixture name is not executable evidence. Boundary fixtures must contain the
+  literal input, expected output or error, exact boundary neighbor, and any fixed digest or byte
+  oracle that the implementation will assert. The proof must execute those values or validate
+  their complete machine-readable form before review.
 - The `provenance` proof names the producer, authentication method, immutable binding, and consumer
   for every externally supplied or trusted value. Caller-controlled data cannot become trusted
   evidence merely because a command or event stores it.
@@ -91,6 +95,9 @@ Complete these proofs as executable evidence before independent review:
   deletion, retry, and restart.
 - The `milestone` proof draws the dependency order and verifies that every test imports only files
   created in the same or an earlier milestone. Run each focused command at its milestone boundary.
+  It also starts from a clean-checkout prerequisite sequence: name the pinned runtime, install from
+  the committed lockfile without changing it, state the success signal, and give recovery for an
+  interrupted or failed installation.
 - The `scope` proof lists independently verifiable behaviors and contracts. Split behaviors that
   can ship behind a stable interface. A plan combining a wire protocol, lifecycle state machine,
   trust or evidence policy, and persistence is presumptively too broad unless it proves why those
@@ -131,3 +138,19 @@ A novice executor should not need prior conversation, earlier reviews, or unstat
 finish the work. If two reasonable implementations could produce different accepted bytes, state,
 authorization results, recovery behavior, delivery state, or user-visible outcomes, the plan still
 contains a decision that the author must make.
+
+For every promised public function, write the complete exported signature, generic constraints,
+success and failure shape, and error-translation rule. For parsers and validators, define the
+validation sequence and map every violation family to one stable error result. A list of function
+names or error codes does not close the interface.
+For serializers that accept `unknown`, define the complete accepted in-memory object model and the
+stable result for cycles, sparse arrays, unsupported values, non-plain objects, symbol keys, and
+output beyond parser limits. Structural unions and envelopes need a fixture matrix for wrong roots,
+every missing field, every unknown or cross-variant field, invalid discriminants, and nested shape
+failures; success-path examples do not cover these public failures.
+Assign every fixture to the public function that can observe and decide its result. A generic codec
+fixture cannot require a schema, policy, trust, or lifecycle error owned by a later decoder. Add a
+machine check that rejects error codes outside each fixture catalog's ownership boundary.
+Prove that every independent limit and precedence branch is reachable. For nested limits, choose
+values and adjacent fixtures that remain below every earlier outer limit; arithmetic that causes an
+earlier guard to mask the claimed boundary is not evidence.
