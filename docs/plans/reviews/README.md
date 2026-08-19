@@ -12,6 +12,8 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
   repaired split-issue plan, current `PLANS.md`, fresh reviewer, and sole reviewer output path.
 - [U2A1 clean-room round 2 reviewer output](./2026-08-19-u2a1-clean-room-round-2-reviewer-output.md)
   preserves the reviewer's exact one-blocker verdict as the authoritative round-2 artifact.
+- [U2A1 clean-room round 3 dispatch](./2026-08-19-u2a1-clean-room-round-3-dispatch.md) binds the
+  closed structural-failure revision, current `PLANS.md`, fresh reviewer, and sole output path.
 
 - [Mandem epic review](./2026-07-24-mandem-epic-clean-room.md) reviews the epic plan.
 - [U1 review](./2026-07-24-u1-clean-room.md) reviews the bootstrap plan.
