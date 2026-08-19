@@ -47,6 +47,9 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
 - [x] (2026-08-19 22:52Z) Completed the closed-contract, provenance, state-and-replay, milestone,
   and scope proofs in `docs/plans/contracts/u2a1-runtime-protocol-contract.ts` and its test.
 - [x] (2026-08-19 22:52Z) Expanded this document into a self-contained implementation plan.
+- [x] (2026-08-19 23:25Z) Preserved clean-room round 1. It found four planning blockers:
+  clean-checkout setup, incomplete public signatures, label-only fixtures, and undefined error
+  precedence. Repaired the plan and authoring standard before requesting another review.
 - [ ] Obtain one independent clean-room review of the exact plan bytes.
 - [ ] Obtain exact operator approval and set `execution_authorized: true` only in the approved
   execution record.
@@ -93,6 +96,11 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
   Rationale: a digest for one protocol purpose must not be reusable as another purpose, and the
   length prefix makes concatenation boundaries explicit.
   Date/Author: 2026-08-19 / Codex
+- Decision: Validation follows a declared phase order, and every rejection family has a fixed code,
+  path, and detail rule.
+  Rationale: source-byte order cannot resolve conflicts between framing, syntax, schema, scalar,
+  decoder, and digest failures.
+  Date/Author: 2026-08-19 / Codex
 
 ## Outcomes & Retrospective
 
@@ -127,7 +135,7 @@ adjacent test checks catalog ordering, plan parity, fixture coverage, provenance
 dependencies, and exclusions. If this prose and that catalog disagree, repair both before review;
 the implementer does not choose between them.
 
-Public type inventory: `ArtifactKindV1`, `ArtifactProviderV1`, `ArtifactReferenceV1`, `BranchNameV1`, `CanonicalJsonErrorCodeV1`, `CanonicalJsonValueV1`, `CommandEnvelopeV1`, `ExternalArtifactIdV1`, `ExternalArtifactReferenceV1`, `GitSha`, `IdempotencyIdentityV1`, `NonnegativeSafeIntegerV1`, `ParseResultV1`, `PositiveSafeIntegerV1`, `ProtocolTokenV1`, `RepoPath`, `RepositoryArtifactReferenceV1`, `RepositorySlugV1`, `Sha256`, `UtcTimestamp`, `Uuid`
+Public type inventory: `ArtifactKindV1`, `ArtifactProviderV1`, `ArtifactReferenceV1`, `BranchNameV1`, `CanonicalJsonErrorCodeV1`, `CanonicalJsonValueV1`, `CommandEnvelopeV1`, `ExternalArtifactIdV1`, `ExternalArtifactReferenceV1`, `GitSha`, `IdempotencyIdentityV1`, `NonnegativeSafeIntegerV1`, `ParseResultV1`, `PayloadDecoderV1`, `PositiveSafeIntegerV1`, `ProtocolTokenV1`, `RepoPath`, `RepositoryArtifactReferenceV1`, `RepositorySlugV1`, `Sha256`, `UtcTimestamp`, `Uuid`
 
 Public function inventory: `canonicalDigestV1`, `commandPayloadDigestV1`, `parseArtifactReferenceV1`, `parseBranchNameV1`, `parseCanonicalJsonV1`, `parseCommandEnvelopeV1`, `parseExternalArtifactIdV1`, `parseGitShaV1`, `parseNonnegativeSafeIntegerV1`, `parsePositiveSafeIntegerV1`, `parseProtocolTokenV1`, `parseRepoPathV1`, `parseRepositorySlugV1`, `parseSha256V1`, `parseUtcTimestampV1`, `parseUuidV1`, `serializeCanonicalJsonV1`, `serializeCommandEnvelopeV1`
 
@@ -137,9 +145,9 @@ Scope exclusion inventory: `approval-record-parsing`, `authenticated-principals`
 
 Create `src/modules/runtime/domain/canonical-json-v1.ts`. Define `CanonicalJsonValueV1` recursively as
 `null`, boolean, unsigned safe integer, NFC string, readonly array, or readonly object whose values
-are canonical JSON. Define `ParseResultV1<T, M extends object = object>` as a discriminated union.
-Success is `{ ok: true; value: T }` intersected with the requested metadata type; failure is
-`{ ok: false; error: { code: CanonicalJsonErrorCodeV1; path: string; detail: string } }`. Public
+are canonical JSON. Define `ParseResultV1<T>` as
+`{ readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: { readonly code:
+CanonicalJsonErrorCodeV1; readonly path: string; readonly detail: string } }`. Public
 parse functions never throw for untrusted input and never return partial values.
 
 `parseCanonicalJsonV1(bytes)` first rejects input over 1,048,576 bytes, a byte-order mark, malformed
@@ -160,18 +168,48 @@ shortest UTF-8 encoding. Reject `\/`, uppercase hexadecimal escapes, surrogate e
 Unicode escape for a printable scalar. `serializeCanonicalJsonV1(value)` validates an `unknown`
 value against these rules and returns the exact bytes through `ParseResultV1<Uint8Array>`.
 
-A successful canonical parse requires byte equality with serialization and returns
-`{ ok: true, value, canonical_bytes, digest }`; `canonical_bytes` is a defensive copy of the exact
+A successful canonical parse requires byte equality with serialization and returns its value as
+`{ readonly json: CanonicalJsonValueV1; readonly canonical_bytes: Uint8Array; readonly digest:
+Sha256 }`; `canonical_bytes` is a defensive copy of the exact
 input and `digest` uses the domain `mandem-canonical-json-v1`. The stable error codes are
 `invalid-utf8`, `invalid-json`, `non-canonical-json`, `json-limit-exceeded`, `invalid-scalar`,
-`invalid-envelope`, and `payload-digest-mismatch`. Use the first failure in byte order; `path` is a
+`invalid-envelope`, and `payload-digest-mismatch`. `path` is a
 JSON Pointer with `~` and `/` escaped as `~0` and `~1`, or the empty string for a whole-input error.
 `detail` is a stable short explanation and must not contain raw input bytes.
+
+Validation uses this deterministic order: raw byte limit; UTF-8; BOM, carriage-return, and final-LF
+framing; JSON syntax and numeric token grammar; duplicate keys, key order, escapes, NFC, and exact
+canonical spelling; depth, collection, and decoded-string limits; envelope shape; envelope scalars
+in the interface field order below; payload decoder; kind and digest equality. The corresponding
+codes are, in order, `json-limit-exceeded`, `invalid-utf8`, `non-canonical-json`, `invalid-json`,
+`non-canonical-json`, `json-limit-exceeded`, `invalid-envelope`, `invalid-scalar`, the decoder's
+code, and `payload-digest-mismatch`. Streaming limit checks may stop before later phases. Within an
+array, report the lowest index; within an object, report the first key in canonical key order.
+Schema errors use the offending or missing field pointer and the literal details in the planning
+fixture catalog. A decoder returns paths relative to its payload root; the envelope parser prefixes
+them with `/payload`, preserves its code and detail, and maps a decoder throw to
+`invalid-envelope` at `/payload` with detail `payload decoder threw`.
 
 Create `src/modules/runtime/domain/protocol-primitives-v1.ts`. Implement the public branded aliases
 with these exact rules:
 
-- `Uuid` is 36 lowercase ASCII bytes matching RFC 4122 version 4 and variant 8, 9, a, or b. Reject
+    declare const protocolBrandV1: unique symbol;
+    type BrandV1<T, N extends string> = T & { readonly [protocolBrandV1]: N };
+    export type Uuid = BrandV1<string, "Uuid">;
+    export type Sha256 = BrandV1<string, "Sha256">;
+    export type GitSha = BrandV1<string, "GitSha">;
+    export type UtcTimestamp = BrandV1<string, "UtcTimestamp">;
+    export type RepoPath = BrandV1<string, "RepoPath">;
+    export type RepositorySlugV1 = BrandV1<string, "RepositorySlugV1">;
+    export type BranchNameV1 = BrandV1<string, "BranchNameV1">;
+    export type ProtocolTokenV1 = BrandV1<string, "ProtocolTokenV1">;
+    export type ArtifactKindV1 = BrandV1<string, "ArtifactKindV1">;
+    export type ExternalArtifactIdV1 = BrandV1<string, "ExternalArtifactIdV1">;
+    export type NonnegativeSafeIntegerV1 = BrandV1<number, "NonnegativeSafeIntegerV1">;
+    export type PositiveSafeIntegerV1 = BrandV1<number, "PositiveSafeIntegerV1">;
+
+- `Uuid` is 36 lowercase ASCII bytes matching
+  `[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}`. Reject
   uppercase, braces, nil values, other versions, and other variants.
 - `Sha256` is 64 lowercase hexadecimal ASCII bytes and `GitSha` is 40. Reject the all-zero value.
 - `UtcTimestamp` is exactly 24 ASCII bytes in `YYYY-MM-DDTHH:mm:ss.sssZ`, names a real Gregorian
@@ -196,10 +234,37 @@ with these exact rules:
   `PositiveSafeIntegerV1` starts at one. Reject non-number values, negative zero, fractions,
   infinities, and values outside the range.
 
-Every scalar parser accepts `unknown`, returns `ParseResultV1`, and uses `invalid-scalar` with the
-caller-supplied JSON Pointer path. It does not coerce, trim, case-fold, or normalize.
+Every scalar parser has signature `(value: unknown, path?: string) => ParseResultV1<Brand>`, where
+the optional path defaults to `""`, and uses `invalid-scalar` at that path. It does not coerce,
+trim, case-fold, or normalize. The exact exported declarations are:
 
-Define `ArtifactProviderV1` as `git | git-issue | github | codex | local`. A repository artifact is
+    export function parseUuidV1(value: unknown, path?: string): ParseResultV1<Uuid>;
+    export function parseSha256V1(value: unknown, path?: string): ParseResultV1<Sha256>;
+    export function parseGitShaV1(value: unknown, path?: string): ParseResultV1<GitSha>;
+    export function parseUtcTimestampV1(value: unknown, path?: string): ParseResultV1<UtcTimestamp>;
+    export function parseRepoPathV1(value: unknown, path?: string): ParseResultV1<RepoPath>;
+    export function parseRepositorySlugV1(value: unknown, path?: string): ParseResultV1<RepositorySlugV1>;
+    export function parseBranchNameV1(value: unknown, path?: string): ParseResultV1<BranchNameV1>;
+    export function parseProtocolTokenV1(value: unknown, path?: string): ParseResultV1<ProtocolTokenV1>;
+    export function parseExternalArtifactIdV1(value: unknown, path?: string): ParseResultV1<ExternalArtifactIdV1>;
+    export function parseNonnegativeSafeIntegerV1(value: unknown, path?: string): ParseResultV1<NonnegativeSafeIntegerV1>;
+    export function parsePositiveSafeIntegerV1(value: unknown, path?: string): ParseResultV1<PositiveSafeIntegerV1>;
+
+Define `ArtifactProviderV1` as `"git" | "git-issue" | "github" | "codex" | "local"`. The exact
+artifact declarations are:
+
+    export interface RepositoryArtifactReferenceV1 {
+      readonly location: "repository"; readonly kind: ArtifactKindV1; readonly path: RepoPath;
+      readonly commit: GitSha; readonly digest: Sha256;
+    }
+    export interface ExternalArtifactReferenceV1 {
+      readonly location: "external"; readonly kind: ArtifactKindV1; readonly provider: ArtifactProviderV1;
+      readonly external_id: ExternalArtifactIdV1; readonly digest: Sha256;
+    }
+    export type ArtifactReferenceV1 = RepositoryArtifactReferenceV1 | ExternalArtifactReferenceV1;
+    export function parseArtifactReferenceV1(value: unknown, path?: string): ParseResultV1<ArtifactReferenceV1>;
+
+A repository artifact is
 `{ location: "repository"; kind; path; commit; digest }`. An external artifact is
 `{ location: "external"; kind; provider; external_id; digest }`. `parseArtifactReferenceV1`
 rejects unknown keys and validates every field. The repository form binds a path to one nonzero Git
@@ -225,19 +290,38 @@ Create `src/modules/runtime/domain/protocol-envelope-v1.ts`. Define these exact 
       readonly payload: P & { readonly kind: K };
     }
 
+    export type PayloadDecoderV1<K extends ProtocolTokenV1, P extends CanonicalJsonValueV1> =
+      (value: CanonicalJsonValueV1, path: string) => ParseResultV1<P & { readonly kind: K }>;
+    export function parseCanonicalJsonV1(bytes: Uint8Array): ParseResultV1<{
+      readonly json: CanonicalJsonValueV1; readonly canonical_bytes: Uint8Array; readonly digest: Sha256;
+    }>;
+    export function serializeCanonicalJsonV1(value: unknown): ParseResultV1<Uint8Array>;
+    export function canonicalDigestV1(domain: unknown, value: unknown): ParseResultV1<Sha256>;
+    export function parseCommandEnvelopeV1<K extends ProtocolTokenV1, P extends CanonicalJsonValueV1>(
+      bytes: Uint8Array, payloadDecoder: PayloadDecoderV1<K, P>
+    ): ParseResultV1<CommandEnvelopeV1<K, P>>;
+    export function serializeCommandEnvelopeV1<K extends ProtocolTokenV1, P extends CanonicalJsonValueV1>(
+      value: unknown, payloadDecoder: PayloadDecoderV1<K, P>
+    ): ParseResultV1<Uint8Array>;
+    export function commandPayloadDigestV1<K extends ProtocolTokenV1, P extends CanonicalJsonValueV1>(
+      kind: unknown, payload: unknown, payloadDecoder: PayloadDecoderV1<K, P>
+    ): ParseResultV1<Sha256>;
+
 `parseCommandEnvelopeV1(bytes, payloadDecoder)` applies the 262,144-byte envelope limit before the
 general JSON parser, rejects every unknown or missing envelope key, validates the scalar fields,
 and calls the supplied pure decoder for the policy-owned payload. The payload decoder must reject
 unknown payload keys and return a payload whose `kind` is a `ProtocolTokenV1`. U2A1 does not define
 any concrete command kind or payload.
 
-`commandPayloadDigestV1(kind, payload)` requires `payload.kind === kind` and computes the payload
+`commandPayloadDigestV1(kind, payload, payloadDecoder)` validates the kind, invokes the decoder at
+the empty path, requires `payload.kind === kind`, and computes the payload
 digest with domain `mandem-command-payload-v1`. `parseCommandEnvelopeV1` requires the idempotency
 kind to equal `payload.kind` and its digest to equal the recomputed digest. A mismatch returns
 `payload-digest-mismatch`. `serializeCommandEnvelopeV1` repeats the same validations before
 returning bytes, so a cast or manually assembled value cannot bypass them.
 
-`canonicalDigestV1(domain, value)` validates the domain with `ProtocolTokenV1`, serializes the
+`canonicalDigestV1(domain, value)` validates the domain with `ProtocolTokenV1` at `/domain`, then
+serializes the
 value, and computes SHA-256 over ASCII domain bytes, one zero byte, the canonical byte length as an
 unsigned 64-bit big-endian integer, and the canonical bytes including their final line feed. It
 returns lowercase `Sha256`. The fixed domain `mandem-canonical-json-v1` is used for the digest
@@ -277,11 +361,19 @@ review evidence, U2A3 owns plan admission, U2A4 owns active work, U2A5 owns life
 and replay, and U2B owns persistence. U2A1 cannot define concrete lifecycle commands, trusted
 principals, approval parsing, state transitions, leases, events, or storage.
 
-Run this evidence before review from the repository root:
+Run this evidence before review from a clean checkout. The required bootstrap is:
+
+    bun --version
+    bun install --frozen-lockfile
+    git diff --exit-code -- bun.lock
+
+The first command must print `1.3.14`; installation must exit zero; the final command must produce
+no diff. If installation is interrupted or fails, rerun the same frozen-lockfile command. Do not
+delete the lockfile or dependency cache without evidence of corruption. Then run:
 
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-The expected result is one passing file and seven passing tests. Any failure means the plan is not
+The expected result is one passing file and nine passing tests. Any failure means the plan is not
 ready for clean-room review.
 
 ## Plan of Work
@@ -317,10 +409,14 @@ repository checks, then commit, push, open a pull request, and follow the guarde
 Work from the repository root in the isolated worktree created for U2A1. Before implementation,
 confirm the approved plan commit and that execution authorization matches it. Then run:
 
+    bun --version
+    bun install --frozen-lockfile
+    git diff --exit-code -- bun.lock
     git status --short
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-Expect a clean worktree and seven passing planning-contract tests. Create the Milestone 1 tests and
+Expect Bun 1.3.14, an unchanged lockfile, a clean worktree, and nine passing planning-contract tests.
+If installation is interrupted or fails, rerun `bun install --frozen-lockfile`. Create the Milestone 1 tests and
 run them before implementation:
 
     bunx vitest run src/modules/runtime/domain/canonical-json-v1.test.ts src/modules/runtime/domain/protocol-primitives-v1.test.ts
@@ -411,6 +507,6 @@ Concrete policy decoders implement the payload callback in later issues; U2A1 su
 catalog and no default decoder that accepts arbitrary objects.
 
 Plan revision note (2026-08-19): Replaced the split scaffold with a complete U2A1 implementation
-contract. Removed trusted-principal and lifecycle ownership, fixed canonical byte and scalar rules,
-added executable evidence for all five pre-review proofs, and made delivery to `main` part of the
-acceptance path.
+contract. After clean-room round 1, added clean-checkout bootstrap and recovery, exact exported
+signatures and UUID grammar, literal executable boundary and digest oracles, and deterministic
+validation precedence with stable error translation. `PLANS.md` remains unchanged.

@@ -83,6 +83,10 @@ Complete these proofs as executable evidence before independent review:
 - The `closed-contract` proof inventories every public type, variant, grammar, cardinality, and
   nullability rule, then checks parity across prose, machine-readable schemas, examples, and tests.
   If the plan behaves like a type system, compile its closed contracts before review.
+  A catalog entry or fixture name is not executable evidence. Boundary fixtures must contain the
+  literal input, expected output or error, exact boundary neighbor, and any fixed digest or byte
+  oracle that the implementation will assert. The proof must execute those values or validate
+  their complete machine-readable form before review.
 - The `provenance` proof names the producer, authentication method, immutable binding, and consumer
   for every externally supplied or trusted value. Caller-controlled data cannot become trusted
   evidence merely because a command or event stores it.
@@ -91,6 +95,9 @@ Complete these proofs as executable evidence before independent review:
   deletion, retry, and restart.
 - The `milestone` proof draws the dependency order and verifies that every test imports only files
   created in the same or an earlier milestone. Run each focused command at its milestone boundary.
+  It also starts from a clean-checkout prerequisite sequence: name the pinned runtime, install from
+  the committed lockfile without changing it, state the success signal, and give recovery for an
+  interrupted or failed installation.
 - The `scope` proof lists independently verifiable behaviors and contracts. Split behaviors that
   can ship behind a stable interface. A plan combining a wire protocol, lifecycle state machine,
   trust or evidence policy, and persistence is presumptively too broad unless it proves why those
@@ -131,3 +138,8 @@ A novice executor should not need prior conversation, earlier reviews, or unstat
 finish the work. If two reasonable implementations could produce different accepted bytes, state,
 authorization results, recovery behavior, delivery state, or user-visible outcomes, the plan still
 contains a decision that the author must make.
+
+For every promised public function, write the complete exported signature, generic constraints,
+success and failure shape, and error-translation rule. For parsers and validators, define the
+validation sequence and map every violation family to one stable error result. A list of function
+names or error codes does not close the interface.

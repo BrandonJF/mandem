@@ -1,14 +1,19 @@
 /** @fileoverview Verifies the U2A1 pre-review contract and its ExecPlan parity. */
 
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   boundaryFixtureCatalogV1,
+  canonicalFixtureOraclesV1,
   canonicalLimitsV1,
+  digestFixtureOraclesV1,
+  identityFixtureOraclesV1,
   milestoneDependencyCatalogV1,
   provenanceCatalogV1,
   publicFunctionCatalogV1,
   publicTypeCatalogV1,
+  scalarFixtureOraclesV1,
   scopeExclusionsV1,
 } from "./u2a1-runtime-protocol-contract";
 
@@ -48,6 +53,40 @@ describe("U2A1 pre-review contract", () => {
     expect(boundaryFixtureCatalogV1.scalars).toContain("repo-path-traversal");
     expect(boundaryFixtureCatalogV1.identity).toContain("envelope-round-trip");
     expect(boundaryFixtureCatalogV1.identity).toContain("idempotency-digest-mismatch");
+  });
+
+  it("provides executable canonical and scalar fixture oracles", () => {
+    expect(canonicalFixtureOraclesV1["byte-limit-accepted"].bytes).toHaveLength(canonicalLimitsV1.max_bytes);
+    expect(canonicalFixtureOraclesV1["byte-limit-rejected"].bytes).toHaveLength(canonicalLimitsV1.max_bytes + 1);
+    expect(canonicalFixtureOraclesV1["depth-limit-accepted"].bytes[0]).toBe("[".charCodeAt(0));
+    expect(canonicalFixtureOraclesV1["depth-limit-rejected"].path.split("/")).toHaveLength(canonicalLimitsV1.max_depth + 1);
+    expect(canonicalFixtureOraclesV1["collection-limit-accepted"].bytes).toBeInstanceOf(Uint8Array);
+    expect(canonicalFixtureOraclesV1["collection-limit-rejected"].path).toBe(`/${canonicalLimitsV1.max_collection_entries}`);
+    for (const fixture of [...Object.values(canonicalFixtureOraclesV1), ...Object.values(scalarFixtureOraclesV1)]) {
+      if ("code" in fixture) {
+        expect(fixture.code.length).toBeGreaterThan(0);
+        expect(fixture.path).toBeDefined();
+        expect(fixture.detail.length).toBeGreaterThan(0);
+      } else {
+        expect("value" in fixture).toBe(true);
+      }
+    }
+  });
+
+  it("pins digest framing to independent literal SHA-256 oracles", () => {
+    for (const fixture of digestFixtureOraclesV1) {
+      const length = new Uint8Array(8);
+      new DataView(length.buffer).setBigUint64(0, BigInt(fixture.bytes.byteLength));
+      const digest = createHash("sha256")
+        .update(fixture.domain, "ascii")
+        .update(Uint8Array.of(0))
+        .update(length)
+        .update(fixture.bytes)
+        .digest("hex");
+      expect(digest).toBe(fixture.digest);
+    }
+    expect(identityFixtureOraclesV1.payload_digest).not.toBe(identityFixtureOraclesV1.changed_payload_digest);
+    expect(Object.values(identityFixtureOraclesV1.failures).every((failure) => failure.path.startsWith("/"))).toBe(true);
   });
 
   it("bounds raw allocation before nested parsing", () => {
