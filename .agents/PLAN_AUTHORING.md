@@ -148,3 +148,6 @@ stable result for cycles, sparse arrays, unsupported values, non-plain objects, 
 output beyond parser limits. Structural unions and envelopes need a fixture matrix for wrong roots,
 every missing field, every unknown or cross-variant field, invalid discriminants, and nested shape
 failures; success-path examples do not cover these public failures.
+Assign every fixture to the public function that can observe and decide its result. A generic codec
+fixture cannot require a schema, policy, trust, or lifecycle error owned by a later decoder. Add a
+machine check that rejects error codes outside each fixture catalog's ownership boundary.

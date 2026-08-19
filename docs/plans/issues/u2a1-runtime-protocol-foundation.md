@@ -53,6 +53,10 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
 - [x] (2026-08-19 23:48Z) Preserved clean-room round 2. Its one blocker showed that structural and
   serializer failure behavior remained open. Added a complete machine-checked failure matrix and
   extended the authoring standard for `unknown`-accepting serializers and structural unions.
+- [x] (2026-08-20 00:05Z) Round 3 found an envelope-only error in the generic JSON fixture catalog.
+  The third-failure policy required redesign or another split. U2A1 was already bounded to one
+  behavior, so redesigned fixture ownership: every catalog is now constrained to errors its public
+  function can decide, and a machine check prevents cross-layer fixture drift.
 - [ ] Obtain one independent clean-room review of the exact plan bytes.
 - [ ] Obtain exact operator approval and set `execution_authorized: true` only in the approved
   execution record.
@@ -104,6 +108,11 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
   Rationale: source-byte order cannot resolve conflicts between framing, syntax, schema, scalar,
   decoder, and digest failures.
   Date/Author: 2026-08-19 / Codex
+- Decision: Keep U2A1 as one issue after the third failed verdict, but redesign its fixture catalogs
+  around public-function ownership instead of splitting the same generic codec across issues.
+  Rationale: the remaining contradiction crossed the generic JSON/envelope test boundary; another
+  issue boundary would duplicate the canonical codec rather than remove the ambiguity.
+  Date/Author: 2026-08-20 / Codex
 
 ## Outcomes & Retrospective
 
@@ -397,7 +406,7 @@ delete the lockfile or dependency cache without evidence of corruption. Then run
 
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-The expected result is one passing file and ten passing tests. Any failure means the plan is not
+The expected result is one passing file and eleven passing tests. Any failure means the plan is not
 ready for clean-room review.
 
 ## Plan of Work
@@ -439,7 +448,7 @@ confirm the approved plan commit and that execution authorization matches it. Th
     git status --short
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-Expect Bun 1.3.14, an unchanged lockfile, a clean worktree, and ten passing planning-contract tests.
+Expect Bun 1.3.14, an unchanged lockfile, a clean worktree, and eleven passing planning-contract tests.
 If installation is interrupted or fails, rerun `bun install --frozen-lockfile`. Create the Milestone 1 tests and
 run them before implementation:
 
@@ -534,4 +543,5 @@ Plan revision note (2026-08-19): Replaced the split scaffold with a complete U2A
 contract. After clean-room rounds 1 and 2, added clean-checkout bootstrap and recovery, exact
 exported signatures and UUID grammar, literal executable boundary and digest oracles, deterministic
 validation precedence, and a closed structural and serializer failure matrix. `PLANS.md` remains
-unchanged.
+unchanged. After the mandatory third-failure redesign, fixture catalogs are also checked against
+the error authority of their owning public function.

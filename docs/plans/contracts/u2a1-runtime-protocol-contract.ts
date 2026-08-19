@@ -57,7 +57,7 @@ export const canonicalLimitsV1 = {
 export const boundaryFixtureCatalogV1 = {
   canonical_json: [
     "null", "boolean", "zero", "max-safe-integer", "nfc-unicode", "control-escapes",
-    "nested-key-order", "duplicate-key", "unknown-envelope-key", "noncanonical-key-order",
+    "nested-key-order", "duplicate-key", "noncanonical-key-order",
     "leading-zero", "negative-number", "fraction", "exponent", "unsafe-integer", "invalid-utf8",
     "bom", "missing-final-lf", "extra-final-lf", "non-nfc", "lone-surrogate", "depth-limit",
     "collection-limit", "byte-limit",
@@ -100,7 +100,6 @@ export const canonicalFixtureOraclesV1 = {
   "control-escapes": { bytes: jsonBytes('"\\b\\t\\n\\f\\r\\u0000"\n'), value: "\b\t\n\f\r\u0000" },
   "nested-key-order": { bytes: jsonBytes('{"a":[1,true,null],"z":"é"}\n'), value: { a: [1, true, null], z: "é" } },
   "duplicate-key": { bytes: jsonBytes('{"a":1,"a":1}\n'), code: "non-canonical-json", path: "/a", detail: "duplicate object key" },
-  "unknown-envelope-key": { bytes: jsonBytes('{"extra":0}\n'), code: "invalid-envelope", path: "/extra", detail: "unknown envelope key" },
   "noncanonical-key-order": { bytes: jsonBytes('{"z":0,"a":0}\n'), code: "non-canonical-json", path: "/a", detail: "object keys are not ordered" },
   "leading-zero": { bytes: jsonBytes("01\n"), code: "invalid-json", path: "", detail: "invalid unsigned integer token" },
   "negative-number": { bytes: jsonBytes("-1\n"), code: "invalid-json", path: "", detail: "invalid unsigned integer token" },

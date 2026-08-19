@@ -74,6 +74,14 @@ describe("U2A1 pre-review contract", () => {
     }
   });
 
+  it("keeps fixture errors with the public function that can decide them", () => {
+    const canonicalCodes = new Set(["invalid-utf8", "invalid-json", "non-canonical-json", "json-limit-exceeded"]);
+    for (const fixture of Object.values(canonicalFixtureOraclesV1)) {
+      if ("code" in fixture) expect(canonicalCodes.has(fixture.code)).toBe(true);
+    }
+    expect(structuralFailureOraclesV1.envelope.some((fixture) => fixture.id === "unknown-key" && fixture.code === "invalid-envelope")).toBe(true);
+  });
+
   it("pins digest framing to independent literal SHA-256 oracles", () => {
     for (const fixture of digestFixtureOraclesV1) {
       const length = new Uint8Array(8);
