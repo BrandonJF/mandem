@@ -1,0 +1,86 @@
+/** @fileoverview Verifies the U2A1 pre-review contract and its ExecPlan parity. */
+
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  boundaryFixtureCatalogV1,
+  canonicalLimitsV1,
+  milestoneDependencyCatalogV1,
+  provenanceCatalogV1,
+  publicFunctionCatalogV1,
+  publicTypeCatalogV1,
+  scopeExclusionsV1,
+} from "./u2a1-runtime-protocol-contract";
+
+const planPath = "docs/plans/issues/u2a1-runtime-protocol-foundation.md";
+
+function inlineInventory(plan: string, label: string): readonly string[] {
+  const pattern = new RegExp(`^${label}: (.+)$`, "mu");
+  const value = pattern.exec(plan)?.[1];
+  if (!value) return [];
+  return [...value.matchAll(/`([^`]+)`/gu)].map((match) => match[1] ?? "");
+}
+
+describe("U2A1 pre-review contract", () => {
+  it("keeps the public type and function catalogs unique and sorted", () => {
+    const types = Object.keys(publicTypeCatalogV1);
+    const functions = [...publicFunctionCatalogV1];
+    expect(types).toEqual([...types].sort());
+    expect(functions).toEqual([...functions].sort());
+    expect(new Set(types).size).toBe(types.length);
+    expect(new Set(functions).size).toBe(functions.length);
+  });
+
+  it("binds the ExecPlan inventories to the compiled catalogs", () => {
+    const plan = readFileSync(planPath, "utf8");
+    expect(inlineInventory(plan, "Public type inventory")).toEqual(Object.keys(publicTypeCatalogV1));
+    expect(inlineInventory(plan, "Public function inventory")).toEqual(publicFunctionCatalogV1);
+    expect(inlineInventory(plan, "Scope exclusion inventory")).toEqual(scopeExclusionsV1);
+  });
+
+  it("covers every boundary family with accepted and rejected fixtures", () => {
+    expect(boundaryFixtureCatalogV1.canonical_json).toContain("max-safe-integer");
+    expect(boundaryFixtureCatalogV1.canonical_json).toContain("duplicate-key");
+    expect(boundaryFixtureCatalogV1.canonical_json).toContain("invalid-utf8");
+    expect(boundaryFixtureCatalogV1.canonical_json).toContain("byte-limit");
+    expect(boundaryFixtureCatalogV1.scalars).toContain("uuid-valid");
+    expect(boundaryFixtureCatalogV1.scalars).toContain("uuid-wrong-version");
+    expect(boundaryFixtureCatalogV1.scalars).toContain("repo-path-traversal");
+    expect(boundaryFixtureCatalogV1.identity).toContain("envelope-round-trip");
+    expect(boundaryFixtureCatalogV1.identity).toContain("idempotency-digest-mismatch");
+  });
+
+  it("bounds raw allocation before nested parsing", () => {
+    expect(canonicalLimitsV1.max_command_envelope_bytes).toBeLessThan(canonicalLimitsV1.max_bytes);
+    expect(canonicalLimitsV1.max_depth).toBeGreaterThan(0);
+    expect(canonicalLimitsV1.max_collection_entries).toBeGreaterThan(0);
+    expect(canonicalLimitsV1.max_string_bytes).toBeLessThanOrEqual(canonicalLimitsV1.max_bytes);
+  });
+
+  it("does not upgrade structural input into trusted evidence", () => {
+    expect(provenanceCatalogV1).toHaveLength(4);
+    for (const row of provenanceCatalogV1) {
+      expect(row.producer.length).toBeGreaterThan(0);
+      expect(row.authentication.length).toBeGreaterThan(0);
+      expect(row.immutable_binding.length).toBeGreaterThan(0);
+      expect(row.consumer.length).toBeGreaterThan(0);
+      expect(["structural-only", "derived"]).toContain(row.trust_result);
+    }
+    expect(JSON.stringify(publicTypeCatalogV1)).not.toContain("Trusted");
+  });
+
+  it("orders milestone imports without a later-file dependency", () => {
+    const first = new Set(milestoneDependencyCatalogV1["scalar-and-json"]);
+    const second = milestoneDependencyCatalogV1["artifact-and-envelope"];
+    expect(second.filter((path) => path.includes("canonical-json") || path.includes("protocol-primitives")).every((path) => first.has(path))).toBe(true);
+    expect(milestoneDependencyCatalogV1["public-handoff"].every((path) => path.endsWith("index.ts") || path.endsWith("README.md"))).toBe(true);
+  });
+
+  it("keeps lifecycle, trust policy, and persistence outside U2A1", () => {
+    expect(scopeExclusionsV1).toEqual([...scopeExclusionsV1].sort());
+    expect(scopeExclusionsV1).toContain("clean-review-validation");
+    expect(scopeExclusionsV1).toContain("lifecycle-replay");
+    expect(scopeExclusionsV1).toContain("policy-specific-trusted-observations");
+    expect(scopeExclusionsV1).toContain("persistence");
+  });
+});
