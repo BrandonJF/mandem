@@ -50,7 +50,7 @@ export const canonicalLimitsV1 = {
   max_bytes: 1_048_576,
   max_depth: 16,
   max_collection_entries: 1_024,
-  max_string_bytes: 1_048_576,
+  max_string_bytes: 1_000_000,
   max_command_envelope_bytes: 262_144,
 } as const;
 
@@ -60,7 +60,7 @@ export const boundaryFixtureCatalogV1 = {
     "nested-key-order", "duplicate-key", "noncanonical-key-order",
     "leading-zero", "negative-number", "fraction", "exponent", "unsafe-integer", "invalid-utf8",
     "bom", "missing-final-lf", "extra-final-lf", "non-nfc", "lone-surrogate", "depth-limit",
-    "collection-limit", "byte-limit",
+    "collection-limit", "string-limit", "byte-limit",
   ],
   scalars: [
     "uuid-valid", "uuid-uppercase", "uuid-wrong-version", "uuid-wrong-variant", "uuid-nil",
@@ -116,6 +116,8 @@ export const canonicalFixtureOraclesV1 = {
   "depth-limit-rejected": { bytes: nestedArrayBytes(17), code: "json-limit-exceeded", path: "/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0", detail: "maximum depth is 16" },
   "collection-limit-accepted": { bytes: repeatedArrayBytes(1_024), value: Array.from({ length: 1_024 }, () => 0) },
   "collection-limit-rejected": { bytes: repeatedArrayBytes(1_025), code: "json-limit-exceeded", path: "/1024", detail: "maximum collection size is 1024" },
+  "string-limit-accepted": { bytes: stringDocumentBytes(1_000_000), value: "a".repeat(1_000_000) },
+  "string-limit-rejected": { bytes: stringDocumentBytes(1_000_001), code: "json-limit-exceeded", path: "", detail: "maximum decoded string size is 1000000 bytes" },
   "byte-limit-accepted": { bytes: stringDocumentBytes(1_048_573), value: "a".repeat(1_048_573) },
   "byte-limit-rejected": { bytes: stringDocumentBytes(1_048_574), code: "json-limit-exceeded", path: "", detail: "maximum input size is 1048576 bytes" },
 } as const;

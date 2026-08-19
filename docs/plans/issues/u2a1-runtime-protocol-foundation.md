@@ -57,6 +57,9 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
   The third-failure policy required redesign or another split. U2A1 was already bounded to one
   behavior, so redesigned fixture ownership: every catalog is now constrained to errors its public
   function can decide, and a machine check prevents cross-layer fixture drift.
+- [x] (2026-08-20 00:18Z) Round 4 found that the decoded-string limit was masked by the equal raw
+  document limit. Lowered it to 1,000,000 bytes and added exact accepted and rejected neighbors that
+  remain below the raw limit.
 - [ ] Obtain one independent clean-room review of the exact plan bytes.
 - [ ] Obtain exact operator approval and set `execution_authorized: true` only in the approved
   execution record.
@@ -165,7 +168,7 @@ parse functions never throw for untrusted input and never return partial values.
 `parseCanonicalJsonV1(bytes)` first rejects input over 1,048,576 bytes, a byte-order mark, malformed
 UTF-8, and any carriage return. It then tokenizes the raw bytes without `JSON.parse`. The maximum
 nesting depth is 16, each object or array has at most 1,024 entries, and one decoded string has at
-most 1,048,576 UTF-8 bytes. Check the raw byte limit before allocating nested values. The input must
+most 1,000,000 UTF-8 bytes. Check the raw byte limit before allocating nested values. The input must
 end in exactly one line feed and contain no other insignificant whitespace.
 
 Object keys are unique and ordered by Unicode scalar value, which is the same order as comparing
@@ -545,3 +548,5 @@ exported signatures and UUID grammar, literal executable boundary and digest ora
 validation precedence, and a closed structural and serializer failure matrix. `PLANS.md` remains
 unchanged. After the mandatory third-failure redesign, fixture catalogs are also checked against
 the error authority of their owning public function.
+Round 4 made the string-size guard independently reachable below the raw document limit and added
+adjacent executable fixtures.

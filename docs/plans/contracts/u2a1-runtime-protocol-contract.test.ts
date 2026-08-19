@@ -63,6 +63,9 @@ describe("U2A1 pre-review contract", () => {
     expect(canonicalFixtureOraclesV1["depth-limit-rejected"].path.split("/")).toHaveLength(canonicalLimitsV1.max_depth + 1);
     expect(canonicalFixtureOraclesV1["collection-limit-accepted"].bytes).toBeInstanceOf(Uint8Array);
     expect(canonicalFixtureOraclesV1["collection-limit-rejected"].path).toBe(`/${canonicalLimitsV1.max_collection_entries}`);
+    expect(canonicalFixtureOraclesV1["string-limit-accepted"].bytes).toHaveLength(canonicalLimitsV1.max_string_bytes + 3);
+    expect(canonicalFixtureOraclesV1["string-limit-rejected"].bytes).toHaveLength(canonicalLimitsV1.max_string_bytes + 4);
+    expect(canonicalFixtureOraclesV1["string-limit-rejected"].bytes.length).toBeLessThan(canonicalLimitsV1.max_bytes);
     for (const fixture of [...Object.values(canonicalFixtureOraclesV1), ...Object.values(scalarFixtureOraclesV1)]) {
       if ("code" in fixture) {
         expect(fixture.code.length).toBeGreaterThan(0);

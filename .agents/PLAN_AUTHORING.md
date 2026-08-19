@@ -151,3 +151,6 @@ failures; success-path examples do not cover these public failures.
 Assign every fixture to the public function that can observe and decide its result. A generic codec
 fixture cannot require a schema, policy, trust, or lifecycle error owned by a later decoder. Add a
 machine check that rejects error codes outside each fixture catalog's ownership boundary.
+Prove that every independent limit and precedence branch is reachable. For nested limits, choose
+values and adjacent fixtures that remain below every earlier outer limit; arithmetic that causes an
+earlier guard to mask the claimed boundary is not evidence.
