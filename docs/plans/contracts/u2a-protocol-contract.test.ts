@@ -6,7 +6,7 @@ import { closedWireTypesV1, commandSchemaV1, eventValueSchemaV1, recursiveWireSc
 const fieldPattern = /^[a-z][a-z0-9_]*:([A-Za-z][A-Za-z0-9]*)(\[\])?$/u;
 const tokenPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
 
-describe("U2A planning protocol contract", () => {
+describe("retained U2A split-source protocol contract", () => {
   it("keeps command and event catalogs unique and canonically ordered by explicit keys", () => {
     expect(Object.keys(commandSchemaV1)).toHaveLength(29);
     expect(Object.keys(eventValueSchemaV1)).toHaveLength(31);
