@@ -193,6 +193,46 @@ export const identityFixtureOraclesV1 = {
   },
 } as const;
 
+const repositoryArtifactFixtureV1 = { location: "repository", kind: "plan", path: "docs/plan.md", commit: "1".repeat(40), digest: "1".repeat(64) };
+const externalArtifactFixtureV1 = { location: "external", kind: "review", provider: "github", external_id: "review_1", digest: "1".repeat(64) };
+const omitFixtureKey = <T extends object>(value: T, key: keyof T): Partial<T> => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
+
+export const structuralFailureOraclesV1 = {
+  artifact: [
+    { id: "root-not-object", input: null, code: "invalid-envelope", path: "", detail: "expected artifact object" },
+    { id: "missing-location", input: {}, code: "invalid-envelope", path: "/location", detail: "required artifact field is missing" },
+    { id: "invalid-location", input: { location: "remote" }, code: "invalid-envelope", path: "/location", detail: "unsupported artifact location" },
+    ...(["kind", "path", "commit", "digest"] as const).map((field) => ({ id: `repository-missing-${field}`, input: omitFixtureKey(repositoryArtifactFixtureV1, field), code: "invalid-envelope", path: `/${field}`, detail: "required artifact field is missing" })),
+    { id: "repository-cross-variant-provider", input: { ...repositoryArtifactFixtureV1, provider: "github" }, code: "invalid-envelope", path: "/provider", detail: "unknown repository artifact key" },
+    { id: "repository-cross-variant-external-id", input: { ...repositoryArtifactFixtureV1, external_id: "review_1" }, code: "invalid-envelope", path: "/external_id", detail: "unknown repository artifact key" },
+    ...(["kind", "provider", "external_id", "digest"] as const).map((field) => ({ id: `external-missing-${field}`, input: omitFixtureKey(externalArtifactFixtureV1, field), code: "invalid-envelope", path: `/${field}`, detail: "required artifact field is missing" })),
+    { id: "external-invalid-provider", input: { ...externalArtifactFixtureV1, provider: "remote" }, code: "invalid-scalar", path: "/provider", detail: "unsupported artifact provider" },
+    { id: "external-cross-variant-path", input: { ...externalArtifactFixtureV1, path: "docs/plan.md" }, code: "invalid-envelope", path: "/path", detail: "unknown external artifact key" },
+    { id: "external-cross-variant-commit", input: { ...externalArtifactFixtureV1, commit: "1".repeat(40) }, code: "invalid-envelope", path: "/commit", detail: "unknown external artifact key" },
+  ],
+  envelope: [
+    { id: "root-not-object", input: null, code: "invalid-envelope", path: "", detail: "expected command envelope object" },
+    ...(["protocol_version", "command_id", "project_id", "issue_id", "correlation_id", "causation_id", "idempotency", "payload"] as const).map((field) => ({ id: `missing-${field}`, input: omitFixtureKey(identityFixtureOraclesV1.envelope, field), code: "invalid-envelope", path: `/${field}`, detail: "required envelope field is missing" })),
+    { id: "unknown-key", input: { ...identityFixtureOraclesV1.envelope, extra: 0 }, code: "invalid-envelope", path: "/extra", detail: "unknown envelope key" },
+    { id: "protocol-version", input: { ...identityFixtureOraclesV1.envelope, protocol_version: 2 }, code: "invalid-envelope", path: "/protocol_version", detail: "unsupported protocol version" },
+    { id: "idempotency-not-object", input: { ...identityFixtureOraclesV1.envelope, idempotency: null }, code: "invalid-envelope", path: "/idempotency", detail: "expected idempotency object" },
+    ...(["key", "kind", "payload_digest"] as const).map((field) => ({ id: `idempotency-missing-${field}`, input: { ...identityFixtureOraclesV1.envelope, idempotency: omitFixtureKey(identityFixtureOraclesV1.envelope.idempotency, field) }, code: "invalid-envelope", path: `/idempotency/${field}`, detail: "required idempotency field is missing" })),
+    { id: "idempotency-unknown-key", input: { ...identityFixtureOraclesV1.envelope, idempotency: { ...identityFixtureOraclesV1.envelope.idempotency, extra: 0 } }, code: "invalid-envelope", path: "/idempotency/extra", detail: "unknown idempotency key" },
+    { id: "payload-not-object", input: { ...identityFixtureOraclesV1.envelope, payload: null }, code: "invalid-envelope", path: "/payload", detail: "expected payload object" },
+  ],
+  serializer: [
+    { id: "undefined", value: undefined, code: "invalid-json", path: "", detail: "unsupported JavaScript value" },
+    { id: "function", value: () => undefined, code: "invalid-json", path: "", detail: "unsupported JavaScript value" },
+    { id: "symbol", value: Symbol("x"), code: "invalid-json", path: "", detail: "unsupported JavaScript value" },
+    { id: "bigint", value: 1n, code: "invalid-json", path: "", detail: "unsupported JavaScript value" },
+    { id: "cyclic-object", construction: "const value = {}; value.self = value", code: "invalid-json", path: "/self", detail: "cyclic value is forbidden" },
+    { id: "sparse-array", construction: "Array(1)", code: "invalid-json", path: "/0", detail: "sparse array is forbidden" },
+    { id: "symbol-key", construction: "{ [Symbol('x')]: 1 }", code: "invalid-json", path: "", detail: "symbol object keys are forbidden" },
+    { id: "non-plain-object", construction: "new Date(0)", code: "invalid-json", path: "", detail: "expected a plain object" },
+    { id: "output-too-large", construction: "'a'.repeat(1048574)", code: "json-limit-exceeded", path: "", detail: "maximum serialized size is 1048576 bytes" },
+  ],
+} as const;
+
 export const provenanceCatalogV1 = [
   {
     value: "canonical input bytes",

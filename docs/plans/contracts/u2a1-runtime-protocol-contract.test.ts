@@ -15,6 +15,7 @@ import {
   publicTypeCatalogV1,
   scalarFixtureOraclesV1,
   scopeExclusionsV1,
+  structuralFailureOraclesV1,
 } from "./u2a1-runtime-protocol-contract";
 
 const planPath = "docs/plans/issues/u2a1-runtime-protocol-foundation.md";
@@ -87,6 +88,25 @@ describe("U2A1 pre-review contract", () => {
     }
     expect(identityFixtureOraclesV1.payload_digest).not.toBe(identityFixtureOraclesV1.changed_payload_digest);
     expect(Object.values(identityFixtureOraclesV1.failures).every((failure) => failure.path.startsWith("/"))).toBe(true);
+  });
+
+  it("closes every structural and serializer failure result", () => {
+    const failures = Object.values(structuralFailureOraclesV1).flat();
+    expect(structuralFailureOraclesV1.artifact.map((fixture) => fixture.id)).toEqual(expect.arrayContaining([
+      "root-not-object", "missing-location", "invalid-location", "repository-cross-variant-provider",
+      "external-cross-variant-path", "external-invalid-provider",
+    ]));
+    expect(structuralFailureOraclesV1.envelope.filter((fixture) => fixture.id.startsWith("missing-"))).toHaveLength(8);
+    expect(structuralFailureOraclesV1.envelope.filter((fixture) => fixture.id.startsWith("idempotency-missing-"))).toHaveLength(3);
+    expect(structuralFailureOraclesV1.serializer.map((fixture) => fixture.id)).toEqual(expect.arrayContaining([
+      "cyclic-object", "sparse-array", "non-plain-object", "output-too-large",
+    ]));
+    for (const failure of failures) {
+      expect(failure.code.length).toBeGreaterThan(0);
+      expect(failure.path).toBeDefined();
+      expect(failure.detail.length).toBeGreaterThan(0);
+      expect("input" in failure || "value" in failure || "construction" in failure).toBe(true);
+    }
   });
 
   it("bounds raw allocation before nested parsing", () => {

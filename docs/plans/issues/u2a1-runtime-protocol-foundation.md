@@ -50,6 +50,9 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
 - [x] (2026-08-19 23:25Z) Preserved clean-room round 1. It found four planning blockers:
   clean-checkout setup, incomplete public signatures, label-only fixtures, and undefined error
   precedence. Repaired the plan and authoring standard before requesting another review.
+- [x] (2026-08-19 23:48Z) Preserved clean-room round 2. Its one blocker showed that structural and
+  serializer failure behavior remained open. Added a complete machine-checked failure matrix and
+  extended the authoring standard for `unknown`-accepting serializers and structural unions.
 - [ ] Obtain one independent clean-room review of the exact plan bytes.
 - [ ] Obtain exact operator approval and set `execution_authorized: true` only in the approved
   execution record.
@@ -177,6 +180,18 @@ input and `digest` uses the domain `mandem-canonical-json-v1`. The stable error 
 JSON Pointer with `~` and `/` escaped as `~0` and `~1`, or the empty string for a whole-input error.
 `detail` is a stable short explanation and must not contain raw input bytes.
 
+Serialization accepts only the canonical value model: `null`, booleans, nonnegative safe integers,
+NFC strings, dense arrays with own values at every index, and plain objects whose own enumerable
+keys are strings and whose prototype is `Object.prototype` or `null`. It rejects `undefined`,
+functions, symbols, bigint, negative or non-integer numbers, sparse arrays, symbol keys, accessors,
+class instances, dates, maps, sets, typed arrays, and cycles. It traverses without invoking getters.
+A cycle returns `invalid-json` at the pointer where the repeated reference occurs with detail
+`cyclic value is forbidden`. Other unsupported values use `invalid-json` at their pointer and
+detail `unsupported JavaScript value`; non-plain objects use detail `expected a plain object`.
+Serialization enforces the same depth, collection, decoded-string, and 1,048,576-byte complete
+document limits as parsing. Oversized output returns `json-limit-exceeded` at the first overflowing
+value, or `""` for total output size, with the literal detail in the compiled fixture matrix.
+
 Validation uses this deterministic order: raw byte limit; UTF-8; BOM, carriage-return, and final-LF
 framing; JSON syntax and numeric token grammar; duplicate keys, key order, escapes, NFC, and exact
 canonical spelling; depth, collection, and decoded-string limits; envelope shape; envelope scalars
@@ -270,6 +285,15 @@ A repository artifact is
 rejects unknown keys and validates every field. The repository form binds a path to one nonzero Git
 commit and content digest. The external form binds a provider-issued identifier to a digest. Neither
 form is trusted evidence by itself, and no public type contains a trust flag.
+
+For artifacts, validate the root object, `location`, selected-variant unknown keys, required fields
+in declaration order, then scalar values in that order. For envelopes, validate the root object,
+unknown top-level keys in canonical order, required top-level fields in declaration order,
+`protocol_version`, the idempotency object and its keys, top-level scalars, then the payload decoder
+and digest bindings. The compiled `structuralFailureOraclesV1` matrix covers wrong roots, every
+missing field, invalid discriminants and providers, unknown and cross-variant keys, nested
+idempotency shape, payload shape, cycles, unsupported JavaScript values, and serializer overflow.
+Each row's code, path, detail, and precedence is normative; implementation tests execute every row.
 
 Create `src/modules/runtime/domain/protocol-envelope-v1.ts`. Define these exact generic interfaces:
 
@@ -373,7 +397,7 @@ delete the lockfile or dependency cache without evidence of corruption. Then run
 
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-The expected result is one passing file and nine passing tests. Any failure means the plan is not
+The expected result is one passing file and ten passing tests. Any failure means the plan is not
 ready for clean-room review.
 
 ## Plan of Work
@@ -415,7 +439,7 @@ confirm the approved plan commit and that execution authorization matches it. Th
     git status --short
     bunx vitest run docs/plans/contracts/u2a1-runtime-protocol-contract.test.ts
 
-Expect Bun 1.3.14, an unchanged lockfile, a clean worktree, and nine passing planning-contract tests.
+Expect Bun 1.3.14, an unchanged lockfile, a clean worktree, and ten passing planning-contract tests.
 If installation is interrupted or fails, rerun `bun install --frozen-lockfile`. Create the Milestone 1 tests and
 run them before implementation:
 
@@ -507,6 +531,7 @@ Concrete policy decoders implement the payload callback in later issues; U2A1 su
 catalog and no default decoder that accepts arbitrary objects.
 
 Plan revision note (2026-08-19): Replaced the split scaffold with a complete U2A1 implementation
-contract. After clean-room round 1, added clean-checkout bootstrap and recovery, exact exported
-signatures and UUID grammar, literal executable boundary and digest oracles, and deterministic
-validation precedence with stable error translation. `PLANS.md` remains unchanged.
+contract. After clean-room rounds 1 and 2, added clean-checkout bootstrap and recovery, exact
+exported signatures and UUID grammar, literal executable boundary and digest oracles, deterministic
+validation precedence, and a closed structural and serializer failure matrix. `PLANS.md` remains
+unchanged.

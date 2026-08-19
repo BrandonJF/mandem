@@ -143,3 +143,8 @@ For every promised public function, write the complete exported signature, gener
 success and failure shape, and error-translation rule. For parsers and validators, define the
 validation sequence and map every violation family to one stable error result. A list of function
 names or error codes does not close the interface.
+For serializers that accept `unknown`, define the complete accepted in-memory object model and the
+stable result for cycles, sparse arrays, unsupported values, non-plain objects, symbol keys, and
+output beyond parser limits. Structural unions and envelopes need a fixture matrix for wrong roots,
+every missing field, every unknown or cross-variant field, invalid discriminants, and nested shape
+failures; success-path examples do not cover these public failures.
