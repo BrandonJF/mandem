@@ -84,6 +84,11 @@ const jsonBytes = (source: string): Uint8Array => encoder.encode(source);
 const nestedArrayBytes = (depth: number): Uint8Array => jsonBytes(`${"[".repeat(depth)}0${"]".repeat(depth)}\n`);
 const repeatedArrayBytes = (count: number): Uint8Array => jsonBytes(`[${Array.from({ length: count }, () => "0").join(",")}]\n`);
 const stringDocumentBytes = (contentBytes: number): Uint8Array => jsonBytes(`"${"a".repeat(contentBytes)}"\n`);
+const splitStringDocument = (totalBytes: number): { readonly bytes: Uint8Array; readonly value: readonly [string, string] } => {
+  const first = "a".repeat(500_000);
+  const second = "b".repeat(totalBytes - 500_008);
+  return { bytes: jsonBytes(`["${first}","${second}"]\n`), value: [first, second] };
+};
 const nestedArrayValue = (depth: number): unknown => {
   let value: unknown = 0;
   for (let index = 0; index < depth; index += 1) value = [value];
@@ -118,8 +123,8 @@ export const canonicalFixtureOraclesV1 = {
   "collection-limit-rejected": { bytes: repeatedArrayBytes(1_025), code: "json-limit-exceeded", path: "/1024", detail: "maximum collection size is 1024" },
   "string-limit-accepted": { bytes: stringDocumentBytes(1_000_000), value: "a".repeat(1_000_000) },
   "string-limit-rejected": { bytes: stringDocumentBytes(1_000_001), code: "json-limit-exceeded", path: "", detail: "maximum decoded string size is 1000000 bytes" },
-  "byte-limit-accepted": { bytes: stringDocumentBytes(1_048_573), value: "a".repeat(1_048_573) },
-  "byte-limit-rejected": { bytes: stringDocumentBytes(1_048_574), code: "json-limit-exceeded", path: "", detail: "maximum input size is 1048576 bytes" },
+  "byte-limit-accepted": splitStringDocument(1_048_576),
+  "byte-limit-rejected": { bytes: splitStringDocument(1_048_577).bytes, code: "json-limit-exceeded", path: "", detail: "maximum input size is 1048576 bytes" },
 } as const;
 
 export const scalarFixtureOraclesV1 = {
@@ -230,7 +235,7 @@ export const structuralFailureOraclesV1 = {
     { id: "sparse-array", construction: "Array(1)", code: "invalid-json", path: "/0", detail: "sparse array is forbidden" },
     { id: "symbol-key", construction: "{ [Symbol('x')]: 1 }", code: "invalid-json", path: "", detail: "symbol object keys are forbidden" },
     { id: "non-plain-object", construction: "new Date(0)", code: "invalid-json", path: "", detail: "expected a plain object" },
-    { id: "output-too-large", construction: "'a'.repeat(1048574)", code: "json-limit-exceeded", path: "", detail: "maximum serialized size is 1048576 bytes" },
+    { id: "output-too-large", construction: "['a'.repeat(500000), 'b'.repeat(548569)]", code: "json-limit-exceeded", path: "", detail: "maximum serialized size is 1048576 bytes" },
   ],
 } as const;
 
