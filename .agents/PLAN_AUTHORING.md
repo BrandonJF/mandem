@@ -154,3 +154,5 @@ machine check that rejects error codes outside each fixture catalog's ownership 
 Prove that every independent limit and precedence branch is reachable. For nested limits, choose
 values and adjacent fixtures that remain below every earlier outer limit; arithmetic that causes an
 earlier guard to mask the claimed boundary is not evidence.
+An outer-size fixture must also keep every nested value within its inner limits. Use a composite
+value when one scalar cannot reach the outer boundary without violating an earlier inner rule.
