@@ -4,6 +4,26 @@ This directory records independent reviews of Mandem's epic and issue ExecPlans.
 
 - [Canonical clean-room prompt](./CLEAN_ROOM_PROMPT.md) defines the plan-agnostic novice-executor
   review and stable output criteria used verbatim for every dispatch.
+- [U2A1 clean-room round 1 dispatch](./2026-08-19-u2a1-clean-room-round-1-dispatch.md) binds the
+  first split issue plan, current `PLANS.md`, fresh reviewer, and sole reviewer output path.
+- [U2A1 clean-room round 1 reviewer output](./2026-08-19-u2a1-clean-room-round-1-reviewer-output.md)
+  preserves the reviewer's exact four-blocker verdict as the authoritative round-1 artifact.
+- [U2A1 clean-room round 2 dispatch](./2026-08-19-u2a1-clean-room-round-2-dispatch.md) binds the
+  repaired split-issue plan, current `PLANS.md`, fresh reviewer, and sole reviewer output path.
+- [U2A1 clean-room round 2 reviewer output](./2026-08-19-u2a1-clean-room-round-2-reviewer-output.md)
+  preserves the reviewer's exact one-blocker verdict as the authoritative round-2 artifact.
+- [U2A1 clean-room round 3 dispatch](./2026-08-19-u2a1-clean-room-round-3-dispatch.md) binds the
+  closed structural-failure revision, current `PLANS.md`, fresh reviewer, and sole output path.
+- [U2A1 clean-room round 3 reviewer output](./2026-08-19-u2a1-clean-room-round-3-reviewer-output.md)
+  preserves the reviewer's exact one-blocker verdict as the authoritative round-3 artifact.
+- [U2A1 clean-room round 4 dispatch](./2026-08-20-u2a1-clean-room-round-4-dispatch.md) binds the
+  mandatory fixture-ownership redesign, current `PLANS.md`, fresh reviewer, and sole output path.
+- [U2A1 clean-room round 4 reviewer output](./2026-08-20-u2a1-clean-room-round-4-reviewer-output.md)
+  preserves the reviewer's exact one-blocker verdict as the authoritative round-4 artifact.
+- [U2A1 clean-room round 5 dispatch](./2026-08-20-u2a1-clean-room-round-5-dispatch.md) binds the
+  reachable-limit repair, current `PLANS.md`, fresh reviewer, and sole reviewer output path.
+- [U2A1 clean-room round 5 reviewer output](./2026-08-20-u2a1-clean-room-round-5-reviewer-output.md)
+  preserves the reviewer's exact clean verdict for the reviewed U2A1 plan bytes.
 
 - [Mandem epic review](./2026-07-24-mandem-epic-clean-room.md) reviews the epic plan.
 - [U1 review](./2026-07-24-u1-clean-room.md) reviews the bootstrap plan.
