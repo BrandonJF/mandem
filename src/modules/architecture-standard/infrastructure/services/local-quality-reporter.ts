@@ -2,7 +2,7 @@
 import { spawn } from "node:child_process";
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 export type QualityCommandRunner = (command: readonly string[], cwd: string, logFile: string) => Promise<{ exitCode: number; stdout: string }>;
@@ -11,7 +11,10 @@ const repository = "BrandonJF/mandem";
 const qualityCommands = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "check"], ["bun", "run", "build"], ["git", "issue", "fsck"]];
 
 const execute: QualityCommandRunner = async (command, cwd, logFile) => new Promise((resolve, reject) => {
-  const child = spawn(command[0]!, command.slice(1), { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  const temporaryDirectory = join(dirname(logFile), "tmp");
+  mkdirSync(temporaryDirectory, { recursive: true, mode: 0o700 });
+  const child = spawn(command[0]!, command.slice(1), { cwd, stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, TMPDIR: temporaryDirectory, TMP: temporaryDirectory, TEMP: temporaryDirectory } });
   let stdout = "";
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
