@@ -1,6 +1,18 @@
 /** @fileoverview Thin Mandem command-line presentation root. */
 import { runtimeVersion } from "@/modules/runtime";
-const argument = Bun.argv[2];
-if (argument === "--version") console.log(runtimeVersion("mandem"));
-else if (argument === "--help" || argument === undefined) console.log("mandem: --version | --help");
-else { console.error("mandem: unknown argument"); process.exitCode = 1; }
+import { coordinationHelp, parseFlags, runCoordinationCommand, startCoordinationServer } from "@/modules/coordination";
+
+const args = Bun.argv.slice(2);
+try {
+  if (args[0] === "--version") console.log(runtimeVersion("mandem"));
+  else if (args[0] === "--help" || args.length === 0) console.log(`mandem: --version | --help\n${coordinationHelp}`);
+  else if (args[0] === "serve") {
+    const flags = parseFlags(args.slice(1), ["db", "port"]);
+    const service = startCoordinationServer({ databasePath: flags.db, port: flags.port === undefined ? undefined : Number(flags.port) });
+    console.log(`mandem: coordination service listening on ${service.url}`);
+    for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => { void service.stop().then(() => process.exit(0)); });
+  } else console.log(JSON.stringify(await runCoordinationCommand(args)));
+} catch (error) {
+  console.error(`mandem: ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+}

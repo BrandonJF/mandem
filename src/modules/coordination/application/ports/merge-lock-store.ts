@@ -24,44 +24,8 @@
  */
 
 /** A durable advisory-lock row. */
-export interface MergeLockRecord {
-  /** The lock name — a single global merge lane uses `MERGE_LOCK_NAME` ("merge"),
-   *  defined once in `coord-client.ts` (the one home for that string). */
-  name: string;
-  /** Opaque per-acquire holder token (a UUID). Release is scoped to it. */
-  holder: string;
-  /** ISO-8601 acquisition timestamp. */
-  acquiredAt: string;
-  /** Seconds after `acquiredAt` at which the lock is considered abandoned. */
-  ttlSeconds: number;
-}
-
-/** A {@link MergeLockRecord} enriched with the derived expiry fields the status
- *  surface needs. */
-export type MergeLockView = MergeLockRecord & {
-  /** ISO-8601 `acquiredAt` + `ttlSeconds`. */
-  expiresAt: string;
-  /** `true` iff `expiresAt` < now — a stuck/abandoned lock. */
-  expired: boolean;
-};
-
-/** Result of an acquire attempt. */
-export interface MergeLockAcquireResult {
-  /** `true` iff THIS call now holds the lock. */
-  acquired: boolean;
-  /** On success: the record we now hold. On contention: the CURRENT (other) holder's
-   *  view, for the diagnostic. */
-  view: MergeLockView;
-}
-
-/** Current lock status for the read/status surface. */
-export interface MergeLockStatus {
-  /** `true` iff a non-expired lock currently exists. */
-  held: boolean;
-  /** The current holder's view when held (or when an expired row lingers, for the
-   *  stuck-lock diagnostic); absent when no row exists at all. */
-  view?: MergeLockView;
-}
+import type { MergeLockRecord, MergeLockView, MergeLockAcquireResult, MergeLockStatus } from '../../domain/types';
+export type { MergeLockRecord, MergeLockView, MergeLockAcquireResult, MergeLockStatus } from '../../domain/types';
 
 /** Persistence port. Postgres adapter (`.server.ts`) + in-memory fake both implement it. */
 export interface MergeLockStore {
