@@ -45,3 +45,11 @@ The reporter checks the exact commit supplied even if the PR later advances; a n
 head needs a new run. The orchestration owner checks the result and local log before
 merging. This is the bounded first slice of issue #49; Actions-runner registration
 and host setup remain separate work with the user's token and host authorization.
+
+The local reporter strips GitHub token environment variables from repository
+commands and redacts known credential values and GitHub token patterns in retained
+output. It verifies the requested HEAD and tracked sources again after all checks.
+It rejects temporary filesystem paths, including symlinks and tmpfs, before it
+creates logs or scratch. Install with `bun install --frozen-lockfile` before
+running its focused tests with `bunx vitest run
+src/modules/architecture-standard/tests/local-quality-reporter.test.ts`.

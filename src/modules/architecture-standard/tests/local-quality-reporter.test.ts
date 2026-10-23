@@ -1,9 +1,9 @@
 /** @fileoverview Local quality reporter completes checks before posting commit status. */
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { reportLocalQuality, type QualityCommandRunner } from "../infrastructure/services/local-quality-reporter";
+import { reportLocalQuality, executeQualityCommand, resolvePersistentQualityDirectory, type QualityCommandRunner } from "../infrastructure/services/local-quality-reporter";
 
 const roots: string[] = [];
 afterEach(() => { for(const root of roots.splice(0)) rmSync(root,{recursive:true,force:true}); });
@@ -80,4 +80,57 @@ it("fails if the checkout resolves to a different commit", async () => {
   expect(result.state).toBe("failure");
   expect(f.commands.some(row=>row[0]==="bun")).toBe(false);
   expect(f.commands.some(row=>row.includes("state=success"))).toBe(false);
+});
+
+
+it.each(["HEAD", "tracked sources"])("fails when checks change %s before cleanup", async (changed) => {
+  const f = fixture();
+  let complete = false;
+  const run: QualityCommandRunner = async (command, cwd, log, environment) => {
+    if (command.join(" ") === "git issue fsck") complete = true;
+    if (complete && command.join(" ") === "git rev-parse HEAD" && changed === "HEAD") return { exitCode: 0, stdout: "b".repeat(40) };
+    if (complete && command.join(" ").startsWith("git status --porcelain") && changed === "tracked sources") return { exitCode: 0, stdout: " M package.json" };
+    return f.run(command, cwd, log, environment);
+  };
+  const result = await reportLocalQuality({ pr: 54, sha, repositoryRoot: f.root, logDirectory: f.root }, run);
+  expect(result.state).toBe("failure");
+  expect(f.commands.some(row => row.includes("state=success"))).toBe(false);
+});
+
+it("strips GitHub credentials from repository commands while retaining gh authentication", async () => {
+  const f = fixture();
+  const previous = process.env.GH_TOKEN;
+  process.env.GH_TOKEN = "review-secret";
+  try {
+    const run: QualityCommandRunner = (command, cwd, log, environment) => {
+      expect(environment?.GH_TOKEN).toBe(command[0] === "gh" ? "review-secret" : undefined);
+      expect(environment?.GITHUB_TOKEN).toBeUndefined();
+      return f.run(command, cwd, log, environment);
+    };
+    expect((await reportLocalQuality({ pr: 54, sha, repositoryRoot: f.root, logDirectory: f.root }, run)).state).toBe("success");
+  } finally { if (previous === undefined) delete process.env.GH_TOKEN; else process.env.GH_TOKEN = previous; }
+});
+
+it("redacts credential values and GitHub token patterns from retained subprocess output", async () => {
+  const f = fixture();
+  const log = join(f.root, "output.log");
+  const previous = process.env.GH_TOKEN;
+  process.env.GH_TOKEN = "known-review-secret";
+  try {
+    await executeQualityCommand([process.execPath, "-e", "process.stdout.write('known-review-secret ghp_' + 'a'.repeat(36)); process.stderr.write('github_pat_' + 'b'.repeat(40))"], f.root, log, {});
+    const output = readFileSync(log, "utf8");
+    expect(output).not.toContain("known-review-secret");
+    expect(output).not.toMatch(/ghp_|github_pat_/);
+    expect(output).toContain("[REDACTED]");
+  } finally { if (previous === undefined) delete process.env.GH_TOKEN; else process.env.GH_TOKEN = previous; }
+});
+
+it("rejects temporary log locations, including a symlink, before running commands", async () => {
+  const f = fixture();
+  const link = join(f.root, "temporary-link");
+  symlinkSync("/tmp", link);
+  for (const logDirectory of ["/tmp", link]) {
+    expect(() => resolvePersistentQualityDirectory(logDirectory)).toThrow(/persistent/);
+  }
+  expect(f.commands).toEqual([]);
 });

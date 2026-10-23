@@ -1,40 +1,65 @@
 /** @fileoverview Run exact-head local quality checks and report their completed result. */
 import { spawn } from "node:child_process";
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statfsSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
-export type QualityCommandRunner = (command: readonly string[], cwd: string, logFile: string) => Promise<{ exitCode: number; stdout: string }>;
+export type QualityCommandRunner = (command: readonly string[], cwd: string, logFile: string, environment?: NodeJS.ProcessEnv) => Promise<{ exitCode: number; stdout: string }>;
 export interface LocalQualityOptions { pr: number; sha: string; repositoryRoot?: string; logDirectory?: string; }
 const repository = "BrandonJF/mandem";
 const qualityCommands = [["bun", "install", "--frozen-lockfile"], ["bun", "run", "check"], ["bun", "run", "build"], ["git", "issue", "fsck"]];
 
-const execute: QualityCommandRunner = async (command, cwd, logFile) => new Promise((resolve, reject) => {
+const credentialNames = ["GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"];
+function redact(text: string): string {
+  for (const name of credentialNames) {
+    const secret = process.env[name];
+    if (secret) text = text.replaceAll(secret, "[REDACTED]");
+  }
+  return text.replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b/g, "[REDACTED]");
+}
+export function resolvePersistentQualityDirectory(path: string): string {
+  const absolute = resolve(path);
+  let ancestor = absolute;
+  while (!existsSync(ancestor)) ancestor = dirname(ancestor);
+  const physical = resolve(realpathSync(ancestor), absolute.slice(ancestor.length).replace(/^\//, ""));
+  if (["/tmp", "/var/tmp", "/dev/shm"].some(base => physical === base || physical.startsWith(`${base}/`)) || statfsSync(ancestor).type === 0x01021994) {
+    throw new Error("Use a persistent filesystem for local quality logs and scratch");
+  }
+  return physical;
+}
+export const executeQualityCommand: QualityCommandRunner = async (command, cwd, logFile, environment = {}) => new Promise((resolve, reject) => {
   const temporaryDirectory = join(dirname(logFile), "tmp");
   mkdirSync(temporaryDirectory, { recursive: true, mode: 0o700 });
   const child = spawn(command[0]!, command.slice(1), { cwd, stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, TMPDIR: temporaryDirectory, TMP: temporaryDirectory, TEMP: temporaryDirectory } });
+    env: { ...environment, TMPDIR: temporaryDirectory, TMP: temporaryDirectory, TEMP: temporaryDirectory } });
   let stdout = "";
+  let stderr = "";
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
-  child.stdout.on("data", (chunk: string) => { stdout += chunk; appendFileSync(logFile, chunk); });
-  child.stderr.on("data", (chunk: string) => appendFileSync(logFile, chunk));
+  // Buffer output so a credential split across process chunks still gets redacted.
+  child.stdout.on("data", (chunk: string) => { stdout += chunk; });
+  child.stderr.on("data", (chunk: string) => { stderr += chunk; });
   child.on("error", reject);
-  child.on("close", code => resolve({ exitCode: code ?? 1, stdout }));
+  child.on("close", code => {
+    appendFileSync(logFile, redact(stdout + stderr));
+    resolve({ exitCode: code ?? 1, stdout: redact(stdout) });
+  });
 });
 
-export async function reportLocalQuality(options: LocalQualityOptions, run: QualityCommandRunner = execute) {
+export async function reportLocalQuality(options: LocalQualityOptions, run: QualityCommandRunner = executeQualityCommand) {
   if (!Number.isInteger(options.pr) || options.pr <= 0 || !/^[a-f0-9]{40}$/.test(options.sha)) throw new Error("Supply a PR number and its full 40-character head SHA");
   const root = options.repositoryRoot ?? process.cwd();
-  const directory = options.logDirectory ?? join(homedir(), ".local", "state", "mandem", "local-ci");
+  const directory = resolvePersistentQualityDirectory(options.logDirectory ?? join(homedir(), ".local", "state", "mandem", "local-ci"));
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const logFile = join(directory, `${options.sha}-${randomUUID()}.log`);
   writeFileSync(logFile, `Repository: ${repository}\nPR: ${options.pr}\nHead: ${options.sha}\nStarted: ${new Date().toISOString()}\n`, { mode: 0o600 });
   console.log(`Local quality log: ${logFile}`);
   async function checked(command: string[], cwd = root) {
-    appendFileSync(logFile, `\n$ ${command.map(value => JSON.stringify(value)).join(" ")}\n`);
-    const result = await run(command, cwd, logFile);
+    appendFileSync(logFile, redact(`\n$ ${command.map(value => JSON.stringify(value)).join(" ")}\n`));
+    const environment = { ...process.env };
+    if (command[0] !== "gh") for (const name of credentialNames) delete environment[name];
+    const result = await run(command, cwd, logFile, environment);
     if (result.exitCode !== 0) throw new Error(`${command.join(" ")} exited ${result.exitCode}`);
     return result.stdout.trim();
   }
@@ -57,15 +82,17 @@ export async function reportLocalQuality(options: LocalQualityOptions, run: Qual
     const targets = [...workflow.matchAll(/^\s*- run: (.+)$/gm)].map(match => match[1]!.trim());
     if (JSON.stringify(targets) !== JSON.stringify(qualityCommands.map(command => command.join(" ")))) throw new Error("Workflow quality commands changed; update this reporter before running them");
     for (const command of qualityCommands) await checked(command, checkout);
+    if (await checked(["git", "rev-parse", "HEAD"], checkout) !== options.sha) throw new Error("Quality commands changed the checked-out HEAD");
+    if (await checked(["git", "status", "--porcelain", "--untracked-files=no"], checkout)) throw new Error("Quality commands changed tracked sources");
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error);
-    appendFileSync(logFile, `\nQuality failed: ${failure}\n`);
+    appendFileSync(logFile, redact(`\nQuality failed: ${failure}\n`));
   } finally {
     if (created) {
       try { await checked(["git", "worktree", "remove", "--force", checkout]); removed = true; }
       catch (error) {
         failure ??= `Disposable checkout cleanup failed: ${String(error)}`;
-        appendFileSync(logFile, `\n${failure}\n`);
+        appendFileSync(logFile, redact(`\n${failure}\n`));
       }
     }
     // Only remove this run's scratch directory after Git removed its worktree.
