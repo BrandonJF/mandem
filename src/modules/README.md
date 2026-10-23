@@ -5,3 +5,4 @@ application, infrastructure, and API composition boundaries.
 
 - [Architecture standard](./architecture-standard/README.md) defines repository conformance.
 - [Runtime](./runtime/README.md) provides bounded process identity.
+- [Coordination](./coordination/README.md) provides durable messages, sessions and merge locks.
