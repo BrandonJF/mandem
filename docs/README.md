@@ -9,3 +9,4 @@ index for local documents and child directories.
 - [Plans](./plans/README.md) contains the epic plan, issue plans, and plan reviews.
 - [Solutions](./solutions/README.md) captures reusable engineering guidance.
 - [Sources](./sources/README.md) records the pinned external source material used by Mandem.
+- [Coordination delivery](./coordination-plan-51.md) tracks the lean delivery for issue #51.
