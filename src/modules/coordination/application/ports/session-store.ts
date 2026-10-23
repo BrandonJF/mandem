@@ -21,16 +21,8 @@
  */
 
 /** A durable, best-effort live-session directory entry. Additive-only, names no runtime. */
-export interface SessionRecord {
-  /** Logical session id (self-chosen). For a dispatched agent, conventionally its pane label. */
-  session: string;
-  /** Advisory role: "orchestrator" | "engineer" | "planner" | "researcher" | … (free string). */
-  role: string;
-  /** ISO-8601 last-registration timestamp (server-filled when absent). */
-  ts: string;
-  /** Optional framework-agnostic metadata (e.g. { worktree, issue }). Names no runtime. */
-  data?: Record<string, unknown>;
-}
+import type { SessionRecord } from '../../domain/types';
+export type { SessionRecord } from '../../domain/types';
 
 /** Persistence port. Postgres adapter (.server.ts) + in-memory fake both implement it. */
 export interface SessionStore {

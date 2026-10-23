@@ -5,6 +5,10 @@ Mandem orchestrates bounded agent sessions through durable, observable workflows
 Run `bun run check` to validate the repository, then run `bun run build` to create the two
 executables.
 
+The [coordination module](./src/modules/coordination/README.md) provides the local
+SQLite message bus, session registry, merge lock and Herdr adapter. Start it with
+`./dist/mandem serve`; run `./dist/mandem --help` for message and session commands.
+
 ## Repository guides
 
 - [Agent instructions](./AGENTS.md) and [Claude instructions](./CLAUDE.md) point every supported

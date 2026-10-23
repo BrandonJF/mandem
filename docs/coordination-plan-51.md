@@ -8,7 +8,7 @@ plan review. This records that exception without changing Mandem's general contr
 
 - [x] PR 1 code: preserve Strategy Builder Pro's message, session and merge-lock ports and
   store tests; add durable SQLite adapters and restart/contention tests.
-- [ ] PR 2: preserve the message/session/lock routes and client interfaces; compose a
+- [x] PR 2 code: preserve the message/session/lock routes and client interfaces; compose a
   loopback service, Herdr pane launch/kill/wake adapter and minimal CLI. Prove
   send, receive, ack and reply through separate CLI processes and SQLite restart.
 - [ ] Review once, repair findings, run affected tests, typecheck, lint, architecture
@@ -32,6 +32,15 @@ Herdr wakes are advisory: persist first, retain the message if the wake fails.
   pass. SQLite tests reopen a real file and contend through separate connections.
 - Upstream's message port documented optional timestamps but required them in its
   type. Made the timestamp optional to match existing behavior and imported tests.
+- PR 1: [#52](https://github.com/BrandonJF/mandem/pull/52), commit `3a6a811`.
+  GitHub reports no workflow runs or checks for its branch.
+- Runtime verification: 87 route/store/queue/adapter tests passed, plus the separate
+  CLI journey, HTTP failure and failed-wake checks. The service retained receipts
+  after restart. Build, lint, typecheck, architecture and documentation checks passed.
+- Herdr labels provide pane discovery after restart; the compatibility `window`
+  field does not create tabs. Wakes use registered pane IDs or owned session labels.
+- Requests for a failed send/ack/register now reject HTTP errors instead of silently
+  claiming success, repairing a source-client behavior that would hide inbox failures.
 
 ## Readiness
 
