@@ -58,7 +58,12 @@ function enrich(
   paneReader?: () => Record<string, string>,
 ): EnrichedSessionRecord[] {
   if (!paneReader) return records;
-  const paneMap = paneReader();
+  let paneMap: Record<string, string>;
+  try { paneMap = paneReader(); }
+  catch (error) {
+    console.error("mandem: optional Herdr session enrichment failed", error);
+    return records;
+  }
   return records.map((record) => {
     const paneId = paneMap[record.session];
     return paneId !== undefined ? { ...record, pane: { paneId } } : record;

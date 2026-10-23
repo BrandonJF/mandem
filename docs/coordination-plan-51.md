@@ -41,6 +41,18 @@ Herdr wakes are advisory: persist first, retain the message if the wake fails.
   field does not create tabs. Wakes use registered pane IDs or owned session labels.
 - Requests for a failed send/ack/register now reject HTTP errors instead of silently
   claiming success, repairing a source-client behavior that would hide inbox failures.
+- Independent review found #52 clean at `3a6a811`. Review of #53 at `6c19455`
+  reproduced a send timeout when synchronous Herdr wakes blocked the event loop.
+  The repair schedules wakes after the response and uses asynchronous child processes
+  for both wake and label discovery. A four-second fake-Herdr test reproduces the
+  original failure and checks send receipts and concurrent health/inbox/lock requests.
+- Optional Herdr session enrichment now logs an error and returns the stored records
+  when pane discovery fails. A focused regression test covers the review's backlog item.
+- RoughPatch consumer issue [#533](https://github.com/BrandonJF/roughpatch/issues/533)
+  uses persistent worktree `~/.herdr/worktrees/job-match-workbench/mandem-inbox-533`.
+  RoughPatch CI remains unchanged: its hosted lightweight PR checks are permitted;
+  only Mandem uses the no-hosted-CI exception. Live peers retain their current inbox
+  until the operator coordinates adoption at a stopped boundary.
 
 ## Readiness
 

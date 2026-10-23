@@ -1,11 +1,13 @@
 /** @fileoverview Herdr pane operations scoped to Mandem labels in one workspace. */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 import type { PaneQueueIo } from "../application/ports/pane-queue";
 
 interface HerdrOptions {
   parentPaneId: string;
   workspaceId: string;
   run?: (args: string[]) => unknown;
+  runAsync?: (args: string[]) => Promise<unknown>;
 }
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -18,14 +20,22 @@ function runHerdr(args: string[]): unknown {
   if (process.env.HERDR_ENV !== "1") throw new Error("Herdr requires a managed pane (HERDR_ENV=1)");
   return JSON.parse(execFileSync("herdr", args, { encoding: "utf8", timeout: 10_000 }));
 }
+const execFileAsync = promisify(execFile);
+async function runHerdrAsync(args: string[]): Promise<unknown> {
+  if (process.env.HERDR_ENV !== "1") throw new Error("Herdr requires a managed pane (HERDR_ENV=1)");
+  const { stdout } = await execFileAsync("herdr", args, { encoding: "utf8", timeout: 10_000 });
+  return JSON.parse(stdout);
+}
 
 export function createHerdrPaneIo(options: HerdrOptions): PaneQueueIo & {
   wake(paneId: string, topic: string, id: string): Promise<void>;
+  readMapAsync(): Promise<Record<string, string>>;
 } {
   const run = options.run ?? runHerdr;
+  const runAsync = options.runAsync ?? (options.run ? async (args: string[]) => options.run!(args) : runHerdrAsync);
   const prefix = "mandem:";
-  function readMap(): Record<string, string> {
-    const response = result(run(["pane", "list", "--workspace", options.workspaceId]));
+  function paneMap(value: unknown): Record<string, string> {
+    const response = result(value);
     if (!Array.isArray(response.panes)) throw new Error("Invalid Herdr pane list");
     const map: Record<string, string> = Object.create(null);
     for (const pane of response.panes) {
@@ -38,8 +48,14 @@ export function createHerdrPaneIo(options: HerdrOptions): PaneQueueIo & {
     }
     return map;
   }
+  function readMap(): Record<string, string> {
+    return paneMap(run(["pane", "list", "--workspace", options.workspaceId]));
+  }
   return {
     readMap,
+    async readMapAsync() {
+      return paneMap(await runAsync(["pane", "list", "--workspace", options.workspaceId]));
+    },
     async launchPane(request) {
       const existing = readMap()[request.label];
       if (existing && !request.fresh) return existing;
@@ -64,7 +80,7 @@ export function createHerdrPaneIo(options: HerdrOptions): PaneQueueIo & {
       if (id) run(["pane", "close", id]);
     },
     async wake(paneId, topic, id) {
-      run(["agent", "prompt", paneId, `Mandem message ${id} is waiting on ${topic}. Read and acknowledge it through mandem msg inbox/ack.`]);
+      await runAsync(["agent", "prompt", paneId, `Mandem message ${id} is waiting on ${topic}. Read and acknowledge it through mandem msg inbox/ack.`]);
     },
   };
 }

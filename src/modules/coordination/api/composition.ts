@@ -17,7 +17,7 @@ export function defaultDatabasePath(): string {
 export interface CoordinationServerOptions {
   databasePath?: string;
   port?: number;
-  herdr?: false | { parentPaneId: string; workspaceId: string; run?: (args: string[]) => unknown };
+  herdr?: false | { parentPaneId: string; workspaceId: string; run?: (args: string[]) => unknown; runAsync?: (args: string[]) => Promise<unknown> };
 }
 
 export function startCoordinationServer(options: CoordinationServerOptions = {}) {
@@ -40,9 +40,11 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     if (!paneIo || !message.topic.startsWith("session:")) return;
     const session = message.topic.slice("session:".length);
     const wake = (async () => {
+      // Let Bun return the persisted message ID before attempting advisory delivery.
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
       try {
         const registered = await stores.sessionStore.get(session);
-        const paneId = registered?.data?.herdrPaneId ?? paneIo.readMap()[session];
+        const paneId = registered?.data?.herdrPaneId ?? (await paneIo.readMapAsync())[session];
         if (typeof paneId === "string") await paneIo.wake(paneId, message.topic, message.id);
       } catch (error) {
         wakeFailures++;

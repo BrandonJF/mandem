@@ -68,4 +68,3 @@ export interface MergeLockStatus {
    *  stuck-lock diagnostic); absent when no row exists at all. */
   view?: MergeLockView;
 }
-

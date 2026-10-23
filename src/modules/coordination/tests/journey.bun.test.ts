@@ -62,7 +62,12 @@ test("a failed Herdr wake keeps the persisted message and exposes the failure in
     await post("/sessions/register",{session:"engineer",role:"engineer",data:{herdrPaneId:"w1:p2"}});
     const response = await post("/messages",{topic:"session:engineer",type:"handoff",subject:"#51",sender:"orchestrator"});
     expect(response.status).toBe(201);
-    const health = await (await fetch(service.url+"/health")).json();
+    let health = await (await fetch(service.url+"/health")).json();
+    const deadline = Date.now()+1000;
+    while (health.wakeFailures === 0 && Date.now()<deadline) {
+      await Bun.sleep(10);
+      health = await (await fetch(service.url+"/health")).json();
+    }
     expect(health.wakeFailures).toBe(1);
     expect(health.lastWakeError).toContain("agent blocked");
     const inbox = await (await fetch(service.url+"/messages?topic=session:engineer")).json();
@@ -70,3 +75,40 @@ test("a failed Herdr wake keeps the persisted message and exposes the failure in
     expect(inbox[0].ackedBy).toEqual([]);
   } finally {await service.stop();rmSync(dir,{recursive:true,force:true});}
 });
+
+test("a four-second Herdr wake does not delay the send receipt or other requests", async () => {
+  const { writeFileSync, existsSync } = await import("node:fs");
+  const dir = mkdtempSync(join(tmpdir(), "mandem-slow-wake-"));
+  const marker = join(dir,"wake-started");
+  writeFileSync(join(dir,"herdr"), `#!/bin/sh\ntouch '${marker}'\nsleep 4\nprintf '%s' '{"result":{"type":"agent_prompted"}}'\n`, {mode:0o755});
+  const server = Bun.spawn(["bun","src/cli/main.ts","serve","--db",join(dir,"coord.sqlite"),"--port","0"], {
+    env:{...process.env,PATH:`${dir}:${process.env.PATH}`,HERDR_ENV:"1",HERDR_PANE_ID:"w1:p1",HERDR_WORKSPACE_ID:"w1"},stdout:"pipe",stderr:"pipe"});
+  const reader = server.stdout.getReader();
+  const startup = await reader.read();
+  const url = new TextDecoder().decode(startup.value).match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
+  reader.releaseLock();
+  try {
+    expect(url).toBeDefined();
+    await fetch(url+"/sessions/register",{method:"POST",body:JSON.stringify({session:"engineer",role:"engineer",data:{herdrPaneId:"w1:p2"}})});
+    const started = Date.now();
+    const child = Bun.spawn(["bun","src/cli/main.ts","msg","send","--topic","session:engineer","--sender","orchestrator","--type","handoff","--subject","slow wake"],{
+      env:{...process.env,MANDEM_COORD_URL:url},stdout:"pipe",stderr:"pipe"});
+    const stdout = await new Response(child.stdout).text();
+    const stderr = await new Response(child.stderr).text();
+    expect(await child.exited,stderr).toBe(0);
+    expect(JSON.parse(stdout).id).toBe("1");
+    expect(Date.now()-started).toBeLessThan(2500);
+    const deadline = Date.now()+1000;
+    while(!existsSync(marker) && Date.now()<deadline) await Bun.sleep(10);
+    expect(existsSync(marker)).toBe(true);
+    const requestsStarted = Date.now();
+    const responses = await Promise.all(["/health","/messages?topic=session:engineer","/merge-lock?name=merge"].map(path => fetch(url+path)));
+    expect(responses.every(response=>response.ok)).toBe(true);
+    expect(await responses[1]!.json()).toHaveLength(1);
+    expect(Date.now()-requestsStarted).toBeLessThan(1000);
+  } finally {
+    server.kill("SIGTERM");
+    await server.exited;
+    rmSync(dir,{recursive:true,force:true});
+  }
+}, 10_000);

@@ -895,3 +895,12 @@ it.each([0, -1, 0.5])("rejects invalid lock TTL %s before storing it", async ttl
   expect(response.status).toBe(400);
   expect(await store.status("merge")).toEqual({held:false});
 });
+
+it("returns stored sessions when optional Herdr enrichment fails", async () => {
+  const store = createInMemorySessionStore();
+  await store.register({session:"engineer",role:"engineer"});
+  const handler = createCoordServiceRequestHandler({sessionStore:store,paneReader:()=>{throw new Error("Herdr socket down");}});
+  const response = await handler(new Request("http://localhost/sessions"));
+  expect(response.status).toBe(200);
+  expect((await response.json()).sessions).toEqual([expect.objectContaining({session:"engineer",role:"engineer"})]);
+});
