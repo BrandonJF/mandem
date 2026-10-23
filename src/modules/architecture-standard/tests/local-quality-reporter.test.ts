@@ -126,7 +126,7 @@ it("redacts credential values and GitHub token patterns from retained subprocess
       }, 100);
     `], f.root, log, {});
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("[REDACTED]");
+    expect(result.stdout, "Child emitted no captured output. The Codex sandbox can block Node pipe streams (EPERM) despite exit 0; run this process test with sandbox permission.").toContain("[REDACTED]");
     const output = readFileSync(log, "utf8");
     expect(output).not.toContain("known+review/secret=");
     expect(output).not.toContain(Buffer.from("known+review/secret=").toString("base64"));
