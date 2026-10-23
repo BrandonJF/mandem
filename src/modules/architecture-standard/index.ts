@@ -10,3 +10,4 @@ export { prepareIssueGraphProjection, runApplyIssueGraphProjection, runIssueGrap
 export type { RemoteIssueGraphPlan } from "./api/issue-graph-reconciliation";
 export { allowedReviewChoices } from "./domain/plan-review-choice-policy";
 export type { PlanReviewChoice, PlanReviewHistory } from "./domain/plan-review-choice-policy";
+export { reportLocalQuality } from "./api/local-quality";
