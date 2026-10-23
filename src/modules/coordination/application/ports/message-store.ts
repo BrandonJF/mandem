@@ -24,25 +24,8 @@
  */
 
 /** A durable, topic-addressed, sender-attributed plane message. No field names any runtime. */
-export interface PlaneMessage {
-  /** Server-assigned id — a monotonically increasing integer rendered as a decimal
-   *  string ("1", "2", …). Ordering and `sinceId` comparison are NUMERIC, never lexical. */
-  id: string;
-  /** Addressable key: "issue:1983" | "session:orch-b" | "orchestrator-handoff" | "events" | … */
-  topic: string;
-  /** Domain type: "handoff" | "needs-harvest.new" | "question.answered" | "report.complete" | … */
-  type: string;
-  /** What the message is about (issue number as string, report stem, free text). */
-  subject: string;
-  /** The poster's self-chosen logical session id — NOT a tmux pane id. */
-  sender: string;
-  /** ISO-8601 emission timestamp (server-filled when absent). */
-  ts: string;
-  /** Optional framework-agnostic JSON payload (e.g. the handoff context body). */
-  data?: Record<string, unknown>;
-  /** Read-receipt: logical session ids that have acked. Empty until acked. */
-  ackedBy: string[];
-}
+import type { PlaneMessage } from '../../domain/types';
+export type { PlaneMessage } from '../../domain/types';
 
 /** Persistence port. Postgres adapter (.server.ts) + in-memory fake both implement it. */
 export interface MessageStore {
