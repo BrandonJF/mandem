@@ -30,3 +30,18 @@ retained issue's complete review history.
 
 The projection commands preserve issue bodies, comments, assignees, projects, and labels outside
 the epic's managed label set. They never invoke repository-wide `git issue sync`.
+
+## Local repository quality
+
+Run `bun run ci:local -- <PR-number> <full-head-SHA>` from a Mandem checkout.
+The reporter verifies the PR head, fetches through SSH, creates a clean detached
+worktree, and runs the workflow's frozen install, `bun run check` (including tests),
+`bun run build`, and `git issue fsck`. It requires Bun 1.3.14, git-issue 1.3.3 and the
+existing authenticated `gh` login. It posts the completed success or failure as
+`repository-quality` through `gh api`; it never changes settings or merges a PR.
+Logs remain under `~/.local/state/mandem/local-ci/`, and the reporter prints the path.
+A status-posting error exits unsuccessfully. An interrupted run cannot post success.
+The reporter checks the exact commit supplied even if the PR later advances; a new
+head needs a new run. The orchestration owner checks the result and local log before
+merging. This is the bounded first slice of issue #49; Actions-runner registration
+and host setup remain separate work with the user's token and host authorization.
