@@ -1,7 +1,7 @@
 /** @fileoverview Run exact-head local quality checks and report their completed result. */
 import { spawn } from "node:child_process";
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -37,7 +37,7 @@ export async function reportLocalQuality(options: LocalQualityOptions, run: Qual
   }
   const pr = JSON.parse(await checked(["gh", "pr", "view", String(options.pr), "-R", repository, "--json", "headRefOid"])) as { headRefOid?: string };
   if (pr.headRefOid !== options.sha) throw new Error(`Requested SHA differs from PR head; no status posted. Log: ${logFile}`);
-  const scratch = mkdtempSync(join(tmpdir(), "mandem-local-quality-"));
+  const scratch = mkdtempSync(join(directory, "run-"));
   const checkout = join(scratch, "checkout");
   let created = false;
   let removed = false;
