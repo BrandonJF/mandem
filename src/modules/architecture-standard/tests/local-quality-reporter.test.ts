@@ -97,13 +97,13 @@ it.each(["HEAD", "tracked sources"])("fails when checks change %s before cleanup
   expect(f.commands.some(row => row.includes("state=success"))).toBe(false);
 });
 
-it("strips GitHub credentials from repository commands while retaining gh authentication", async () => {
+it("gives GitHub credential variables only to the final status post", async () => {
   const f = fixture();
   const previous = process.env.GH_TOKEN;
   process.env.GH_TOKEN = "review-secret";
   try {
     const run: QualityCommandRunner = (command, cwd, log, environment) => {
-      expect(environment?.GH_TOKEN).toBe(command[0] === "gh" ? "review-secret" : undefined);
+      expect(environment?.GH_TOKEN).toBe(command[0] === "gh" && command[1] === "api" ? "review-secret" : undefined);
       expect(environment?.GITHUB_TOKEN).toBeUndefined();
       return f.run(command, cwd, log, environment);
     };
@@ -115,11 +115,22 @@ it("redacts credential values and GitHub token patterns from retained subprocess
   const f = fixture();
   const log = join(f.root, "output.log");
   const previous = process.env.GH_TOKEN;
-  process.env.GH_TOKEN = "known-review-secret";
+  process.env.GH_TOKEN = "known+review/secret=";
   try {
-    await executeQualityCommand([process.execPath, "-e", "process.stdout.write('known-review-secret ghp_' + 'a'.repeat(36)); process.stderr.write('github_pat_' + 'b'.repeat(40))"], f.root, log, {});
+    const result = await executeQualityCommand([process.execPath, "-e", `
+      const secret = 'known+review/secret=';
+      process.stdout.write(secret.slice(0, 6));
+      setTimeout(() => {
+        process.stdout.write(secret.slice(6) + ' ' + Buffer.from(secret).toString('base64') + ' ' + encodeURIComponent(secret));
+        process.stderr.write('ghp_' + 'a'.repeat(36) + ' github_pat_' + 'b'.repeat(40));
+      }, 100);
+    `], f.root, log, {});
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("[REDACTED]");
     const output = readFileSync(log, "utf8");
-    expect(output).not.toContain("known-review-secret");
+    expect(output).not.toContain("known+review/secret=");
+    expect(output).not.toContain(Buffer.from("known+review/secret=").toString("base64"));
+    expect(output).not.toContain(encodeURIComponent("known+review/secret="));
     expect(output).not.toMatch(/ghp_|github_pat_/);
     expect(output).toContain("[REDACTED]");
   } finally { if (previous === undefined) delete process.env.GH_TOKEN; else process.env.GH_TOKEN = previous; }
@@ -133,4 +144,26 @@ it("rejects temporary log locations, including a symlink, before running command
     expect(() => resolvePersistentQualityDirectory(logDirectory)).toThrow(/persistent/);
   }
   expect(f.commands).toEqual([]);
+});
+
+
+it.each([0, 1])("verifies sources immediately after install exits %s, before another target or cleanup", async (exitCode) => {
+  const f = fixture();
+  let dirty = false;
+  const trace: string[] = [];
+  const run: QualityCommandRunner = async (command, cwd, log, environment) => {
+    const text = command.join(" ");
+    trace.push(text);
+    if (text === "bun install --frozen-lockfile") { dirty = true; return { exitCode, stdout: "" }; }
+    if (text === "bun run build") dirty = false;
+    if (dirty && text.startsWith("git status --porcelain")) return { exitCode: 0, stdout: " M package.json" };
+    return f.run(command, cwd, log, environment);
+  };
+  const result = await reportLocalQuality({ pr: 54, sha, repositoryRoot: f.root, logDirectory: f.root }, run);
+  expect(result.state).toBe("failure");
+  const install = trace.indexOf("bun install --frozen-lockfile");
+  expect(trace.slice(install + 1, install + 3)).toEqual(["git rev-parse HEAD", "git status --porcelain --untracked-files=no"]);
+  expect(trace).not.toContain("bun run check");
+  expect(trace.indexOf("git status --porcelain --untracked-files=no")).toBeLessThan(trace.findIndex(row => row.startsWith("git worktree remove")));
+  expect(f.commands.some(row => row.includes("state=success"))).toBe(false);
 });

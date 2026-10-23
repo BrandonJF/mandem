@@ -48,7 +48,10 @@ and host setup remain separate work with the user's token and host authorization
 
 The local reporter strips GitHub token environment variables from repository
 commands and redacts known credential values and GitHub token patterns in retained
-output. It verifies the requested HEAD and tracked sources again after all checks.
+output. It verifies the requested HEAD and tracked sources after every command, including
+failed commands, before another command, cleanup or status posting. Only the final
+status post receives GitHub token variables. Redaction also covers base64 and
+percent-encoded forms of known tokens.
 It rejects temporary filesystem paths, including symlinks and tmpfs, before it
 creates logs or scratch. Install with `bun install --frozen-lockfile` before
 running its focused tests with `bunx vitest run

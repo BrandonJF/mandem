@@ -14,9 +14,9 @@ const credentialNames = ["GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GIT
 function redact(text: string): string {
   for (const name of credentialNames) {
     const secret = process.env[name];
-    if (secret) text = text.replaceAll(secret, "[REDACTED]");
+    if (secret) for (const value of [secret, Buffer.from(secret).toString("base64"), encodeURIComponent(secret)]) text = text.replaceAll(value, "[REDACTED]");
   }
-  return text.replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b/g, "[REDACTED]");
+  return text.replace(/(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/g, "[REDACTED]");
 }
 export function resolvePersistentQualityDirectory(path: string): string {
   const absolute = resolve(path);
@@ -55,10 +55,10 @@ export async function reportLocalQuality(options: LocalQualityOptions, run: Qual
   const logFile = join(directory, `${options.sha}-${randomUUID()}.log`);
   writeFileSync(logFile, `Repository: ${repository}\nPR: ${options.pr}\nHead: ${options.sha}\nStarted: ${new Date().toISOString()}\n`, { mode: 0o600 });
   console.log(`Local quality log: ${logFile}`);
-  async function checked(command: string[], cwd = root) {
+  async function checked(command: string[], cwd = root, statusPost = false) {
     appendFileSync(logFile, redact(`\n$ ${command.map(value => JSON.stringify(value)).join(" ")}\n`));
     const environment = { ...process.env };
-    if (command[0] !== "gh") for (const name of credentialNames) delete environment[name];
+    if (!statusPost) for (const name of credentialNames) delete environment[name];
     const result = await run(command, cwd, logFile, environment);
     if (result.exitCode !== 0) throw new Error(`${command.join(" ")} exited ${result.exitCode}`);
     return result.stdout.trim();
@@ -81,9 +81,16 @@ export async function reportLocalQuality(options: LocalQualityOptions, run: Qual
     const workflow = readFileSync(join(checkout, ".github/workflows/repository-quality.yml"), "utf8");
     const targets = [...workflow.matchAll(/^\s*- run: (.+)$/gm)].map(match => match[1]!.trim());
     if (JSON.stringify(targets) !== JSON.stringify(qualityCommands.map(command => command.join(" ")))) throw new Error("Workflow quality commands changed; update this reporter before running them");
-    for (const command of qualityCommands) await checked(command, checkout);
-    if (await checked(["git", "rev-parse", "HEAD"], checkout) !== options.sha) throw new Error("Quality commands changed the checked-out HEAD");
-    if (await checked(["git", "status", "--porcelain", "--untracked-files=no"], checkout)) throw new Error("Quality commands changed tracked sources");
+    for (const command of qualityCommands) {
+      let commandFailure: Error | undefined;
+      try { await checked(command, checkout); }
+      catch (error) { commandFailure = error instanceof Error ? error : new Error(String(error)); }
+      const head = await checked(["git", "rev-parse", "HEAD"], checkout);
+      const tracked = await checked(["git", "status", "--porcelain", "--untracked-files=no"], checkout);
+      if (head !== options.sha) throw new Error("Quality command changed the checked-out HEAD");
+      if (tracked) throw new Error("Quality command changed tracked sources");
+      if (commandFailure) throw commandFailure;
+    }
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error);
     appendFileSync(logFile, redact(`\nQuality failed: ${failure}\n`));
@@ -102,6 +109,6 @@ export async function reportLocalQuality(options: LocalQualityOptions, run: Qual
   appendFileSync(logFile, `\nCompleted: ${new Date().toISOString()}\nResult: ${state}\n`);
   await checked(["gh", "api", "--method", "POST", `repos/${repository}/statuses/${options.sha}`,
     "-f", `state=${state}`, "-f", "context=repository-quality", "-f",
-    `description=${failure ? `Local quality failed: ${failure}`.slice(0, 140) : "Local install, check, build and issue validation passed"}`]);
+    `description=${failure ? `Local quality failed: ${failure}`.slice(0, 140) : "Local install, check, build and issue validation passed"}`], root, true);
   return { sha: options.sha, state, logFile, ...(failure ? { failure } : {}) };
 }
