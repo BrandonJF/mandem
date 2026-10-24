@@ -7,6 +7,10 @@ import { createSubscriptions } from "../application/ports/message-store";
 import { createPaneQueue } from "../application/ports/pane-queue";
 import { createCoordServiceRequestHandler } from "../infrastructure/http-handler";
 import { parseStreamSession } from "../domain/stream-values";
+import { createReviewDispatcher } from "../application/review-dispatch";
+import type { ReviewEffects } from "../application/ports/review-effects";
+import type { ReviewPolicy } from "../domain/reviews";
+import { loadReviewConfiguration } from "../infrastructure/review-command-effects";
 import { createStreamMonitor } from "../application/stream-monitor";
 import { createHerdrPaneIo } from "../infrastructure/herdr-pane";
 export { openCoordinationStores };
@@ -20,10 +24,14 @@ export interface CoordinationServerOptions {
   databasePath?: string;
   port?: number;
   now?: () => Date;
+  reviewConfigPath?: string;
+  reviews?: { policy: ReviewPolicy; effects: ReviewEffects };
   herdr?: false | { parentPaneId: string; workspaceId: string; run?: (args: string[]) => unknown; runAsync?: (args: string[]) => Promise<unknown> };
 }
 
 export function startCoordinationServer(options: CoordinationServerOptions = {}) {
+  if (options.reviewConfigPath && options.reviews) throw new Error("Choose a review config file or injected review adapters");
+  const reviewOptions = options.reviewConfigPath ? loadReviewConfiguration(options.reviewConfigPath) : options.reviews;
   const databasePath = options.databasePath ?? defaultDatabasePath();
   const port = options.port ?? Number(process.env.COORD_SERVICE_PORT ?? 8991);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Port must be an integer between 0 and 65535");
@@ -63,7 +71,8 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     async list() { return (await stores.sessionStore.list()).map(parseStreamSession); },
     async get(session) { const value = await stores.sessionStore.get(session); return value ? parseStreamSession(value) : undefined; },
   }, store: stores.streamStore, subscriptions, activity: paneIo ? { read: () => paneIo.readActivity() } : undefined, now: options.now });
-  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor,
+  const reviewDispatcher = reviewOptions ? createReviewDispatcher({ store: stores.reviewStore, ...reviewOptions }) : undefined;
+  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor, reviewDispatcher,
     paneReader: paneQueue ? () => paneQueue.snapshot() : undefined });
   let server: ReturnType<typeof Bun.serve>;
   try {
@@ -84,6 +93,7 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     async stop() {
       await server.stop(true);
       await Promise.all(wakes);
+      await reviewDispatcher?.drain();
       stores.close();
     },
   };

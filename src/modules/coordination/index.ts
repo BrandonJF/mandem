@@ -6,3 +6,11 @@ export type { MergeLockStore, MergeLockView, MergeLockStatus } from "./applicati
 export { startCoordinationServer, defaultDatabasePath, postMessage, readMessages, ackMessage, registerSession, listSessions, listTopics, subscribeMessages, acquireMergeLock, releaseMergeLock, fetchMergeLock, isCoordServiceHealthy, streamCommand } from "./api/composition";
 export { coordinationHelp, parseFlags, runCoordinationCommand } from "./api/cli";
 export type { StopInput, StopRecord, WaitingOn, StreamReport, StreamFinding, StreamBinding, RoleReference } from "./domain/streams";
+
+export { createReviewDispatcher } from "./application/review-dispatch";
+export { parseReviewCommand, parseReviewState, parseReviewObservation, parseReviewResult } from "./domain/review-values";
+export type { ReviewCommand } from "./domain/review-values";
+export type { ReviewRef, ReviewState, ReviewObservation, ReviewResult, ReviewPolicy, ReviewTask, ReviewAction, ReviewerSession } from "./domain/reviews";
+export type { ReviewEffects } from "./application/ports/review-effects";
+export type { ReviewStore } from "./application/ports/review-store";
+export { reviewCommand, readReviews } from "./api/composition";
