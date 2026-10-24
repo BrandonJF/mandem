@@ -1,4 +1,6 @@
 /** @fileoverview Fetch client preserving Strategy Builder Pro coordination interfaces. */
+import { parseStoredStop, parseStreamReport, record } from "../domain/stream-values";
+import type { StopRecord, StreamReport } from "../domain/streams";
 import type { PlaneMessage } from '../application/ports/message-store';
 import type { SessionRecord } from '../application/ports/session-store';
 import type { EnrichedSessionRecord } from './session-routes';
@@ -445,4 +447,22 @@ export async function fetchMergeLock(
   } catch {
     return undefined;
   }
+}
+
+
+/** Submit a bounded stream command; every response must complete successfully. */
+export function streamCommand(path: "stop", data: Record<string, unknown>, opts?: ClaimNextIdOptions): Promise<StopRecord>;
+export function streamCommand(path: "check", data: Record<string, unknown>, opts?: ClaimNextIdOptions): Promise<StreamReport>;
+export function streamCommand(path: "claim", data: Record<string, unknown>, opts?: ClaimNextIdOptions): Promise<{ ok: true }>;
+export async function streamCommand(path: "stop" | "check" | "claim", data: Record<string, unknown>, opts?: ClaimNextIdOptions): Promise<StopRecord | StreamReport | { ok: true }> {
+  const endpoint = path === "stop" ? "/sessions/stop" : `/streams/${path}`;
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + endpoint, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+    signal: AbortSignal.timeout(opts?.timeoutMs ?? 30_000),
+  });
+  const body: unknown = await response.json();
+  if (path === "stop") return parseStoredStop(body);
+  if (path === "check") return parseStreamReport(body);
+  if (record(body).ok !== true) throw new Error("Invalid stream claim response");
+  return { ok: true };
 }

@@ -3,12 +3,14 @@ import type { SessionStore } from '../application/ports/session-store';
 import type { MessageStore, Subscriptions } from '../application/ports/message-store';
 import type { MergeLockStore } from '../application/ports/merge-lock-store';
 import type { PaneQueue, PaneWindow } from '../application/ports/pane-queue';
+import type { StreamMonitor } from "../application/stream-monitor";
+import { handleStreamRoutes } from "./stream-routes";
 import { handleMessageRoutes } from './message-routes';
 import { handleSessionRoutes } from './session-routes';
 import { handleMergeLockRoutes } from './merge-lock-routes';
 export interface CoordServiceHandlerOptions {
  sessionStore?: SessionStore; messageStore?: MessageStore; subscriptions?: Subscriptions;
- mergeLockStore?: MergeLockStore; paneQueue?: PaneQueue;
+ streamMonitor?: StreamMonitor; mergeLockStore?: MergeLockStore; paneQueue?: PaneQueue;
  paneReader?: () => Record<string,string>;
 }
 const WINDOWS = ['agents', 'orchestration', 'services'];
@@ -155,6 +157,9 @@ export function createCoordServiceRequestHandler(opts: CoordServiceHandlerOption
       }
       return Response.json({ panes: opts.paneQueue.snapshot() });
     }
+
+    const streamResponse = await handleStreamRoutes(req, url, opts.streamMonitor);
+    if (streamResponse) return streamResponse;
 
     const sessionResponse = await handleSessionRoutes(req, url, {
       sessionStore: opts?.sessionStore,

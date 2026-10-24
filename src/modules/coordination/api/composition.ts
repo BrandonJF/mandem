@@ -6,6 +6,8 @@ import { openCoordinationStores } from "../infrastructure/sqlite-stores";
 import { createSubscriptions } from "../application/ports/message-store";
 import { createPaneQueue } from "../application/ports/pane-queue";
 import { createCoordServiceRequestHandler } from "../infrastructure/http-handler";
+import { parseStreamSession } from "../domain/stream-values";
+import { createStreamMonitor } from "../application/stream-monitor";
 import { createHerdrPaneIo } from "../infrastructure/herdr-pane";
 export { openCoordinationStores };
 export * from "../infrastructure/coord-client";
@@ -17,6 +19,7 @@ export function defaultDatabasePath(): string {
 export interface CoordinationServerOptions {
   databasePath?: string;
   port?: number;
+  now?: () => Date;
   herdr?: false | { parentPaneId: string; workspaceId: string; run?: (args: string[]) => unknown; runAsync?: (args: string[]) => Promise<unknown> };
 }
 
@@ -46,6 +49,7 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
         const registered = await stores.sessionStore.get(session);
         const paneId = registered?.data?.herdrPaneId ?? (await paneIo.readMapAsync())[session];
         if (typeof paneId === "string") await paneIo.wake(paneId, message.topic, message.id);
+        else if (message.type === "stream.need") throw new Error("Stream owner has no registered or owned Herdr pane; register --pane before relying on wakes");
       } catch (error) {
         wakeFailures++;
         lastWakeError = `Message ${message.id} for ${session}: ${error instanceof Error ? error.message : String(error)}`;
@@ -55,7 +59,11 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     wakes.add(wake);
     void wake.finally(() => wakes.delete(wake));
   });
-  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue,
+  const streamMonitor = createStreamMonitor({ sessions: {
+    async list() { return (await stores.sessionStore.list()).map(parseStreamSession); },
+    async get(session) { const value = await stores.sessionStore.get(session); return value ? parseStreamSession(value) : undefined; },
+  }, store: stores.streamStore, subscriptions, activity: paneIo ? { read: () => paneIo.readActivity() } : undefined, now: options.now });
+  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor,
     paneReader: paneQueue ? () => paneQueue.snapshot() : undefined });
   let server: ReturnType<typeof Bun.serve>;
   try {
