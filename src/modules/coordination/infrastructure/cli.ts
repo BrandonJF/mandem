@@ -1,8 +1,11 @@
 /** @fileoverview Coordination CLI parsing and JSON output for local consumers. */
-import { streamCommand, ackMessage, listSessions, postMessage, readMessages, registerSession, resolveDefaultCoordServiceUrl } from "./coord-client";
+import { parseReviewCommand, parseReviewRef } from "../domain/review-values";
+import { reviewCommand, readReviews, streamCommand, ackMessage, listSessions, postMessage, readMessages, registerSession, resolveDefaultCoordServiceUrl } from "./coord-client";
 
-export const coordinationHelp = `mandem serve [--db PATH] [--port NUMBER]
+export const coordinationHelp = `mandem serve [--db PATH] [--port NUMBER] [--review-config PATH]
 mandem health
+mandem review event --data JSON
+mandem reviews [--repository OWNER/REPO --number N]
 mandem msg send --topic TOPIC --sender SESSION --type TYPE --subject TEXT [--data JSON]
 mandem msg inbox --topic TOPIC [--since ID]
 mandem msg ack --id ID --session SESSION
@@ -38,6 +41,16 @@ function data(flags: Record<string,string>): Record<string,unknown> | undefined 
 }
 export async function runCoordinationCommand(args: string[]): Promise<unknown> {
   const [group, action, ...rest] = args;
+  if (group === "review" && action === "event") {
+    const flags = parseFlags(rest, ["data"]);
+    return reviewCommand(parseReviewCommand(JSON.parse(required(flags, "data"))));
+  }
+  if (group === "reviews") {
+    const flags = parseFlags(args.slice(1), ["repository", "number"]);
+    if (flags.repository === undefined && flags.number === undefined) return readReviews();
+    if (!flags.number || !/^[1-9]\d*$/.test(flags.number)) throw new Error("Review number must be positive");
+    return readReviews(parseReviewRef({ repository: required(flags, "repository"), number: Number(flags.number) }));
+  }
   if (group === "health" && args.length === 1) {
     const response = await fetch(`${resolveDefaultCoordServiceUrl()}/health`, { signal: AbortSignal.timeout(3000) });
     if (!response.ok) throw new Error(`Health failed: HTTP ${response.status}`);

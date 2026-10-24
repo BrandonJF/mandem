@@ -1,5 +1,6 @@
 /** @fileoverview Durable coordination stores using Bun SQLite and atomic writes. */
 import { Database } from "bun:sqlite";
+import { createSqliteReviewStore } from "./sqlite-review-store";
 import { createSqliteStreamStore } from "./sqlite-stream-store";
 import type { MessageStore, PlaneMessage } from "../application/ports/message-store";
 import type { SessionRecord, SessionStore } from "../application/ports/session-store";
@@ -93,5 +94,5 @@ export function openCoordinationStores(path: string) {
       return { held: !current.expired, view: current };
     },
   };
-  return { messageStore, sessionStore, mergeLockStore, streamStore: createSqliteStreamStore(db), close: () => db.close() };
+  return { messageStore, sessionStore, mergeLockStore, reviewStore: createSqliteReviewStore(db), streamStore: createSqliteStreamStore(db), close: () => db.close() };
 }

@@ -1,4 +1,5 @@
 /** @fileoverview Fetch client preserving Strategy Builder Pro coordination interfaces. */
+import { parseReviewState } from "../domain/review-values";
 import { parseStoredStop, parseStreamReport, record } from "../domain/stream-values";
 import type { StopRecord, StreamReport } from "../domain/streams";
 import type { PlaneMessage } from '../application/ports/message-store';
@@ -465,4 +466,17 @@ export async function streamCommand(path: "stop" | "check" | "claim", data: Reco
   if (path === "check") return parseStreamReport(body);
   if (record(body).ok !== true) throw new Error("Invalid stream claim response");
   return { ok: true };
+}
+
+/** Submit parsed review facts; repeating an observation never repeats a reserved consumer effect. */
+export async function reviewCommand(input: import("../domain/review-values").ReviewCommand, opts?: ClaimNextIdOptions): Promise<import("../domain/reviews").ReviewState> {
+ const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/reviews/events", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input), signal: AbortSignal.timeout(opts?.timeoutMs ?? 100_000) });
+ return parseReviewState(await response.json());
+}
+/** Read recorded review state even when consumer effects are disabled. */
+export async function readReviews(ref?: import("../domain/reviews").ReviewRef, opts?: ClaimNextIdOptions): Promise<import("../domain/reviews").ReviewState[]> {
+ const query = ref ? "?" + new URLSearchParams({ repository: ref.repository, number: String(ref.number) }) : "";
+ const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/reviews" + query, { signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000) });
+ const rows: unknown = await response.json(); if (!Array.isArray(rows)) throw new Error("Invalid review state list");
+ return rows.map(parseReviewState);
 }

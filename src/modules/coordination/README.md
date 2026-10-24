@@ -140,3 +140,85 @@ together. Domain tests cover values and unions, application tests cover policy t
 typed ports, SQLite contracts cover persistence, and five stream journeys cover wiring.
 
 New HTTP commands: `POST /sessions/stop`, `/streams/check` and `/streams/claim`.
+
+## Review dispatch
+
+Issue #58 adds review decisions over consumer observations. Review effects are
+**disabled by default**. This slice is partial until a separate RoughPatch PR
+supplies and adopts its adapters. It does not change the running service or launch
+a provider. The communicator owns template selection, adoption and recovery.
+
+An operator can pass `serve --review-config /persistent/review-consumer.json` to
+both server binaries. The trusted file is loaded at startup:
+
+```json
+{
+  "version": 1,
+  "templates": {
+    "full": { "name": "independent-review", "revision": "v1" },
+    "delta": { "name": "reconciliation-review", "revision": "v1" }
+  },
+  "command": ["bun", "/persistent/consumer/review-effects.ts"]
+}
+```
+
+The command receives one JSON document on stdin, `{ "version": 1, "action": ... }`.
+A `launch` action carries a task: immutable PR head/base, effective patch artifact
+and SHA-256, template name/revision, and full or delta mode. A delta includes the
+prior review result and a separate immutable reconciliation artifact. The consumer
+must launch a fresh independent session and return JSON
+`{ "session": "reviewer-name", "paneId": "w1:p2" }`; paneId is optional. Mandem
+records that session with role `reviewer` atomically with the confirmed run. It
+rejects author/reviewer equality and reuse of another task's registered session.
+A reviewer can submit its result before the launcher returns: Mandem retains it
+but waits for confirmation of the matching session before scheduling follow-up.
+
+A `readiness` action carries the task, current target, CLEAN result and effect ID.
+A `findings` action also carries the FIX-NOW findings and current author recipient.
+Both commands return `{ "ok": true }` only after completing their action. Commands
+must recheck live authorization, eligibility and exact current PR facts immediately
+before effects, preserve consumer live/shadow policy, verify artifact bytes against
+their digests and retain their own action receipts. The configured executable never
+comes from an HTTP request. Output is bounded to 64 KiB; the command deadline is
+90 seconds. A timeout, failed command or invalid response becomes a durable
+uncertainty diagnostic. Mandem never launches or publishes it again automatically.
+
+Send versioned events with `mandem review event --data JSON` or
+`POST /reviews/events`. Each document contains `version: 1`, `ref` (repository and
+positive PR number), and one event:
+
+- `observe` carries `observation`: the target fields above, authorSession,
+  eligibility (`eligible` or `held` with reason), activeReviewHeads, mergeRef
+  (`null` or SHA and parent SHAs), and delta (`null` or fromPatchId and artifact).
+  The consumer computes the stable patch ID from `git diff BASE...HEAD` piped to
+  `git patch-id --stable`; it retains the patch and supplies current GitHub facts.
+- `result` carries runId, the recorded reviewer session, and result. A result has
+  verdict `CLEAN` or `FIX-NOW`, an artifact reference and SHA-256, and findings only
+  for FIX-NOW. Repeated identical results are safe; conflicting results fail.
+- `adopt` imports an existing completed task, session and result before observation.
+  Consumer observations must list externally running review heads to hold duplicate
+  launches. Imported delta coverage requires its recorded baseline first.
+
+A new head receives a fresh full review. Reopen/retarget with the same head reuses
+coverage only for an equal effective stable patch ID. A different patch requires
+one delta reviewer, after its baseline completes; it never triggers another full
+review for that head. CLEAN waits until the observed GitHub merge ref names the
+current base and head as parents. SQLite retains `waiting-for-merge-ref` across
+restart. The consumer sends a later observation when that ref changes; Mandem
+runs no polling or retry loop. FIX-NOW routes findings to the author session.
+
+Inspect `mandem reviews`, optionally with `--repository OWNER/REPO --number N`, or
+`GET /reviews`. The consumer must inspect results after every submitted event and
+report diagnostics, stranded reservations, missing delta artifacts or unexpected
+waiting states to the communicator immediately. A crash after reservation can
+precede its effect; reservations intentionally remain pending. For uncertain launch,
+inspect the actual reviewer and adopt its verified result. For uncertain readiness
+or findings, inspect consumer receipts and report the result to the communicator;
+this slice provides no automatic replay or reset command. Unreadable stored versions
+fail visibly. Review state shares the existing SQLite backup and disk monitoring.
+
+Pure policy tests cover head/patch coverage and merge-ref decisions; SQLite contracts
+cover concurrent reservations and session registration; application and separate
+CLI/command journeys cover waits, findings and uncertain outcomes. All fixtures run
+locally with no provider calls. Slot filling, repair designation and board projection
+remain later slices of #58.

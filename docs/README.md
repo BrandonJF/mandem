@@ -11,3 +11,4 @@ index for local documents and child directories.
 - [Sources](./sources/README.md) records the pinned external source material used by Mandem.
 - [Coordination delivery](./coordination-plan-51.md) tracks the lean delivery for issue #51.
 - [Stream delivery](./stream-stalls-plan-55.md) tracks stall detection and owner routing for issue #55.
+- [Review dispatch](./review-dispatch-plan-58.md) tracks exact-head reviews and consumer effects for issue #58.

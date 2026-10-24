@@ -1,4 +1,7 @@
 /** @fileoverview Fetch handler for the ported coordination routes. */
+import type { ReviewStore } from '../application/ports/review-store';
+import type { ReviewDispatcher } from '../application/review-dispatch';
+import { handleReviewRoutes } from './review-routes';
 import type { SessionStore } from '../application/ports/session-store';
 import type { MessageStore, Subscriptions } from '../application/ports/message-store';
 import type { MergeLockStore } from '../application/ports/merge-lock-store';
@@ -10,6 +13,7 @@ import { handleSessionRoutes } from './session-routes';
 import { handleMergeLockRoutes } from './merge-lock-routes';
 export interface CoordServiceHandlerOptions {
  sessionStore?: SessionStore; messageStore?: MessageStore; subscriptions?: Subscriptions;
+ reviewStore?: ReviewStore; reviewDispatcher?: ReviewDispatcher;
  streamMonitor?: StreamMonitor; mergeLockStore?: MergeLockStore; paneQueue?: PaneQueue;
  paneReader?: () => Record<string,string>;
 }
@@ -157,6 +161,9 @@ export function createCoordServiceRequestHandler(opts: CoordServiceHandlerOption
       }
       return Response.json({ panes: opts.paneQueue.snapshot() });
     }
+
+    const reviewResponse = await handleReviewRoutes(req, url, opts.reviewStore, opts.reviewDispatcher);
+    if (reviewResponse) return reviewResponse;
 
     const streamResponse = await handleStreamRoutes(req, url, opts.streamMonitor);
     if (streamResponse) return streamResponse;
