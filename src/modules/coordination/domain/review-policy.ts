@@ -2,6 +2,7 @@
 import type {
   ReviewAction,
   ReviewEvent,
+  ReviewEffect,
   ReviewObservation,
   ReviewPolicy,
   ReviewRef,
@@ -20,6 +21,14 @@ export function reviewRunId(target: ReviewTarget): string {
     target.head,
     target.patch.id,
   ]);
+}
+/** Bind publication identity to the reviewed patch and target base, independent of eligibility observations. */
+export function reviewEffectId(
+  runId: string,
+  base: ReviewTarget["base"],
+  operation: ReviewEffect["operation"],
+): string {
+  return JSON.stringify([runId, base.name, base.sha, operation]);
 }
 export function emptyReviewState(ref: ReviewRef): ReviewState {
   return {
@@ -311,7 +320,7 @@ export function transitionReview(
     return { state, actions: [] };
   }
   const operation = result.verdict === "CLEAN" ? "readiness" : "findings";
-  const effectId = JSON.stringify([current.task.id, state.context, operation]);
+  const effectId = reviewEffectId(current.task.id, observation.base, operation);
   const existing = state.effects.find((effect) => effect.id === effectId);
   if (existing) {
     state.status =
@@ -325,6 +334,7 @@ export function transitionReview(
   state.effects.push({
     id: effectId,
     runId: current.task.id,
+    base: { ...observation.base },
     context: state.context,
     operation,
     phase: { kind: "reserved" },

@@ -31,7 +31,9 @@ communicator. Never use hosted Mandem CI, paid calls or temporary filesystems.
   releases it. No timer or retry loop runs inside the handler.
 - Reserve effects transactionally before execution. Uncertain launch or
   publication stays visible as a durable diagnostic; never blindly replay it.
-  Consumer commands must revalidate current PR identity immediately before effects.
+  Publication identity binds head, patch ID, target base and operation; eligibility
+  changes cannot bypass pending or uncertain effects. Consumer commands must
+  revalidate current PR identity immediately before effects.
 - Parse unknown input and versioned persisted shapes at HTTP/store boundaries.
   Use discriminated unions, application ports and strict TypeScript without casts
   or non-null assertions in the new path.
@@ -46,7 +48,7 @@ communicator. Never use hosted Mandem CI, paid calls or temporary filesystems.
 - [x] Implement the handler, durable store, typed consumer effect boundary and
   runtime entrypoint; prove full review, same-patch reuse, delta, merge-ref wait,
   findings routing, concurrent/restart deduplication and uncertain effects.
-- [ ] Run affected checks, publish a small PR, run exact-head local reporter and
+- [x] Run affected checks, publish a small PR, run exact-head local reporter and
   send the head to the communicator for independent review. Never merge it.
 - [ ] After Mandem integration, wire RoughPatch in a separate PR. Keep #58 open
   through intended workflow adoption; later slot/repair/board slices remain outside
@@ -54,11 +56,14 @@ communicator. Never use hosted Mandem CI, paid calls or temporary filesystems.
 
 ## Current result
 
-Implemented the parsed domain policy, SQLite reservations/session registration,
-consumer effect ports and opt-in command/HTTP/CLI adapters. Domain/store/runtime
-checks passed: 140 coordination Vitest tests, 27 Bun tests, repository static
-checks and both binary builds. PR publication and exact-head local reporting are next. Merge-ref waiting
-survives reopening SQLite. Early reviewer results wait for launcher confirmation.
-Equivalent observations preserve effect identity regardless of object key order.
-No live runtime or provider configuration changed. The communicator owns integration
-and adoption.
+PR #59 was reviewed at 7d2ec7d after repository-quality SUCCESS (300 Vitest
+tests, 27 Bun tests, static checks and builds). The review found that eligibility
+changes created new publication IDs and could replay an uncertain effect. The
+failing-first dispatcher/SQLite regression reproduced this for both CLEAN and
+FIX-NOW across restart. Effect IDs now bind the reviewed head/patch, target base
+and operation; SQLite parses the stored base and verifies that identity. The
+observation counter remains audit metadata. Both regressions preserve the original
+uncertain record and attempt publication once. Affected tests passed (140 Vitest
+and 28 Bun), as did static repository checks. New exact-head local reporting and
+fix-delta review are next. No live runtime or provider configuration
+changed. The communicator owns integration and adoption.

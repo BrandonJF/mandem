@@ -180,8 +180,10 @@ must recheck live authorization, eligibility and exact current PR facts immediat
 before effects, preserve consumer live/shadow policy, verify artifact bytes against
 their digests and retain their own action receipts. The configured executable never
 comes from an HTTP request. Output is bounded to 64 KiB; the command deadline is
-90 seconds. A timeout, failed command or invalid response becomes a durable
-uncertainty diagnostic. Mandem never launches or publishes it again automatically.
+90 seconds. Publication IDs bind the PR head, effective patch ID, target base
+name/SHA and operation. Eligibility changes retain the same reservation and receipt
+ID. A timeout, failed command or invalid response becomes a durable uncertainty
+diagnostic, including after held/eligible observations or restart. Mandem never launches or publishes it again automatically.
 
 Send versioned events with `mandem review event --data JSON` or
 `POST /reviews/events`. Each document contains `version: 1`, `ref` (repository and

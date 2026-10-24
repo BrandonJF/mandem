@@ -9,6 +9,7 @@ import type { ReviewEffects } from "../application/ports/review-effects";
 import type {
   ReviewObservation,
   ReviewPolicy,
+  ReviewResult,
   ReviewTask,
 } from "../domain/reviews";
 const ref = { repository: "team/journey", number: 5 };
@@ -125,78 +126,105 @@ test("dispatches once, records the reviewer, waits for merge parents, then publi
     stores.close();
   }
 });
-test("routes FIX-NOW to the author and preserves uncertainty without another effect after restart", async () => {
-  const path = database();
-  let routes = 0;
-  let launches = 0;
-  const effects: ReviewEffects = {
-    async launch() {
-      launches++;
-      return { session: "reviewer-fix" };
-    },
-    async readiness() {
-      throw new Error("Unexpected readiness");
-    },
-    async findings(action) {
-      expect(action.recipient).toBe("author");
-      routes++;
-      throw new Error("Response interrupted; may have committed");
-    },
-  };
-  let stores = openCoordinationStores(path);
-  try {
-    const dispatcher = createReviewDispatcher({
-      store: stores.reviewStore,
-      policy,
-      effects,
-    });
-    const state = await dispatcher.submit({
-      version: 1,
-      ref,
-      event: { kind: "observe", observation },
-    });
-    const task = state.runs[0]?.task;
-    if (!task) throw new Error("No task");
-    expect(
-      (
-        await dispatcher.submit({
-          version: 1,
-          ref,
-          event: {
-            kind: "result",
-            runId: task.id,
-            session: "reviewer-fix",
-            result: {
-              verdict: "FIX-NOW",
-              artifact,
-              findings: "Fix duplicate publication",
-            },
+const publications: ReviewResult[] = [
+  { verdict: "CLEAN", artifact },
+  { verdict: "FIX-NOW", artifact, findings: "Fix duplicate publication" },
+];
+test.each(publications)(
+  "does not retry uncertain $verdict publication after held/eligible observations and restart",
+  async (result) => {
+    const path = database();
+    let launches = 0;
+    const attempts: string[] = [];
+    const effects: ReviewEffects = {
+      async launch() {
+        launches++;
+        return { session: "reviewer" };
+      },
+      async readiness(action) {
+        expect(result.verdict).toBe("CLEAN");
+        attempts.push(action.id);
+        throw new Error("Response interrupted; may have committed");
+      },
+      async findings(action) {
+        expect(result.verdict).toBe("FIX-NOW");
+        expect(action.recipient).toBe("author");
+        attempts.push(action.id);
+        throw new Error("Response interrupted; may have committed");
+      },
+    };
+    const eligible: ReviewObservation = {
+      ...observation,
+      mergeRef: {
+        sha: "4".repeat(40),
+        parents: [observation.base.sha, observation.head],
+      },
+    };
+    let stores = openCoordinationStores(path);
+    try {
+      const dispatcher = createReviewDispatcher({
+        store: stores.reviewStore,
+        policy,
+        effects,
+      });
+      const state = await dispatcher.submit({
+        version: 1,
+        ref,
+        event: { kind: "observe", observation: eligible },
+      });
+      const task = state.runs[0]?.task;
+      if (!task) throw new Error("No task");
+      const uncertain = await dispatcher.submit({
+        version: 1,
+        ref,
+        event: {
+          kind: "result",
+          runId: task.id,
+          session: "reviewer",
+          result,
+        },
+      });
+      expect(uncertain.status.kind).toBe("diagnostic");
+      expect(uncertain.effects).toHaveLength(1);
+      expect(uncertain.effects[0]?.phase.kind).toBe("uncertain");
+      await dispatcher.submit({
+        version: 1,
+        ref,
+        event: {
+          kind: "observe",
+          observation: {
+            ...eligible,
+            eligibility: { kind: "held", reason: "Checks pending" },
           },
-        })
-      ).status.kind,
-    ).toBe("diagnostic");
-    stores.close();
-    stores = openCoordinationStores(path);
-    const restarted = createReviewDispatcher({
-      store: stores.reviewStore,
-      policy,
-      effects,
-    });
-    expect(
-      (
-        await restarted.submit({
-          version: 1,
-          ref,
-          event: { kind: "observe", observation },
-        })
-      ).status.kind,
-    ).toBe("diagnostic");
-    expect(routes).toBe(1);
-    expect(launches).toBe(1);
-  } finally {
-    stores.close();
-  }
-});
+        },
+      });
+      stores.close();
+      stores = openCoordinationStores(path);
+      const restarted = createReviewDispatcher({
+        store: stores.reviewStore,
+        policy,
+        effects,
+      });
+      const resumed = await restarted.submit({
+        version: 1,
+        ref,
+        event: { kind: "observe", observation: eligible },
+      });
+      expect(attempts).toHaveLength(1);
+      expect(launches).toBe(1);
+      expect(resumed.status.kind).toBe("diagnostic");
+      expect(resumed.effects).toEqual(uncertain.effects);
+      await restarted.submit({
+        version: 1,
+        ref,
+        event: { kind: "observe", observation: eligible },
+      });
+      expect(attempts).toHaveLength(1);
+    } finally {
+      stores.close();
+    }
+  },
+);
 test("accepts a fast reviewer result before launch returns without losing it or granting early readiness", async () => {
   const stores = openCoordinationStores(database());
   let ready = 0;

@@ -17,7 +17,7 @@ import type {
   ReviewTask,
   ReviewTemplate,
 } from "./reviews";
-import { reviewRefKey, reviewRunId } from "./review-policy";
+import { reviewEffectId, reviewRefKey, reviewRunId } from "./review-policy";
 export type PublicReviewEvent = Extract<
   ReviewEvent,
   { kind: "observe" | "result" | "adopt" }
@@ -230,9 +230,11 @@ function effect(value: unknown): ReviewEffect {
   const phase = object(row.phase);
   if (row.operation !== "readiness" && row.operation !== "findings")
     throw new Error("Invalid review operation");
+  const base = object(row.base);
   const common: Omit<ReviewEffect, "phase"> = {
     id: text(row.id),
     runId: text(row.runId),
+    base: { name: text(base.name), sha: hash(base.sha) },
     context: number(row.context),
     operation: row.operation,
   };
@@ -326,7 +328,7 @@ export function parseReviewState(value: unknown): ReviewState {
       effects.has(item.id) ||
       item.context < 1 ||
       item.context > state.context ||
-      item.id !== JSON.stringify([item.runId, item.context, item.operation]) ||
+      item.id !== reviewEffectId(item.runId, item.base, item.operation) ||
       item.operation !==
         (source.phase.result.verdict === "CLEAN" ? "readiness" : "findings")
     )

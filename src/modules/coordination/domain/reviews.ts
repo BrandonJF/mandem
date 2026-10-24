@@ -73,6 +73,7 @@ export interface ReviewRun {
 export interface ReviewEffect {
   id: string;
   runId: string;
+  base: ReviewTarget["base"];
   context: number;
   operation: "readiness" | "findings";
   phase:
