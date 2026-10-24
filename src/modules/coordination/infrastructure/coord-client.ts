@@ -446,3 +446,14 @@ export async function fetchMergeLock(
     return undefined;
   }
 }
+
+
+/** Submit a bounded stream command; every response must complete successfully. */
+export async function streamCommand(path: "stop" | "check" | "claim", data: Record<string, unknown>, opts?: ClaimNextIdOptions): Promise<unknown> {
+  const endpoint = path === "stop" ? "/sessions/stop" : `/streams/${path}`;
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + endpoint, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+    signal: AbortSignal.timeout(opts?.timeoutMs ?? 30_000),
+  });
+  return response.json();
+}

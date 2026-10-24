@@ -1,13 +1,17 @@
 /** @fileoverview Coordination CLI parsing and JSON output for local consumers. */
-import { ackMessage, listSessions, postMessage, readMessages, registerSession, resolveDefaultCoordServiceUrl } from "./coord-client";
+import { streamCommand, ackMessage, listSessions, postMessage, readMessages, registerSession, resolveDefaultCoordServiceUrl } from "./coord-client";
 
 export const coordinationHelp = `mandem serve [--db PATH] [--port NUMBER]
 mandem health
 mandem msg send --topic TOPIC --sender SESSION --type TYPE --subject TEXT [--data JSON]
 mandem msg inbox --topic TOPIC [--since ID]
 mandem msg ack --id ID --session SESSION
-mandem session register --session SESSION --role ROLE [--pane HERDR_PANE_ID] [--data JSON]
+mandem session register --session SESSION --role ROLE [--pane HERDR_PANE_ID] [--data JSON] [--stream STREAM --owner-role ROLE]
 mandem session list
+mandem session stop --id KEY --session SESSION --kind done|blocked|decision-needed [--waiting-on user|coordinator|session:NAME|external --need TEXT]
+mandem streams [--idle-minutes N]
+mandem stream claim --stream STREAM --session SESSION
+mandem stream release --stream STREAM
 Environment: MANDEM_COORD_URL, MANDEM_COORD_DB, COORD_SERVICE_PORT`;
 
 export function parseFlags(args: string[], allowed: string[]): Record<string, string> {
@@ -53,10 +57,24 @@ export async function runCoordinationCommand(args: string[]): Promise<unknown> {
     return { ok: true };
   }
   if (group === "session" && action === "register") {
-    const flags = parseFlags(rest, ["session", "role", "data", "pane"]);
-    const metadata = { ...data(flags), ...(flags.pane ? { herdrPaneId: flags.pane } : {}) };
+    const flags = parseFlags(rest, ["session", "role", "data", "pane", "stream", "owner-role"]);
+    if (flags["owner-role"] !== undefined && flags.stream === undefined) throw new Error("--owner-role requires --stream");
+    const metadata = { ...data(flags), ...(flags.pane ? { herdrPaneId: flags.pane } : {}), ...(flags.stream !== undefined ? { stream: required(flags, "stream"), ownerRole: flags["owner-role"] ?? "orchestrator" } : {}) };
     await registerSession({ session: required(flags,"session"), role: required(flags,"role"), data: metadata });
     return { ok: true };
+  }
+  if (group === "session" && action === "stop") {
+    const flags = parseFlags(rest, ["id", "session", "kind", "waiting-on", "need"]);
+    return streamCommand("stop", { id: required(flags, "id"), session: required(flags, "session"), kind: required(flags, "kind"),
+      ...(flags["waiting-on"] !== undefined ? { waiting_on: flags["waiting-on"] } : {}), ...(flags.need !== undefined ? { need: flags.need } : {}) });
+  }
+  if (group === "streams") {
+    const flags = parseFlags(args.slice(1), ["idle-minutes"]);
+    return streamCommand("check", { ...(flags["idle-minutes"] !== undefined ? { idleMinutes: Number(flags["idle-minutes"]) } : {}) });
+  }
+  if (group === "stream" && (action === "claim" || action === "release")) {
+    const flags = parseFlags(rest, action === "claim" ? ["stream", "session"] : ["stream"]);
+    return streamCommand("claim", { stream: required(flags, "stream"), session: action === "claim" ? required(flags, "session") : null });
   }
   if (group === "session" && action === "list" && rest.length === 0) return { sessions: await listSessions() };
   throw new Error("Unknown command. Run mandem --help");

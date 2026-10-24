@@ -10,3 +10,4 @@ index for local documents and child directories.
 - [Solutions](./solutions/README.md) captures reusable engineering guidance.
 - [Sources](./sources/README.md) records the pinned external source material used by Mandem.
 - [Coordination delivery](./coordination-plan-51.md) tracks the lean delivery for issue #51.
+- [Stream delivery](./stream-stalls-plan-55.md) tracks stall detection and owner routing for issue #55.

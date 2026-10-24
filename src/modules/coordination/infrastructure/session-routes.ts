@@ -13,6 +13,8 @@
  * authority being built.
  */
 
+import { randomUUID } from "node:crypto";
+import { streamBinding } from "../application/stream-monitor";
 import type { SessionRecord, SessionStore } from "../application/ports/session-store";
 
 /** A `SessionRecord` advisorily enriched with its live pane binding, when known. */
@@ -114,6 +116,12 @@ export async function handleSessionRoutes(
     const data =
       isRecord(body) && isRecord(body.data) ? (body.data as Record<string, unknown>) : undefined;
 
+    if (data?.stream !== undefined) {
+      try {
+        streamBinding({ session, role, ts: new Date().toISOString(), data });
+        data.streamAssignment = randomUUID();
+      } catch (error) { return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }); }
+    }
     await opts.sessionStore.register({ session, role, ...(data ? { data } : {}) });
     logRegisterEnd({ ok: true, session }, Date.now() - requestStart);
     return Response.json({ ok: true });

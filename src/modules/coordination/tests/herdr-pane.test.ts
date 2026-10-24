@@ -66,3 +66,13 @@ describe("Herdr panes", () => {
     expect(() => io.readMap()).toThrow("Herdr");
   });
 });
+
+it("reads asynchronous activity only in its workspace and resolves owned session labels", async () => {
+  const io = createHerdrPaneIo({ parentPaneId: "w1:p1", workspaceId: "w1", runAsync: async args => args[0] === "agent"
+    ? { result: { agents: [
+      { pane_id: "w1:p2", workspace_id: "w1", name: "provider-name", agent_status: "idle" },
+      { pane_id: "w2:p2", workspace_id: "w2", name: "engineer", agent_status: "working" },
+    ] } }
+    : { result: { panes: [{ pane_id: "w1:p2", label: "mandem:engineer" }] } } });
+  expect(await io.readActivity()).toEqual([{ paneId: "w1:p2", name: "engineer", state: "idle" }]);
+});

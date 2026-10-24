@@ -1,6 +1,7 @@
 /** @fileoverview Herdr pane operations scoped to Mandem labels in one workspace. */
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
+import type { LiveAgent } from "../domain/streams";
 import type { PaneQueueIo } from "../application/ports/pane-queue";
 
 interface HerdrOptions {
@@ -30,6 +31,7 @@ async function runHerdrAsync(args: string[]): Promise<unknown> {
 export function createHerdrPaneIo(options: HerdrOptions): PaneQueueIo & {
   wake(paneId: string, topic: string, id: string): Promise<void>;
   readMapAsync(): Promise<Record<string, string>>;
+  readActivity(): Promise<LiveAgent[]>;
 } {
   const run = options.run ?? runHerdr;
   const runAsync = options.runAsync ?? (options.run ? async (args: string[]) => options.run!(args) : runHerdrAsync);
@@ -55,6 +57,16 @@ export function createHerdrPaneIo(options: HerdrOptions): PaneQueueIo & {
     readMap,
     async readMapAsync() {
       return paneMap(await runAsync(["pane", "list", "--workspace", options.workspaceId]));
+    },
+    async readActivity() {
+      const response = result(await runAsync(["agent", "list"]));
+      if (!Array.isArray(response.agents)) throw new Error("Invalid Herdr agent list");
+      const map = await this.readMapAsync();
+      return response.agents.filter(agent => record(agent) && agent.workspace_id === options.workspaceId).map(agent => {
+        if (!record(agent) || typeof agent.pane_id !== "string" || typeof agent.agent_status !== "string") throw new Error("Invalid Herdr agent activity");
+        const label = Object.keys(map).find(session => map[session] === agent.pane_id);
+        return { paneId: agent.pane_id, state: agent.agent_status, ...(label ? { name: label } : typeof agent.name === "string" ? { name: agent.name } : {}) };
+      });
     },
     async launchPane(request) {
       const existing = readMap()[request.label];
