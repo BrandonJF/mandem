@@ -14,12 +14,13 @@ function fixture() {
   let activityError = false;
   const states: Record<string, string> = { engineer: "idle", other: "working", comm: "idle", orch: "working" };
   const wakes: string[][] = [];
+  const replacements: Record<string, string> = {};
   const options = { databasePath, port: 0, now: () => new Date(time),
     herdr: { parentPaneId: "w1:p0", workspaceId: "w1", runAsync: async (args: string[]) => {
       if (args[0] === "pane") return { result: { panes: [] } };
       if (args[1] === "list") {
         if (activityError) throw new Error("Herdr unavailable");
-        return { result: { agents: Object.entries(states).map(([name, agent_status]) => ({ name, agent_status, pane_id: `w1:p-${name}`, workspace_id: "w1" })) } };
+        return { result: { agents: Object.entries(states).map(([name, agent_status]) => ({ name: replacements[name] ?? name, agent_status, pane_id: `w1:p-${name}`, workspace_id: "w1" })) } };
       }
       wakes.push(args); return { result: { type: "agent_prompted" } };
     } } };
@@ -45,6 +46,7 @@ function fixture() {
       finally { await second.stop(); }
     },
     advance: (minutes: number) => { time += minutes * 60_000; },
+    replaceAgent: (session: string, name: string) => { replacements[session] = name; },
     failActivity: () => { activityError = true; },
     restart: async () => { await service.stop(); service = startCoordinationServer(options); },
     cli: async (...args: string[]) => {
@@ -173,4 +175,15 @@ test("a routed need without a wake binding remains durable and reports one wake 
   await f.check(); await new Promise(resolve => setTimeout(resolve, 20));
   expect((await f.health()).wakeFailures).toBe(1);
   expect(await f.inbox("comm")).toHaveLength(1);
+});
+
+
+test("a reused pane occupied by a different named session fails the staffing claim", async () => {
+  const f = fixture(); await f.register("engineer"); f.states.engineer = "working";
+  await f.post("/streams/claim", { stream: "issue:55", session: "engineer" });
+  expect((await f.check()).claims).toEqual([]);
+  f.replaceAgent("engineer", "replacement");
+  const report = await f.check();
+  expect(report.claims).toHaveLength(1);
+  expect(report.claims[0].state).toBe("identity-mismatch");
 });

@@ -42,10 +42,11 @@ Mandem alone is partial until RoughPatch calls it. Follow TwelveApart/skills#24.
 
 ## Progress
 
-Read #55 and the runtime; created native issue d7fd196. Eleven Bun stream journeys
+Read #55 and the runtime; created native issue d7fd196. Twelve Bun stream journeys
 pass, including concurrent checks through two SQLite connections and one wake,
 restart/acknowledgement, invalid input, and old markers after resumed work. The
 Herdr adapter resolves owned labels and scopes activity to its workspace. All
 coordination tests pass. Static checks found one test-only const preference; fixed.
 Missing owner wake bindings now increment health wake diagnostics while retaining
-the durable message, with no repeat prompt on polling. No blocker. Next: local quality run and independent review.
+the durable message, with no repeat prompt on polling. A working replacement in a bound pane now fails the old session staffing claim;
+a failing-first regression covers that identity mismatch. No blocker. Next: local quality run and independent review.

@@ -79,7 +79,8 @@ client functions. GitHub queue and atomic-ID routes are deferred.
 
 Issue #55 adds typed stops and deterministic stream checks. Register one unique
 `communicator` and `orchestrator` role with their existing Herdr pane IDs. Register
-engineers with `--stream` and the accountable `--owner-role` (default `orchestrator`).
+engineers with the live Herdr agent name as their session ID (or the owned
+`mandem:SESSION` label), `--stream` and the accountable `--owner-role` (default `orchestrator`).
 Every registration with a stream starts a new assignment. Continue using one shared
 service URL and database. Example commands use fixture identities:
 
@@ -106,7 +107,7 @@ a new need. Conflicting reuse fails. Two simultaneous needs require two records.
 `mandem streams` returns JSON and performs a check and once-only routing. Its
 `stalled` array reports idle/done sessions without a current stop past the threshold;
 `needs` lists stops pending their routed owner's acknowledgement; `claims` reports
-staffing mismatches; `diagnostics` exposes missing/ambiguous owners, unavailable
+staffing mismatches, including another named agent occupying the bound pane; `diagnostics` exposes missing/ambiguous owners, unavailable
 Herdr and unrecognized/missing activity. One working agent hides no other stream.
 The first observed idle/done state starts the timer; SQLite retains it across restart.
 Working activity resets the timer and invalidates earlier stop markers when a new

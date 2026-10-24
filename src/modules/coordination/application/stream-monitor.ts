@@ -46,6 +46,7 @@ export function createStreamMonitor(options: { sessions: SessionStore; store: St
     function state(session: SessionRecord): string {
       const pane = session.data?.herdrPaneId;
       const candidates = agents.filter(agent => typeof pane === "string" ? agent.paneId === pane : agent.name === session.session);
+      if (candidates.length === 1 && candidates[0]!.name && candidates[0]!.name !== session.session) return "identity-mismatch";
       return candidates.length === 1 ? candidates[0]!.state : candidates.length > 1 ? "ambiguous" : "missing";
     }
     function owner(waiting: string, role: string): string | undefined {
