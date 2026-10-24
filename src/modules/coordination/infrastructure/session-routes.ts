@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { streamBinding } from "../application/stream-monitor";
+import { parseStreamSession } from "../domain/stream-values";
 import type { SessionRecord, SessionStore } from "../application/ports/session-store";
 
 /** A `SessionRecord` advisorily enriched with its live pane binding, when known. */
@@ -118,8 +118,8 @@ export async function handleSessionRoutes(
 
     if (data?.stream !== undefined) {
       try {
-        streamBinding({ session, role, ts: new Date().toISOString(), data });
         data.streamAssignment = randomUUID();
+        parseStreamSession({ session, role, data });
       } catch (error) { return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }); }
     }
     await opts.sessionStore.register({ session, role, ...(data ? { data } : {}) });

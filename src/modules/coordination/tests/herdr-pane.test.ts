@@ -74,5 +74,5 @@ it("reads asynchronous activity only in its workspace and resolves owned session
       { pane_id: "w2:p2", workspace_id: "w2", name: "engineer", agent_status: "working" },
     ] } }
     : { result: { panes: [{ pane_id: "w1:p2", label: "mandem:engineer" }] } } });
-  expect(await io.readActivity()).toEqual([{ paneId: "w1:p2", name: "engineer", state: "idle" }]);
+  expect(await io.readActivity()).toEqual([{ paneId: "w1:p2", name: "engineer", state: { kind: "idle" } }]);
 });

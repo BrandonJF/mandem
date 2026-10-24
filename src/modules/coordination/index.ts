@@ -5,4 +5,4 @@ export type { SessionStore, SessionRecord } from "./application/ports/session-st
 export type { MergeLockStore, MergeLockView, MergeLockStatus } from "./application/ports/merge-lock-store";
 export { startCoordinationServer, defaultDatabasePath, postMessage, readMessages, ackMessage, registerSession, listSessions, listTopics, subscribeMessages, acquireMergeLock, releaseMergeLock, fetchMergeLock, isCoordServiceHealthy, streamCommand } from "./api/composition";
 export { coordinationHelp, parseFlags, runCoordinationCommand } from "./api/cli";
-export type { StopRecord, StreamReport, StreamBinding } from "./domain/streams";
+export type { StopInput, StopRecord, WaitingOn, StreamReport, StreamFinding, StreamBinding, RoleReference } from "./domain/streams";

@@ -102,7 +102,8 @@ waiting owner. Other kinds require a single-line need and `--waiting-on`:
 `session:NAME` to that registered session, and `external` to the stream's owner role.
 Mandem never prompts the user directly. Stop IDs are globally unique caller keys;
 repeat the same ID/content to recover an uncertain response, and use a new ID for
-a new need. Conflicting reuse fails. Two simultaneous needs require two records.
+a later stop. A true retry returns the original record even after work resumes;
+it does not renew the old marker. Conflicting reuse fails. Two simultaneous needs require two records.
 
 `mandem streams` returns JSON and performs a check and once-only routing. Its
 `stalled` array reports idle/done sessions without a current stop past the threshold;
@@ -110,8 +111,8 @@ a new need. Conflicting reuse fails. Two simultaneous needs require two records.
 staffing mismatches, including another named agent occupying the bound pane; `diagnostics` exposes missing/ambiguous owners, unavailable
 Herdr and unrecognized/missing activity. One working agent hides no other stream.
 The first observed idle/done state starts the timer; SQLite retains it across restart.
-Working activity resets the timer and invalidates earlier stop markers when a new
-work episode begins. A new assignment also invalidates old markers. Open needs
+A recorded stop marks an episode boundary. Any subsequent working observation,
+including the first observation, resets the timer and invalidates earlier markers. A new assignment also invalidates old markers. Open needs
 remain until their original routed owner acknowledges, even if the engineer resumes.
 A stalled finding remains visible until a typed stop or resumed work explains it.
 Reading is not acknowledgement, and another session's ack does not clear the need.
@@ -130,4 +131,12 @@ The communicator owns stream policy, role registration and watchdog diagnostics.
 This runtime is partial until the separate RoughPatch watchdog/launch PR consumes it.
 Do not switch live peers here. No hosted CI, provider calls or new database server
 support this slice. All state shares the existing SQLite backup and disk monitoring.
+Stop and delivery persistence uses version 1 with a required stored generation.
+Readers parse the complete shape and fail visibly on unsupported versions or corrupt
+records. Unknown Herdr states remain explicit values with their original state name.
+Report findings distinguish `source: stop` from `source: idle` and `delivery: unresolved`
+from `delivery: routed`; routed owner, message ID and acknowledgement always appear
+together. Domain tests cover values and unions, application tests cover policy through
+typed ports, SQLite contracts cover persistence, and five stream journeys cover wiring.
+
 New HTTP commands: `POST /sessions/stop`, `/streams/check` and `/streams/claim`.

@@ -42,11 +42,21 @@ Mandem alone is partial until RoughPatch calls it. Follow TwelveApart/skills#24.
 
 ## Progress
 
-Read #55 and the runtime; created native issue d7fd196. Twelve Bun stream journeys
-pass, including concurrent checks through two SQLite connections and one wake,
-restart/acknowledgement, invalid input, and old markers after resumed work. The
-Herdr adapter resolves owned labels and scopes activity to its workspace. All
-coordination tests pass. Static checks found one test-only const preference; fixed.
-Missing owner wake bindings now increment health wake diagnostics while retaining
-the durable message, with no repeat prompt on polling. A working replacement in a bound pane now fails the old session staffing claim;
-a failing-first regression covers that identity mismatch. No blocker. Next: local quality run and independent review.
+Initial PR #56 at `db5a836` passed95 Vitest and17 Bun tests plus local repository
+quality. An additional staffing-identity regression passed at `b27b0e3`, which also
+passed the local reporter. Independent review found two further episode/retry bugs
+and requested stronger boundary types and test placement.
+
+The repair marks every recorded stop as an episode boundary: working observed
+afterwards invalidates it, even without a preceding idle observation. Identical
+retries compare caller content and assignment first and return the original record.
+Both reported sequences failed before repair and now pass.
+
+Stops, waiting owners, roles, activity and findings use explicit unions. Application
+ports accept typed values; HTTP, registry, Herdr, SQLite and client adapters parse
+unknown values. Stop/delivery storage uses version1, requires stored generation and
+rejects unsupported/corrupt records. Parsing replaces casts and non-null assertions.
+Tests separate pure domain/application policy, SQLite contracts and five stream
+end-to-end journeys. Verified125 affected Vitest tests and18 Bun tests, all static
+checks and build locally. Next: publish the repair, run exact-head repository quality
+and request fix-delta review.
