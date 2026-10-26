@@ -14,3 +14,4 @@ index for local documents and child directories.
 - [Review dispatch](./review-dispatch-plan-58.md) tracks exact-head reviews and consumer effects for issue #58.
 
 - [Slot refill](./slot-refill-plan-58.md) tracks deterministic queue selection, typed-stop release and consumer effects for issue #58.
+- [Repair designation](./repair-designation-plan-58.md) tracks exact failing-main/P0/PR authority and consumer effects for issue #58.

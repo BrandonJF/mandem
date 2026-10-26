@@ -7,6 +7,9 @@ import { createSubscriptions } from "../application/ports/message-store";
 import { createPaneQueue } from "../application/ports/pane-queue";
 import { createCoordServiceRequestHandler } from "../infrastructure/http-handler";
 import { parseStreamSession } from "../domain/stream-values";
+import { createRepairDispatcher } from "../application/repair-dispatch";
+import type { RepairConsumer } from "../application/ports/repair-store";
+import { loadRepairConfiguration } from "../infrastructure/repair-command-consumer";
 import { createSlotDispatcher } from "../application/slot-dispatch";
 import type { SlotConsumer } from "../application/ports/slot-store";
 import type { SlotTemplate } from "../domain/slots";
@@ -28,6 +31,8 @@ export interface CoordinationServerOptions {
   databasePath?: string;
   port?: number;
   now?: () => Date;
+  repairConfigPath?: string;
+  repairs?: { repository: string; consumer: RepairConsumer };
   slotConfigPath?: string;
   slots?: { repository: string; template: SlotTemplate; consumer: SlotConsumer };
   reviewConfigPath?: string;
@@ -38,6 +43,8 @@ export interface CoordinationServerOptions {
 export function startCoordinationServer(options: CoordinationServerOptions = {}) {
   if (options.reviewConfigPath && options.reviews) throw new Error("Choose a review config file or injected review adapters");
   if (options.slotConfigPath && options.slots) throw new Error("Choose a slot config file or injected slot consumer");
+  if (options.repairConfigPath && options.repairs) throw new Error("Choose a repair config file or injected repair consumer");
+  const repairOptions = options.repairConfigPath ? loadRepairConfiguration(options.repairConfigPath) : options.repairs;
   const slotOptions = options.slotConfigPath ? loadSlotConfiguration(options.slotConfigPath) : options.slots;
   const reviewOptions = options.reviewConfigPath ? loadReviewConfiguration(options.reviewConfigPath) : options.reviews;
   const databasePath = options.databasePath ?? defaultDatabasePath();
@@ -75,6 +82,7 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     wakes.add(wake);
     void wake.finally(() => wakes.delete(wake));
   });
+  const repairDispatcher = repairOptions ? createRepairDispatcher({ ...repairOptions, store: stores.repairStore, now: options.now }) : undefined;
   const slotDispatcher = slotOptions ? createSlotDispatcher({ ...slotOptions, store: stores.slotStore, now: options.now }) : undefined;
   let slotFailures = 0; let lastSlotError: string | undefined;
   const slotChecks = new Set<Promise<void>>();
@@ -86,13 +94,13 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     slotChecks.add(check); void check.finally(() => slotChecks.delete(check));
   } : undefined });
   const reviewDispatcher = reviewOptions ? createReviewDispatcher({ store: stores.reviewStore, ...reviewOptions }) : undefined;
-  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor, reviewDispatcher, slotDispatcher,
+  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor, reviewDispatcher, slotDispatcher, repairDispatcher,
     paneReader: paneQueue ? () => paneQueue.snapshot() : undefined });
   let server: ReturnType<typeof Bun.serve>;
   try {
     server = Bun.serve({ hostname: "127.0.0.1", port, maxRequestBodySize: 64 * 1024,
       fetch: async (request, activeServer) => {
-        if (new URL(request.url).pathname === "/slots/check") activeServer.timeout(request, 0);
+        if (["/slots/check", "/repairs/check"].includes(new URL(request.url).pathname)) activeServer.timeout(request, 0);
         if (new URL(request.url).pathname === "/health" && request.method === "GET") {
           try {
             await stores.sessionStore.list();
@@ -111,6 +119,7 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
       await reviewDispatcher?.drain();
       await Promise.all(slotChecks);
       await slotDispatcher?.drain();
+      await repairDispatcher?.drain();
       stores.close();
     },
   };

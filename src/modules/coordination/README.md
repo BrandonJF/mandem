@@ -318,3 +318,60 @@ uncertain effect. Never delete reservations or blindly replay a launch/report.
 Disabling `--slot-config` stops new callbacks/check effects but preserves all
 state, needs and existing sessions. Preserve the existing SQLite backup and disk
 monitoring procedure. See [the slot plan](../../../docs/slot-refill-plan-58.md).
+
+## Deterministic P0 repair designation
+
+Repair designation stays off unless the operator supplies
+`serve --repair-config /persistent/repair-consumer.json` to either binary. The
+trusted file contains version 1, one `repository` and a fixed `command` argument
+array. The shared bounded consumer transport sends `{version:1,action}` on stdin
+and accepts one JSON response, with a 90-second deadline and 64 KiB output limit.
+No event request supplies executables, policy or live facts.
+
+The `observe` action names the lowercase repository. Its response contains:
+
+- `repository`, UTC `observedAt` and `main`: red/green with an exact 40-character
+  lowercase-hex `head`, or `{state:"unknown"}`.
+- `issue`: null, or `{ref,state,priority}`; refs contain lowercase repository and
+  positive number, state uses open/closed and priority uses 0–3.
+- `pulls`: rows with `ref`, exact `head`, UTC `createdAt`, booleans `open`,
+  `draft`, `ready`, `base` branch name and `linkedIssues` ref array.
+
+The consumer derives readiness from its canonical exact-head source-review and
+lightweight-check policy. A PR row's ready flag belongs only to that row's head.
+Mandem never grants readiness or calls a merge command. The source supplies the
+explicit P0 issue for the current failure; Mandem never chooses an incident.
+
+For red main and an open priority-0 issue, Mandem chooses the oldest ready, open,
+non-draft same-repository PR targeting main and linked to that issue. Equal
+creation times sort by PR number. The target contains `repository`, exact failing
+`main`, `issue` ref, PR `number` and exact PR `head`. Green/unknown main, no
+open P0, no linked ready candidate, lost readiness or changed facts removes old
+authority through a null target. Malformed/duplicate/wrong-repository PR rows
+reject the snapshot. Future snapshots and snapshots older than five minutes hold
+writes; older-than-durable observations cannot replace newer facts.
+
+An `apply` action contains `effect`: a durable `id`, immutable `snapshot` and
+nullable `target`. Immediately before its atomic write and receipt, the consumer
+must recheck current main/P0/PR/head/readiness, reject a stale source, preserve
+unrelated policy and remove obsolete repair authority. It returns `{ok:true}`.
+The consumer must not weaken the existing exact failing-main and PR/head merge
+guard. Even a stale stored designation never authorizes another head's merge.
+
+SQLite reserves effects before execution and serializes them per repository.
+Repeated facts produce no duplicate write. Changed observations wait behind an
+in-flight effect, then the dispatcher applies only the latest correction.
+Uncertain writes remain visible and hold later effects across restart; neither
+the dispatcher nor an operator should blindly replay them. Inspect durable
+state, actual consumer policy and receipts before any explicit recovery.
+
+The existing consumer event source can call `POST /repairs/check` or
+`mandem repair check` for main, issue or PR events; no timer runs here.
+`GET /repairs` and `mandem repairs` inspect durable effects even when disabled.
+Explicit checks allow five minutes for bounded observation and writes, and the
+server drains pending work before closing SQLite. Removing --repair-config stops
+new effects but preserves state and policy. Tests use fake consumers and disable
+Herdr; no fixture proves live deployment. After integration, RoughPatch must add
+its source/policy writer in a separate PR. The communicator owns activation and
+records exact-main/PR/head live smoke before closing #58 or RoughPatch #676.
+See [the repair plan](../../../docs/repair-designation-plan-58.md).
