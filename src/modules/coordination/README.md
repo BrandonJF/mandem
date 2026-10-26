@@ -224,3 +224,99 @@ cover concurrent reservations and session registration; application and separate
 CLI/command journeys cover waits, findings and uncertain outcomes. All fixtures run
 locally with no provider calls. Slot filling, repair designation and board projection
 remain later slices of #58.
+
+## Slot refill
+
+Issue #58's second handler uses recorded issue facts and registered owner
+assignments, not a project-board read or model judgment. Effects remain disabled
+unless the operator starts either binary with
+`serve --slot-config /persistent/slot-consumer.json`. The trusted version-1 file
+contains `repository`, `template` (`name` and `revision`) and a fixed `command`
+argument array. The command uses the shared bounded JSON transport: one
+`{version:1, action}` document on stdin, a 90-second deadline and at most 64 KiB
+of stdout. Review dispatch reuses that same transport without changing its
+protocol. Requests cannot choose executables, templates or models.
+
+An `observe` action carries the configured lowercase repository and returns a
+fresh snapshot with `repository`, UTC `observedAt`, `main`, `issues` and `owners`.
+Mandem rejects future snapshots and snapshots older than five minutes. `main`
+uses `{state:"green",head}`, `{state:"red",head,repairIssue}` or
+`{state:"unknown"}`; exact main heads use 40 lowercase hex characters.
+An issue ref contains lowercase `repository` and a positive `number`.
+
+Each issue contains `ref`, `revision`, `state` (open/closed), `kind`
+(product/platform), numeric `priority` (0–3), nonnegative finite `estimate`,
+nonempty `outcome`, `scope` and `acceptance`, boolean `blocked`, `userDecision`
+and `openPull`, and an `openDependencies` ref array. The consumer derives those
+facts deterministically from issues, labels, PRs and dependencies. A complete
+filed issue needs no separate approval marker. Stable `revision` identifies the
+actual scheduling facts, including dependency closure; never use observation
+time or a random ID. Mandem skips malformed issue rows with diagnostics while
+retaining valid work. The generated task ID must fit the existing 512-character
+stream-assignment limit; oversized issue revisions skip that row before launch.
+
+Each owner contains `session`, `assignment`, `ref`, `kind`, `priority` and live
+`state` (working/idle/blocked/done/unknown).
+The consumer supplies all scoped owners; Mandem retains prior owners and its own
+launches rather than treating omission as a free slot. Mandem checks every
+session/assignment against the existing registry, then derives release from the
+current generation's typed done/blocked stop and stop boundary. A consumer's
+`released` property grants no release. A later working observation invalidates
+that stop generation. Decision-needed records keep their stream. A blocked
+record still keeps its existing need/acknowledgement route; refill never consumes
+another owner's messages. Adopt existing engineers through normal session
+registration and provide their actual assignment IDs in the consumer snapshot.
+
+Mandem ranks startable issues by priority then repository/issue number, prefers
+product work until two product streams run, and reserves at most four total and
+two platform streams. Red main requires an active dedicated P0 owner for its exact
+repair issue, or selects that startable P0 repair first. A reserved launch does
+not count as live P0 staffing. A confirmed fresh launch counts until the next
+observation; later observations require a current working owner. Omitted owners
+retain capacity but lose live staffing evidence. Unknown main and unknown
+owner identity hold starts. Over-capacity observations report a diagnostic; the
+handler never kills or checkpoints a peer. Repair PR designation remains the
+next separate #58 slice.
+
+A `launch` action carries the immutable `task` with ID, issue facts, repository,
+observation time and fixed template. The consumer must recheck current
+startability, capacity/ownership, authorization and launch prerequisites before
+using its canonical engineer launcher. It returns a fresh unique `{session}` and
+optional `paneId`. Mandem commits confirmation and engineer session metadata
+atomically, including the task ID as the stream assignment. Later refill
+transitions do not re-register or revalidate historical launches against obsolete
+assignments; current owner facts track normal session re-registration. The consumer must
+not reuse another task's session. Repeated events and concurrent connections
+share SQLite reservations; an uncertain launch never retries. The same issue
+revision never launches twice. Changed dependency/issue facts can permit a new
+revision, but active issue ownership still prevents duplicate work.
+
+A `report` action carries a stable notice with `reason`, malformed-row
+`diagnostics` and open user-decision refs. The consumer files or updates its
+hygiene record and sends any genuine communicator escalation, then confirms
+`{ok:true}`. Mandem retains once-only report reservations across restart,
+including uncertain publication. It never runs an LLM to judge completeness,
+choose a stream, rank work or interpret release.
+
+After a typed done/blocked stop commits, the server schedules one fresh refill
+check and returns the stop acknowledgement without waiting for external
+commands. The server tracks that work through shutdown. Source failures retain
+the stop and expose `slotFailures`/`lastSlotError` through `/health`. An issue or
+dependency event may also call `POST /slots/check` or `mandem slot check`.
+`GET /slots` / `mandem slots` inspect durable reservations and diagnostics even
+with effects disabled. Mandem adds no polling timer. Explicit checks allow up to
+11 minutes for the bounded observation/launch/report sequence; their HTTP request
+disables idle timeout while those bounded commands finish.
+
+The communicator owns deployment, consumer configuration, activation and the live
+smoke check. After this Mandem PR merges, RoughPatch must supply its observation,
+canonical launch and checked-report adapters in a separate PR. Tests use fake
+consumers/commands and disable Herdr. No hosted CI, paid calls or live service
+change belongs to this implementation. Keep #58 and RoughPatch #676 open until
+consumer adoption and actual live verification.
+
+Inspect `mandem slots`, registered sessions and consumer receipts after an
+uncertain effect. Never delete reservations or blindly replay a launch/report.
+Disabling `--slot-config` stops new callbacks/check effects but preserves all
+state, needs and existing sessions. Preserve the existing SQLite backup and disk
+monitoring procedure. See [the slot plan](../../../docs/slot-refill-plan-58.md).

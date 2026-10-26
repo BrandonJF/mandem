@@ -12,3 +12,5 @@ index for local documents and child directories.
 - [Coordination delivery](./coordination-plan-51.md) tracks the lean delivery for issue #51.
 - [Stream delivery](./stream-stalls-plan-55.md) tracks stall detection and owner routing for issue #55.
 - [Review dispatch](./review-dispatch-plan-58.md) tracks exact-head reviews and consumer effects for issue #58.
+
+- [Slot refill](./slot-refill-plan-58.md) tracks deterministic queue selection, typed-stop release and consumer effects for issue #58.

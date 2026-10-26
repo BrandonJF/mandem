@@ -1,4 +1,5 @@
 /** @fileoverview Fetch client preserving Strategy Builder Pro coordination interfaces. */
+import { parseSlotState } from "../domain/slot-values";
 import { parseReviewState } from "../domain/review-values";
 import { parseStoredStop, parseStreamReport, record } from "../domain/stream-values";
 import type { StopRecord, StreamReport } from "../domain/streams";
@@ -479,4 +480,16 @@ export async function readReviews(ref?: import("../domain/reviews").ReviewRef, o
  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/reviews" + query, { signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000) });
  const rows: unknown = await response.json(); if (!Array.isArray(rows)) throw new Error("Invalid review state list");
  return rows.map(parseReviewState);
+}
+
+/** Request one fresh configured slot observation; the consumer retains launch authorization. */
+export async function checkSlots(opts?: ClaimNextIdOptions): Promise<import("../domain/slots").SlotState> {
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/slots/check", { method: "POST", headers: { "content-type": "application/json" }, body: "{}", signal: AbortSignal.timeout(opts?.timeoutMs ?? 660_000) });
+  return parseSlotState(await response.json());
+}
+/** Read durable reservations and diagnostics without enabling consumer effects. */
+export async function readSlots(opts?: ClaimNextIdOptions): Promise<import("../domain/slots").SlotState[]> {
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/slots", { signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000) });
+  const rows: unknown = await response.json(); if (!Array.isArray(rows)) throw new Error("Invalid slot state list");
+  return rows.map(parseSlotState);
 }

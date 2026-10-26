@@ -14,3 +14,9 @@ export type { ReviewRef, ReviewState, ReviewObservation, ReviewResult, ReviewPol
 export type { ReviewEffects } from "./application/ports/review-effects";
 export type { ReviewStore } from "./application/ports/review-store";
 export { reviewCommand, readReviews } from "./api/composition";
+
+export { createSlotDispatcher } from "./application/slot-dispatch";
+export type { SlotConsumer, SlotStore } from "./application/ports/slot-store";
+export type { SlotIssue, SlotOwner, SlotSnapshot, SlotTemplate, SlotTask, SlotSession, SlotState, SlotNotice } from "./domain/slots";
+export { parseSlotSnapshot, parseSlotState } from "./domain/slot-values";
+export { checkSlots, readSlots } from "./api/composition";

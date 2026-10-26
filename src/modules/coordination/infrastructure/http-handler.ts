@@ -1,4 +1,7 @@
 /** @fileoverview Fetch handler for the ported coordination routes. */
+import type { SlotStore } from '../application/ports/slot-store';
+import type { SlotDispatcher } from '../application/slot-dispatch';
+import { handleSlotRoutes } from './slot-routes';
 import type { ReviewStore } from '../application/ports/review-store';
 import type { ReviewDispatcher } from '../application/review-dispatch';
 import { handleReviewRoutes } from './review-routes';
@@ -13,6 +16,7 @@ import { handleSessionRoutes } from './session-routes';
 import { handleMergeLockRoutes } from './merge-lock-routes';
 export interface CoordServiceHandlerOptions {
  sessionStore?: SessionStore; messageStore?: MessageStore; subscriptions?: Subscriptions;
+ slotStore?: SlotStore; slotDispatcher?: SlotDispatcher;
  reviewStore?: ReviewStore; reviewDispatcher?: ReviewDispatcher;
  streamMonitor?: StreamMonitor; mergeLockStore?: MergeLockStore; paneQueue?: PaneQueue;
  paneReader?: () => Record<string,string>;
@@ -165,6 +169,8 @@ export function createCoordServiceRequestHandler(opts: CoordServiceHandlerOption
     const reviewResponse = await handleReviewRoutes(req, url, opts.reviewStore, opts.reviewDispatcher);
     if (reviewResponse) return reviewResponse;
 
+    const slotResponse = await handleSlotRoutes(req, url, opts.slotStore, opts.slotDispatcher);
+    if (slotResponse) return slotResponse;
     const streamResponse = await handleStreamRoutes(req, url, opts.streamMonitor);
     if (streamResponse) return streamResponse;
 
