@@ -20,3 +20,9 @@ export type { SlotConsumer, SlotStore } from "./application/ports/slot-store";
 export type { SlotIssue, SlotOwner, SlotSnapshot, SlotTemplate, SlotTask, SlotSession, SlotState, SlotNotice } from "./domain/slots";
 export { parseSlotSnapshot, parseSlotState } from "./domain/slot-values";
 export { checkSlots, readSlots } from "./api/composition";
+
+export { createRepairDispatcher } from "./application/repair-dispatch";
+export type { RepairConsumer, RepairStore } from "./application/ports/repair-store";
+export type { RepairSnapshot, RepairTarget, RepairEffect, RepairState } from "./domain/repairs";
+export { parseRepairSnapshot, parseRepairState } from "./domain/repair-values";
+export { checkRepairs, readRepairs } from "./api/composition";

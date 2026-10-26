@@ -1,4 +1,5 @@
 /** @fileoverview Fetch client preserving Strategy Builder Pro coordination interfaces. */
+import { parseRepairState } from "../domain/repair-values";
 import { parseSlotState } from "../domain/slot-values";
 import { parseReviewState } from "../domain/review-values";
 import { parseStoredStop, parseStreamReport, record } from "../domain/stream-values";
@@ -492,4 +493,15 @@ export async function readSlots(opts?: ClaimNextIdOptions): Promise<import("../d
   const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/slots", { signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000) });
   const rows: unknown = await response.json(); if (!Array.isArray(rows)) throw new Error("Invalid slot state list");
   return rows.map(parseSlotState);
+}
+
+/** Request current repair facts; the consumer retains designation and merge guards. */
+export async function checkRepairs(opts?: ClaimNextIdOptions): Promise<import("../domain/repairs").RepairState> {
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/repairs/check", { method: "POST", signal: AbortSignal.timeout(opts?.timeoutMs ?? 300_000) });
+  return parseRepairState(await response.json());
+}
+/** Inspect durable repair effects without enabling policy writes. */
+export async function readRepairs(opts?: ClaimNextIdOptions): Promise<import("../domain/repairs").RepairState[]> {
+  const response = await checkedFetch(opts)((opts?.baseUrl ?? resolveDefaultCoordServiceUrl()) + "/repairs", { signal: AbortSignal.timeout(opts?.timeoutMs ?? 3000) });
+  const rows: unknown = await response.json(); if (!Array.isArray(rows)) throw new Error("Invalid repair state list"); return rows.map(parseRepairState);
 }

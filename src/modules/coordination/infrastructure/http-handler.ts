@@ -1,4 +1,7 @@
 /** @fileoverview Fetch handler for the ported coordination routes. */
+import type { RepairStore } from "../application/ports/repair-store";
+import type { RepairDispatcher } from "../application/repair-dispatch";
+import { handleRepairRoutes } from "./repair-routes";
 import type { SlotStore } from '../application/ports/slot-store';
 import type { SlotDispatcher } from '../application/slot-dispatch';
 import { handleSlotRoutes } from './slot-routes';
@@ -16,6 +19,7 @@ import { handleSessionRoutes } from './session-routes';
 import { handleMergeLockRoutes } from './merge-lock-routes';
 export interface CoordServiceHandlerOptions {
  sessionStore?: SessionStore; messageStore?: MessageStore; subscriptions?: Subscriptions;
+ repairStore?: RepairStore; repairDispatcher?: RepairDispatcher;
  slotStore?: SlotStore; slotDispatcher?: SlotDispatcher;
  reviewStore?: ReviewStore; reviewDispatcher?: ReviewDispatcher;
  streamMonitor?: StreamMonitor; mergeLockStore?: MergeLockStore; paneQueue?: PaneQueue;
@@ -169,6 +173,8 @@ export function createCoordServiceRequestHandler(opts: CoordServiceHandlerOption
     const reviewResponse = await handleReviewRoutes(req, url, opts.reviewStore, opts.reviewDispatcher);
     if (reviewResponse) return reviewResponse;
 
+    const repairResponse = await handleRepairRoutes(req, url, opts.repairStore, opts.repairDispatcher);
+    if (repairResponse) return repairResponse;
     const slotResponse = await handleSlotRoutes(req, url, opts.slotStore, opts.slotDispatcher);
     if (slotResponse) return slotResponse;
     const streamResponse = await handleStreamRoutes(req, url, opts.streamMonitor);

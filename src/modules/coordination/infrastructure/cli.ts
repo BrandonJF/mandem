@@ -1,5 +1,5 @@
 /** @fileoverview Coordination CLI parsing and JSON output for local consumers. */
-import { checkSlots, readSlots } from "./coord-client";
+import { checkRepairs, readRepairs, checkSlots, readSlots } from "./coord-client";
 import { parseReviewCommand, parseReviewRef } from "../domain/review-values";
 import { reviewCommand, readReviews, streamCommand, ackMessage, listSessions, postMessage, readMessages, registerSession, resolveDefaultCoordServiceUrl } from "./coord-client";
 
@@ -16,6 +16,8 @@ mandem session stop --id KEY --session SESSION --kind done|blocked|decision-need
 mandem streams [--idle-minutes N]
 mandem stream claim --stream STREAM --session SESSION
 mandem stream release --stream STREAM
+mandem repair check
+mandem repairs
 mandem slot check
 mandem slots
 Environment: MANDEM_COORD_URL, MANDEM_COORD_DB, COORD_SERVICE_PORT`;
@@ -44,6 +46,8 @@ function data(flags: Record<string,string>): Record<string,unknown> | undefined 
 }
 export async function runCoordinationCommand(args: string[]): Promise<unknown> {
   const [group, action, ...rest] = args;
+  if (group === "repair" && action === "check" && rest.length === 0) return checkRepairs();
+  if (group === "repairs" && args.length === 1) return readRepairs();
   if (group === "slot" && action === "check" && rest.length === 0) return checkSlots();
   if (group === "slots" && args.length === 1) return readSlots();
   if (group === "review" && action === "event") {
