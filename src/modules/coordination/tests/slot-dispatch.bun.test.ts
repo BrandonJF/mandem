@@ -134,3 +134,16 @@ test("an older snapshot cannot replace current owner staffing facts", async () =
     expect(result.state.owners.every(owner => owner.state === "working")).toBe(true);
   } finally { stores.close(); }
 });
+
+test("new launch confirmation still rejects another task's registered session atomically", async () => {
+  const stores = openCoordinationStores(database()); const observed = snapshot(); const launches: SlotTask[] = [];
+  await register(stores, observed); await stop(stores);
+  const effects = consumer(observed, launches); effects.launch = async task => { launches.push(task); return { session: "owner-100" }; };
+  try {
+    const state = await createSlotDispatcher({ repository, template, consumer: effects, store: stores.slotStore, now }).check();
+    expect(state.launches[0]?.phase.kind).toBe("uncertain");
+    expect(state.launches.filter(run => run.phase.kind === "running")).toHaveLength(0);
+    expect((await stores.sessionStore.get("owner-100"))?.data?.streamAssignment).toBe("assignment-100");
+    expect(launches).toHaveLength(1);
+  } finally { stores.close(); }
+});

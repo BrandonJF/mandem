@@ -24,7 +24,11 @@ The consumer never needs project-board permission or an LLM judgment.
   SQLite reservations, configured effects and the automatic done/blocked callback.
 - [x] (2026-10-25) The engineer ran affected checks, published PR #60 and
   recorded repository-quality success for implementation head 546026f.
-- [ ] Finish the documentation-head reporter and independent review handoff.
+- [x] (2026-10-25) The documentation head df8f90d passed the local reporter.
+- [x] (2026-10-26) The engineer reproduced reviewer finding 5654488962 through
+  normal HTTP session re-registration, restricted atomic registration to the new
+  launch confirmation and passed 15 affected runtime/store tests.
+- [ ] Publish the correction, run its exact-head reporter and request fresh review.
 - [ ] The communicator integrates the PR; the RoughPatch engineer wires its
   consumer in a separate PR and the communicator records live activation/smoke.
 
@@ -71,7 +75,9 @@ One task ID binds repository, issue identity and stable revision. Repeated event
 cannot launch that same revision twice, even after release. Changed dependency
 or issue facts may produce a new revision, but an active owner still blocks a
 duplicate issue. SQLite reserves before effects under one immediate transaction.
-Confirmed launch and engineer registry metadata commit together. Uncertain
+A newly confirmed launch and engineer registry metadata commit together. Later
+transitions preserve that historical launch without requiring its session to
+retain an obsolete assignment; fresh owner facts track normal re-registration. Uncertain
 launches remain visible and never replay. Stable notice identities deduplicate
 malformed-row and empty/product-queue reports, including after restart.
 
@@ -135,6 +141,12 @@ replacing newer owner facts. Failing regressions now cover both boundaries.
 The first static run caught misplaced file headers; the engineer restored the
 required first-line fileoverview and the next check:core passed.
 
+The independent reviewer found historical launch registration checks rejecting
+normal session re-registration. The engineer reproduced the failure, restricted
+registration checks to the newly confirmed launch, and added actual HTTP refill
+and restart coverage plus a collision-rollback regression. The domain already
+excludes superseded assignments; the persistence adapter now preserves that rule.
+
 ## Decision Log
 
 The engineer will extend the existing coordination module and command-adapter
@@ -146,13 +158,14 @@ review-dispatch-676.
 ## Outcomes & Retrospective
 
 The engineer implemented the configured default-off handler and verified 11 pure
-slot-policy tests, 9 durable-store/dispatcher tests and 4 runtime/CLI tests.
+slot-policy tests. After the review correction, 10 durable-store/dispatcher tests
+and 5 runtime/CLI tests pass.
 The broader coordination runs passed 148 Vitest tests and 40 Bun tests before the
 last staffing regressions; the engineer reran the affected files after those
 changes. Repository check:core and both compiled binary builds passed. The exact-head local reporter passed installation, full checks, builds, packaging
 and issue validation for implementation head 546026f and published success on
-PR #60. This documentation checkpoint requires the reporter for its new head;
-independent PR review remains the communicator’s next step. No live
+PR #60; documentation head df8f90d also passed. The review correction requires
+its own exact-head reporter and the communicator’s fresh independent review. No live
 activation or provider call occurred.
 
 Revision note: The engineer created this plan for the coordinator's explicit

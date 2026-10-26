@@ -283,7 +283,9 @@ observation time and fixed template. The consumer must recheck current
 startability, capacity/ownership, authorization and launch prerequisites before
 using its canonical engineer launcher. It returns a fresh unique `{session}` and
 optional `paneId`. Mandem commits confirmation and engineer session metadata
-atomically, including the task ID as the stream assignment. The consumer must
+atomically, including the task ID as the stream assignment. Later refill
+transitions do not re-register or revalidate historical launches against obsolete
+assignments; current owner facts track normal session re-registration. The consumer must
 not reuse another task's session. Repeated events and concurrent connections
 share SQLite reservations; an uncertain launch never retries. The same issue
 revision never launches twice. Changed dependency/issue facts can permit a new
