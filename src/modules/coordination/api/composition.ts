@@ -7,6 +7,10 @@ import { createSubscriptions } from "../application/ports/message-store";
 import { createPaneQueue } from "../application/ports/pane-queue";
 import { createCoordServiceRequestHandler } from "../infrastructure/http-handler";
 import { parseStreamSession } from "../domain/stream-values";
+import { createSlotDispatcher } from "../application/slot-dispatch";
+import type { SlotConsumer } from "../application/ports/slot-store";
+import type { SlotTemplate } from "../domain/slots";
+import { loadSlotConfiguration } from "../infrastructure/slot-command-consumer";
 import { createReviewDispatcher } from "../application/review-dispatch";
 import type { ReviewEffects } from "../application/ports/review-effects";
 import type { ReviewPolicy } from "../domain/reviews";
@@ -24,6 +28,8 @@ export interface CoordinationServerOptions {
   databasePath?: string;
   port?: number;
   now?: () => Date;
+  slotConfigPath?: string;
+  slots?: { repository: string; template: SlotTemplate; consumer: SlotConsumer };
   reviewConfigPath?: string;
   reviews?: { policy: ReviewPolicy; effects: ReviewEffects };
   herdr?: false | { parentPaneId: string; workspaceId: string; run?: (args: string[]) => unknown; runAsync?: (args: string[]) => Promise<unknown> };
@@ -31,6 +37,8 @@ export interface CoordinationServerOptions {
 
 export function startCoordinationServer(options: CoordinationServerOptions = {}) {
   if (options.reviewConfigPath && options.reviews) throw new Error("Choose a review config file or injected review adapters");
+  if (options.slotConfigPath && options.slots) throw new Error("Choose a slot config file or injected slot consumer");
+  const slotOptions = options.slotConfigPath ? loadSlotConfiguration(options.slotConfigPath) : options.slots;
   const reviewOptions = options.reviewConfigPath ? loadReviewConfiguration(options.reviewConfigPath) : options.reviews;
   const databasePath = options.databasePath ?? defaultDatabasePath();
   const port = options.port ?? Number(process.env.COORD_SERVICE_PORT ?? 8991);
@@ -67,21 +75,28 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
     wakes.add(wake);
     void wake.finally(() => wakes.delete(wake));
   });
+  const slotDispatcher = slotOptions ? createSlotDispatcher({ ...slotOptions, store: stores.slotStore, now: options.now }) : undefined;
+  let slotFailures = 0; let lastSlotError: string | undefined;
+  const slotChecks = new Set<Promise<void>>();
   const streamMonitor = createStreamMonitor({ sessions: {
     async list() { return (await stores.sessionStore.list()).map(parseStreamSession); },
     async get(session) { const value = await stores.sessionStore.get(session); return value ? parseStreamSession(value) : undefined; },
-  }, store: stores.streamStore, subscriptions, activity: paneIo ? { read: () => paneIo.readActivity() } : undefined, now: options.now });
+  }, store: stores.streamStore, subscriptions, activity: paneIo ? { read: () => paneIo.readActivity() } : undefined, now: options.now, onStop: slotDispatcher ? async () => {
+    const check = (async () => { try { await slotDispatcher.check(); } catch (error) { slotFailures++; lastSlotError = error instanceof Error ? error.message : String(error); console.error(`mandem: stop persisted but slot refill failed: ${lastSlotError}`); } })();
+    slotChecks.add(check); void check.finally(() => slotChecks.delete(check));
+  } : undefined });
   const reviewDispatcher = reviewOptions ? createReviewDispatcher({ store: stores.reviewStore, ...reviewOptions }) : undefined;
-  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor, reviewDispatcher,
+  const handler = createCoordServiceRequestHandler({ ...stores, subscriptions, paneQueue, streamMonitor, reviewDispatcher, slotDispatcher,
     paneReader: paneQueue ? () => paneQueue.snapshot() : undefined });
   let server: ReturnType<typeof Bun.serve>;
   try {
     server = Bun.serve({ hostname: "127.0.0.1", port, maxRequestBodySize: 64 * 1024,
-      fetch: async request => {
+      fetch: async (request, activeServer) => {
+        if (new URL(request.url).pathname === "/slots/check") activeServer.timeout(request, 0);
         if (new URL(request.url).pathname === "/health" && request.method === "GET") {
           try {
             await stores.sessionStore.list();
-            return Response.json({ ok: true, herdr: Boolean(paneIo), wakeFailures, ...(lastWakeError ? { lastWakeError } : {}) });
+            return Response.json({ ok: true, herdr: Boolean(paneIo), wakeFailures, ...(slotDispatcher ? { slotFailures, ...(lastSlotError ? { lastSlotError } : {}) } : {}), ...(lastWakeError ? { lastWakeError } : {}) });
           } catch { return Response.json({ ok: false, error: "SQLite unavailable" }, { status: 503 }); }
         }
         return handler(request);
@@ -94,6 +109,8 @@ export function startCoordinationServer(options: CoordinationServerOptions = {})
       await server.stop(true);
       await Promise.all(wakes);
       await reviewDispatcher?.drain();
+      await Promise.all(slotChecks);
+      await slotDispatcher?.drain();
       stores.close();
     },
   };

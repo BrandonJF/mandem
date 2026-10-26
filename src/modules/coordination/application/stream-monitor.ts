@@ -1,15 +1,17 @@
 /** @fileoverview Deterministic per-stream stall checks and accountable owner routing. */
-import type { DeliveryStatus, LiveAgent, SessionState, StopInput, StreamBinding, StreamReport, StreamSession, WaitingOn } from "../domain/streams";
+import type { DeliveryStatus, LiveAgent, SessionState, StopInput, StreamBinding, StreamReport, StreamSession, StopRecord, WaitingOn } from "../domain/streams";
 import { ownerReference } from "../domain/stream-values";
 import type { Subscriptions } from "./ports/message-store";
 import type { StreamActivity, StreamDirectory, StreamStore } from "./ports/stream-store";
 
-export function createStreamMonitor(options: { sessions: StreamDirectory; store: StreamStore; subscriptions: Subscriptions; activity?: StreamActivity; now?: () => Date }) {
+export function createStreamMonitor(options: { sessions: StreamDirectory; store: StreamStore; subscriptions: Subscriptions; activity?: StreamActivity; now?: () => Date; onStop?: (stop: StopRecord) => Promise<void> }) {
   const now = options.now ?? (() => new Date());
   async function recordStop(input: StopInput) {
     const session = await options.sessions.get(input.session);
     if (!session?.binding) throw new Error("Register the session with a stream before recording a stop");
-    return options.store.saveStop({ ...session.binding, ...input, ts: now().toISOString() });
+    const stop = await options.store.saveStop({ ...session.binding, ...input, ts: now().toISOString() });
+    if (stop.kind === "done" || stop.kind === "blocked") await options.onStop?.(stop);
+    return stop;
   }
   async function check(idleMinutes = 3): Promise<StreamReport> {
     if (!Number.isFinite(idleMinutes) || idleMinutes < 0 || idleMinutes > 1440) throw new Error("idleMinutes must be between 0 and 1440");
