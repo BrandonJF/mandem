@@ -59,6 +59,7 @@ describe("U2A1 pre-review contract", () => {
   it("provides executable canonical and scalar fixture oracles", () => {
     expect(canonicalFixtureOraclesV1["byte-limit-accepted"].bytes).toHaveLength(canonicalLimitsV1.max_bytes);
     expect(canonicalFixtureOraclesV1["byte-limit-rejected"].bytes).toHaveLength(canonicalLimitsV1.max_bytes + 1);
+    expect(canonicalFixtureOraclesV1["byte-limit-accepted"].value.every((value) => new TextEncoder().encode(value).length <= canonicalLimitsV1.max_string_bytes)).toBe(true);
     expect(canonicalFixtureOraclesV1["depth-limit-accepted"].bytes[0]).toBe("[".charCodeAt(0));
     expect(canonicalFixtureOraclesV1["depth-limit-rejected"].path.split("/")).toHaveLength(canonicalLimitsV1.max_depth + 1);
     expect(canonicalFixtureOraclesV1["collection-limit-accepted"].bytes).toBeInstanceOf(Uint8Array);

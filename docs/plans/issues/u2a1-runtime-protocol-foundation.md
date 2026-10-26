@@ -65,6 +65,9 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
   execution record.
 - [ ] Implement the milestones, keep the living sections current, and merge the verified pull
   request to `main`.
+- [x] (2026-09-02) Proof-first implementation stopped before production code when the raw-document
+  fixtures contradicted the decoded-string limit. Replaced them with two-string documents whose
+  components remain individually valid and returned the changed contract to review.
 
 ## Surprises & Discoveries
 
@@ -116,6 +119,11 @@ review evidence, plan admission, active work, lifecycle events, replay, and pers
   Rationale: the remaining contradiction crossed the generic JSON/envelope test boundary; another
   issue boundary would duplicate the canonical codec rather than remove the ambiguity.
   Date/Author: 2026-08-20 / Codex
+- Decision: Prove the raw-document boundary with a two-string array rather than one oversized
+  string.
+  Rationale: each string remains below 1,000,000 bytes while the complete document reaches exactly
+  1,048,576 bytes and its adjacent rejected neighbor.
+  Date/Author: 2026-09-02 / Codex
 
 ## Outcomes & Retrospective
 
@@ -550,3 +558,5 @@ unchanged. After the mandatory third-failure redesign, fixture catalogs are also
 the error authority of their owning public function.
 Round 4 made the string-size guard independently reachable below the raw document limit and added
 adjacent executable fixtures.
+The 2026-09-02 implementation repair replaced the conflicting single-string raw-size fixtures with
+composite documents and added a proof that their nested strings remain within the inner limit.
