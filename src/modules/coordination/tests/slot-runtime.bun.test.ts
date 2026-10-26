@@ -62,3 +62,35 @@ test("stop acknowledgement does not wait for a pending consumer observation", as
   expect(response.ok).toBe(true);
   release(observed);
 });
+
+test("a normal session re-registration permits fresh refill and survives restart", async () => {
+  const path = join(root(), "coord.sqlite"); const observed = snapshot(); const launches: SlotTask[] = [];
+  const firstIssue = observed.issues[0]; if (!firstIssue) throw new Error("Missing fixture issue");
+  const start = () => startCoordinationServer({ databasePath: path, port: 0, herdr: false,
+    slots: { repository, template: { name: "engineer", revision: "v1" }, consumer: {
+      async observe() { return { ...observed, observedAt: new Date().toISOString() }; },
+      async launch(task) { launches.push(task); return { session: `engineer-${task.issue.ref.number}` }; },
+      async report() {},
+    } } });
+  let server = start(); servers.push(server);
+  expect((await post(server.url, "/slots/check", {})).ok).toBe(true);
+  expect(launches.map(task => task.issue.ref.number)).toEqual([1]);
+  expect((await post(server.url, "/sessions/register", { session: "engineer-1", role: "engineer", data: { stream: "issue:99", ownerRole: "orchestrator" } })).ok).toBe(true);
+  const rows: { sessions: { session: string; data: { streamAssignment: string } }[] } = await (await fetch(server.url + "/sessions")).json();
+  const replacement = rows.sessions.find(row => row.session === "engineer-1"); if (!replacement) throw new Error("Missing replacement registration");
+  expect(replacement.data.streamAssignment).not.toBe(launches[0]?.id);
+  observed.owners = [{ session: "engineer-1", assignment: replacement.data.streamAssignment, ref: { repository, number: 99 }, kind: "product", priority: 1, state: "working", released: false }];
+  observed.issues.push({ ...firstIssue, ref: { repository, number: 2 } });
+  const response = await post(server.url, "/slots/check", {});
+  expect(response.ok, await response.text()).toBe(true);
+  expect(launches.map(task => task.issue.ref.number)).toEqual([1,2]);
+  await server.stop(); servers.splice(servers.indexOf(server), 1);
+  server = start(); servers.push(server);
+  observed.issues.push({ ...firstIssue, ref: { repository, number: 3 } });
+  expect((await post(server.url, "/slots/check", {})).ok).toBe(true);
+  expect(launches.map(task => task.issue.ref.number)).toEqual([1,2,3]);
+  expect((await post(server.url, "/slots/check", {})).ok).toBe(true);
+  expect(launches).toHaveLength(3);
+  const restarted: { sessions: { session: string; data: { streamAssignment: string } }[] } = await (await fetch(server.url + "/sessions")).json();
+  expect(restarted.sessions.find(row => row.session === "engineer-1")?.data.streamAssignment).toBe(replacement.data.streamAssignment);
+});

@@ -48,7 +48,7 @@ export function createSqliteSlotStore(db: Database): SlotStore {
     const result = transitionSlots(current, event, template);
     const state = parseSlotState(result.state);
     for (const run of state.launches) {
-      if (run.phase.kind !== "running") continue;
+      if (event.kind !== "launched" || run.task.id !== event.id || run.phase.kind !== "running") continue;
       const session = run.phase.session;
       const prior = db.query<{ payload: string }, [string]>("SELECT payload FROM sessions WHERE session=?").get(session.session);
       if (prior) {
